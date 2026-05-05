@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import {
   ArrowUpDown,
   BarChart3,
@@ -21,18 +21,21 @@ import {
   Sparkles,
   Tag,
   Users,
+  X,
   type LucideIcon,
 } from "lucide-react"
 
 type PageKey = "dashboard" | "orders" | "support"
+type MetricTone = "rose" | "emerald" | "indigo" | "violet"
+type OrderStatus = "Processando" | "Entregue" | "Cancelado" | "Em trânsito"
+type SupportType = "Pagamento" | "Atraso" | "Reembolso"
+type RatingLabel = "Ótimo" | "Bom" | "Excelente" | "Crítico"
 
 type NavItem = {
-  id?: PageKey
+  id: PageKey
   label: string
   icon: LucideIcon
 }
-
-type MetricTone = "rose" | "emerald" | "indigo" | "violet"
 
 type Metric = {
   label: string
@@ -49,24 +52,27 @@ type OrderRow = {
   value: string
   stock: string
   date: string
-  status: "Processando" | "Entregue" | "Cancelado" | "Em trânsito"
+  status: OrderStatus
   quantity: string
 }
 
 type SupportRow = {
   ticket: string
   customer: string
-  type: "Pagamento" | "Delay" | "Reembolso"
+  type: SupportType
   createdAt: string
   resolvedIn: string
   rating: string
-  ratingLabel: "Otimo" | "Bom" | "Excelente" | "Critico"
+  ratingLabel: RatingLabel
 }
 
-const pageTitles: Record<PageKey, string> = {
-  dashboard: "Dashboard",
-  orders: "Pedidos",
-  support: "Suporte",
+type OrderFormValues = Omit<OrderRow, "id">
+type SupportFormValues = Omit<SupportRow, "ticket">
+type FilterValue<T extends string> = "Todos" | T
+type ChatMessage = {
+  id: string
+  role: "assistant" | "user"
+  content: string
 }
 
 const navItems: NavItem[] = [
@@ -75,119 +81,19 @@ const navItems: NavItem[] = [
   { id: "support", label: "Suporte", icon: HeartHandshake },
 ]
 
-const dashboardMetrics: Metric[] = [
-  {
-    label: "Receita Total",
-    value: "R$ 150K",
-    helper: "+20% vs mês anterior",
-    tone: "rose",
-    icon: CircleDollarSign,
-  },
-  {
-    label: "Taxa de satisfação",
-    value: "4.6/5.0",
-    helper: "+12% NPS médio",
-    tone: "emerald",
-    icon: Smile,
-  },
-  {
-    label: "Total de pedidos",
-    value: "312",
-    helper: "Pedidos processados",
-    tone: "indigo",
-    icon: Tag,
-  },
-  {
-    label: "Tickets resolvidos hoje",
-    value: "81",
-    helper: "Tickets",
-    tone: "violet",
-    icon: Heart,
-  },
-]
+const orderStatusOptions: OrderStatus[] = ["Processando", "Entregue", "Cancelado", "Em trânsito"]
+const supportTypeOptions: SupportType[] = ["Pagamento", "Atraso", "Reembolso"]
+const ratingLabelOptions: RatingLabel[] = ["Ótimo", "Bom", "Excelente", "Crítico"]
 
-const ordersMetrics: Metric[] = [
-  {
-    label: "Pedidos pendentes",
-    value: "12",
-    helper: "Em processamento",
-    tone: "indigo",
-    icon: Users,
-  },
-  {
-    label: "Total de pedidos",
-    value: "312",
-    helper: "Pedidos processados",
-    tone: "indigo",
-    icon: Smile,
-  },
-  {
-    label: "Receita total",
-    value: "R$150K",
-    helper: "+20% vs mês anterior",
-    tone: "rose",
-    icon: Users,
-  },
-  {
-    label: "Pedidos entregues",
-    value: "2.148",
-    helper: "+47% vs último mês",
-    tone: "emerald",
-    icon: Heart,
-  },
-]
+const ordersStorageKey = "v-commerce-orders"
+const supportStorageKey = "v-commerce-support-tickets"
 
-const supportMetrics: Metric[] = [
-  {
-    label: "Pedidos resolvidos",
-    value: "6.783",
-    helper: "+3% vs mês anterior",
-    tone: "emerald",
-    icon: Users,
-  },
-  {
-    label: "Pedidos em aberto",
-    value: "4.6/5.0",
-    helper: "+12% NPS médio",
-    tone: "emerald",
-    icon: Smile,
-  },
-  {
-    label: "Pedidos em andamento",
-    value: "312",
-    helper: "Pedidos processados",
-    tone: "indigo",
-    icon: Users,
-  },
-  {
-    label: "Tickets resolvidos hoje",
-    value: "81",
-    helper: "Tickets",
-    tone: "violet",
-    icon: Heart,
-  },
-]
-
-const orderSummary = [
-  { label: "47%", value: "Entregues", width: "47%", color: "bg-emerald-500" },
-  { label: "16%", value: "Em trânsito", width: "16%", color: "bg-amber-400" },
-  { label: "37%", value: "Processando", width: "37%", color: "bg-indigo-600" },
-  { label: "1%", value: "Cancelados", width: "7%", color: "bg-rose-500" },
-]
-
-const deliveryCards = [
-  { label: "Entregues", value: "987", detail: "pedidos", color: "bg-emerald-500" },
-  { label: "Em trânsito", value: "340", detail: "pedidos", color: "bg-amber-400" },
-  { label: "Processando", value: "777", detail: "pedidos", color: "bg-indigo-600" },
-  { label: "Cancelados", value: "12", detail: "pedidos", color: "bg-rose-500" },
-]
-
-const orderRows: OrderRow[] = [
+const initialOrders: OrderRow[] = [
   {
     id: "PROD-0001",
     product: "Perfume Premium",
     customer: "Nome do Cliente da Silva Júnior",
-    value: "R$ 32309,95",
+    value: "R$ 32.309,95",
     stock: "9.999",
     date: "29/12/2026",
     status: "Processando",
@@ -197,9 +103,9 @@ const orderRows: OrderRow[] = [
     id: "PROD-0002",
     product: "Conjunto de Pincéis",
     customer: "Nome do Cliente da Silva Júnior",
-    value: "R$ 47346,82",
+    value: "R$ 47.346,82",
     stock: "123",
-    date: "123",
+    date: "12/04/2026",
     status: "Entregue",
     quantity: "2x",
   },
@@ -207,9 +113,9 @@ const orderRows: OrderRow[] = [
     id: "PROD-0003",
     product: "Barraca de Camping",
     customer: "Nome do Cliente da Silva Júnior",
-    value: "R$ -100",
+    value: "R$ 899,90",
     stock: "24",
-    date: "24",
+    date: "24/04/2026",
     status: "Cancelado",
     quantity: "6x",
   },
@@ -217,9 +123,9 @@ const orderRows: OrderRow[] = [
     id: "PROD-0004",
     product: "Chupeta Premium",
     customer: "Nome do Cliente da Silva Júnior",
-    value: "R$ 28506,95",
+    value: "R$ 28.506,95",
     stock: "53",
-    date: "53",
+    date: "25/04/2026",
     status: "Entregue",
     quantity: "3x",
   },
@@ -227,9 +133,9 @@ const orderRows: OrderRow[] = [
     id: "PROD-0005",
     product: "Vassoura Mágica",
     customer: "Nome do Cliente da Silva Júnior",
-    value: "R$ 19165,58",
+    value: "R$ 19.165,58",
     stock: "12",
-    date: "12",
+    date: "26/04/2026",
     status: "Em trânsito",
     quantity: "4x",
   },
@@ -237,70 +143,89 @@ const orderRows: OrderRow[] = [
     id: "PROD-0006",
     product: "Violão Acústico",
     customer: "Nome do Cliente da Silva Júnior",
-    value: "R$ 2215,40",
+    value: "R$ 2.215,40",
     stock: "72",
-    date: "72",
+    date: "27/04/2026",
     status: "Processando",
     quantity: "2x",
   },
 ]
 
-const supportRows: SupportRow[] = [
+const initialSupportTickets: SupportRow[] = [
   {
-    ticket: "b388e879e-d3c6...",
+    ticket: "TCK-0001",
     customer: "Nome do Cliente",
     type: "Pagamento",
-    createdAt: "R$ 32309,95",
-    resolvedIn: "28",
+    createdAt: "28/04/2026",
+    resolvedIn: "2h",
     rating: "4.5",
-    ratingLabel: "Otimo",
+    ratingLabel: "Ótimo",
   },
   {
-    ticket: "b388e879e-d3c6...",
+    ticket: "TCK-0002",
     customer: "Nome do Cliente",
     type: "Pagamento",
-    createdAt: "R$ 47346,82",
-    resolvedIn: "123",
+    createdAt: "28/04/2026",
+    resolvedIn: "4h",
     rating: "4.0",
     ratingLabel: "Bom",
   },
   {
-    ticket: "b388e879e-d3c6...",
+    ticket: "TCK-0003",
     customer: "Nome do Cliente",
-    type: "Delay",
-    createdAt: "R$ -100",
-    resolvedIn: "24",
+    type: "Atraso",
+    createdAt: "29/04/2026",
+    resolvedIn: "24h",
     rating: "4.5",
-    ratingLabel: "Otimo",
+    ratingLabel: "Ótimo",
   },
   {
-    ticket: "b388e879e-d3c6...",
+    ticket: "TCK-0004",
     customer: "Nome do Cliente",
     type: "Reembolso",
-    createdAt: "R$ 28506,95",
-    resolvedIn: "53",
+    createdAt: "30/04/2026",
+    resolvedIn: "53h",
     rating: "4.1",
     ratingLabel: "Bom",
   },
   {
-    ticket: "b388e879e-d3c6...",
+    ticket: "TCK-0005",
     customer: "Nome do Cliente",
     type: "Reembolso",
-    createdAt: "R$ 19165,58",
-    resolvedIn: "12",
+    createdAt: "01/05/2026",
+    resolvedIn: "12h",
     rating: "4.7",
     ratingLabel: "Excelente",
   },
   {
-    ticket: "b388e879e-d3c6...",
+    ticket: "TCK-0006",
     customer: "Nome do Cliente",
-    type: "Delay",
-    createdAt: "R$ 2215,40",
-    resolvedIn: "72",
+    type: "Atraso",
+    createdAt: "02/05/2026",
+    resolvedIn: "72h",
     rating: "3.9",
-    ratingLabel: "Critico",
+    ratingLabel: "Crítico",
   },
 ]
+
+const emptyOrderForm: OrderFormValues = {
+  product: "",
+  customer: "",
+  value: "",
+  stock: "",
+  date: "",
+  status: "Processando",
+  quantity: "",
+}
+
+const emptySupportForm: SupportFormValues = {
+  customer: "",
+  type: "Pagamento",
+  createdAt: "",
+  resolvedIn: "",
+  rating: "",
+  ratingLabel: "Bom",
+}
 
 const toneClasses: Record<MetricTone, string> = {
   rose: "text-rose-500",
@@ -309,85 +234,179 @@ const toneClasses: Record<MetricTone, string> = {
   violet: "text-violet-600",
 }
 
-const statusClasses: Record<OrderRow["status"], string> = {
+const statusClasses: Record<OrderStatus, string> = {
   Processando: "bg-indigo-50 text-indigo-500 ring-indigo-200",
   Entregue: "bg-emerald-50 text-emerald-500 ring-emerald-200",
   Cancelado: "bg-rose-50 text-rose-500 ring-rose-200",
   "Em trânsito": "bg-amber-50 text-amber-500 ring-amber-200",
 }
 
-const supportTypeClasses: Record<SupportRow["type"], string> = {
+const supportTypeClasses: Record<SupportType, string> = {
   Pagamento: "bg-indigo-50 text-indigo-500 ring-indigo-200",
-  Delay: "bg-amber-50 text-amber-500 ring-amber-200",
+  Atraso: "bg-amber-50 text-amber-500 ring-amber-200",
   Reembolso: "bg-rose-50 text-rose-500 ring-rose-200",
 }
 
-const ratingClasses: Record<SupportRow["ratingLabel"], string> = {
-  Otimo: "bg-amber-50 text-amber-500 ring-amber-200",
+const ratingClasses: Record<RatingLabel, string> = {
+  Ótimo: "bg-amber-50 text-amber-500 ring-amber-200",
   Bom: "bg-indigo-50 text-indigo-500 ring-indigo-200",
   Excelente: "bg-emerald-50 text-emerald-500 ring-emerald-200",
-  Critico: "bg-rose-50 text-rose-500 ring-rose-200",
+  Crítico: "bg-rose-50 text-rose-500 ring-rose-200",
 }
 
 function App() {
   const [currentPage, setCurrentPage] = useState<PageKey>("dashboard")
+  const [orders, setOrders] = useState<OrderRow[]>(() => readStoredRows(ordersStorageKey, initialOrders))
+  const [tickets, setTickets] = useState<SupportRow[]>(() => readStoredRows(supportStorageKey, initialSupportTickets))
+  const [orderSearch, setOrderSearch] = useState("")
+  const [ticketSearch, setTicketSearch] = useState("")
+  const [orderStatusFilter, setOrderStatusFilter] = useState<FilterValue<OrderStatus>>("Todos")
+  const [ticketTypeFilter, setTicketTypeFilter] = useState<FilterValue<SupportType>>("Todos")
+  const [isOrderModalOpen, setIsOrderModalOpen] = useState(false)
+  const [isTicketModalOpen, setIsTicketModalOpen] = useState(false)
+  const [editingTicketIndex, setEditingTicketIndex] = useState<number | null>(null)
+  const [isAssistantOpen, setIsAssistantOpen] = useState(false)
+  const [notice, setNotice] = useState("")
+
+  useEffect(() => {
+    localStorage.setItem(ordersStorageKey, JSON.stringify(orders))
+  }, [orders])
+
+  useEffect(() => {
+    localStorage.setItem(supportStorageKey, JSON.stringify(tickets))
+  }, [tickets])
+
+  const filteredOrders = useMemo(
+    () =>
+      orders.filter((order) => {
+        const matchesSearch = rowIncludes(order, orderSearch)
+        const matchesStatus = orderStatusFilter === "Todos" || order.status === orderStatusFilter
+        return matchesSearch && matchesStatus
+      }),
+    [orderSearch, orderStatusFilter, orders],
+  )
+
+  const filteredTickets = useMemo(
+    () =>
+      tickets
+        .map((ticket, index) => ({ ticket, index }))
+        .filter(({ ticket }) => {
+          const matchesSearch = rowIncludes(ticket, ticketSearch)
+          const matchesType = ticketTypeFilter === "Todos" || ticket.type === ticketTypeFilter
+          return matchesSearch && matchesType
+        }),
+    [ticketSearch, ticketTypeFilter, tickets],
+  )
+
+  const dashboardMetrics = getDashboardMetrics(orders, tickets)
+  const ordersMetrics = getOrdersMetrics(orders)
+  const supportMetrics = getSupportMetrics(tickets)
+
+  function showNotice(message: string) {
+    setNotice(message)
+    window.setTimeout(() => setNotice(""), 1800)
+  }
+
+  function addOrder(values: OrderFormValues) {
+    setOrders((current) => [{ id: createOrderId(current), ...values }, ...current])
+    setIsOrderModalOpen(false)
+    showNotice("Pedido adicionado")
+  }
+
+  function addTicket(values: SupportFormValues) {
+    setTickets((current) => [{ ticket: createTicketId(current), ...values }, ...current])
+    setIsTicketModalOpen(false)
+    showNotice("Ticket adicionado")
+  }
+
+  function updateTicket(values: SupportFormValues) {
+    if (editingTicketIndex === null) return
+
+    setTickets((current) =>
+      current.map((ticket, index) => (index === editingTicketIndex ? { ...ticket, ...values } : ticket)),
+    )
+    setEditingTicketIndex(null)
+    showNotice("Ticket atualizado")
+  }
 
   return (
-    <main className="min-h-screen bg-[#1f1f20] px-4 py-6 text-slate-900 md:px-5">
-      <p
-        className={[
-          "mb-2 text-base font-medium",
-          currentPage === "dashboard" ? "text-sky-400" : "text-neutral-500",
-        ].join(" ")}
-      >
-        {pageTitles[currentPage]}
-      </p>
+    <main className="min-h-dvh w-full bg-[#fbfcff] text-slate-900">
+      <div className="grid min-h-dvh w-full grid-cols-1 bg-[#fbfcff] md:grid-cols-[270px_1fr]">
+        <Sidebar currentPage={currentPage} onNavigate={setCurrentPage} />
 
-      <section
-        className={[
-          "mx-auto min-h-[800px] max-w-[1180px] overflow-hidden bg-white shadow-2xl shadow-black/20",
-          currentPage === "dashboard" ? "border-2 border-sky-400" : "border border-slate-200",
-        ].join(" ")}
-      >
-        <div className="grid min-h-[800px] grid-cols-1 bg-[#fbfcff] md:grid-cols-[210px_1fr]">
-          <Sidebar currentPage={currentPage} onNavigate={setCurrentPage} />
-
-          <div className="flex min-w-0 flex-col">
-            <Header />
-            {currentPage === "dashboard" && <Dashboard />}
-            {currentPage === "orders" && <OrdersPage />}
-            {currentPage === "support" && <SupportPage />}
-          </div>
+        <div className="flex min-w-0 flex-col">
+          <Header onNotify={() => showNotice("Nenhuma nova notificação")} />
+          {currentPage === "dashboard" && (
+            <Dashboard metrics={dashboardMetrics} onExport={() => showNotice("Relatório exportado")} />
+          )}
+          {currentPage === "orders" && (
+            <OrdersPage
+              filteredOrders={filteredOrders}
+              metrics={ordersMetrics}
+              onAddOrder={() => setIsOrderModalOpen(true)}
+              orderSearch={orderSearch}
+              orderStatusFilter={orderStatusFilter}
+              ordersCount={orders.length}
+              setOrderSearch={setOrderSearch}
+              setOrderStatusFilter={setOrderStatusFilter}
+            />
+          )}
+          {currentPage === "support" && (
+            <SupportPage
+              filteredTickets={filteredTickets}
+              metrics={supportMetrics}
+              onAddTicket={() => setIsTicketModalOpen(true)}
+              onEditTicket={setEditingTicketIndex}
+              setTicketSearch={setTicketSearch}
+              setTicketTypeFilter={setTicketTypeFilter}
+              ticketSearch={ticketSearch}
+              ticketTypeFilter={ticketTypeFilter}
+              ticketsCount={tickets.length}
+            />
+          )}
         </div>
-      </section>
+      </div>
+
+      <FloatingAssistant onClick={() => setIsAssistantOpen(true)} />
+      {notice && <Notice message={notice} />}
+
+      {isOrderModalOpen && <OrderFormModal onClose={() => setIsOrderModalOpen(false)} onSubmit={addOrder} />}
+      {isTicketModalOpen && (
+        <SupportFormModal onClose={() => setIsTicketModalOpen(false)} onSubmit={addTicket} title="Adicionar ticket" />
+      )}
+      {editingTicketIndex !== null && (
+        <SupportFormModal
+          initialValues={tickets[editingTicketIndex]}
+          onClose={() => setEditingTicketIndex(null)}
+          onSubmit={updateTicket}
+          title="Editar ticket"
+        />
+      )}
+      {isAssistantOpen && (
+        <AssistantPanel
+          currentPage={currentPage}
+          onClose={() => setIsAssistantOpen(false)}
+          orders={orders}
+          tickets={tickets}
+        />
+      )}
     </main>
   )
 }
 
-function Sidebar({
-  currentPage,
-  onNavigate,
-}: {
-  currentPage: PageKey
-  onNavigate: (page: PageKey) => void
-}) {
+function Sidebar({ currentPage, onNavigate }: { currentPage: PageKey; onNavigate: (page: PageKey) => void }) {
   return (
-    <aside className="flex border-b border-slate-200 bg-white md:min-h-full md:flex-col md:border-b-0 md:border-r">
-      <div className="hidden px-7 py-8 md:block">
-        <div className="flex items-end gap-2">
-          <span className="text-lg font-bold text-indigo-600">V-Commerce</span>
-          <span className="pb-0.5 text-[10px] font-medium text-slate-500">CRM 360</span>
+    <aside className="flex border-b border-slate-200 bg-white md:min-h-screen md:flex-col md:border-b-0 md:border-r">
+      <div className="hidden px-8 py-8 md:block">
+        <div className="flex items-center gap-3">
+          <span className="text-xl font-bold leading-tight text-indigo-600">V-Commerce</span>
+          <span className="text-[11px] font-semibold text-slate-500">CRM 360</span>
         </div>
       </div>
 
       <nav className="flex w-full gap-2 overflow-x-auto px-4 py-3 md:block md:px-4 md:py-0">
         {navItems.map((item) => (
-          <NavButton
-            key={item.label}
-            active={item.id === currentPage}
-            item={item}
-            onNavigate={onNavigate}
-          />
+          <NavButton key={item.id} active={item.id === currentPage} item={item} onNavigate={onNavigate} />
         ))}
       </nav>
 
@@ -412,19 +431,13 @@ function NavButton({
 
   return (
     <button
-      aria-disabled={!item.id}
       className={[
         "flex h-9 shrink-0 items-center gap-2 rounded-md px-3 text-sm font-medium transition md:mb-2 md:w-full",
         active
           ? "bg-indigo-600 text-white shadow-sm shadow-indigo-500/25"
           : "text-slate-600 hover:bg-slate-100 hover:text-slate-950",
-        !item.id ? "cursor-default" : "",
       ].join(" ")}
-      onClick={() => {
-        if (item.id) {
-          onNavigate(item.id)
-        }
-      }}
+      onClick={() => onNavigate(item.id)}
       type="button"
     >
       <Icon className="size-4" />
@@ -433,7 +446,7 @@ function NavButton({
   )
 }
 
-function Header() {
+function Header({ onNotify }: { onNotify: () => void }) {
   return (
     <header className="flex min-h-16 items-center justify-between border-b border-slate-200 bg-white px-5 md:px-7">
       <div className="md:hidden">
@@ -449,126 +462,161 @@ function Header() {
         <button
           aria-label="Notificações"
           className="grid size-8 place-items-center rounded-full text-slate-500 transition hover:bg-slate-100 hover:text-slate-900"
+          onClick={onNotify}
           type="button"
         >
           <Bell className="size-4" />
         </button>
 
-        <div className="flex items-center gap-3">
-          <Avatar size="sm" />
-
-          <div className="hidden sm:block">
-            <p className="text-sm font-semibold leading-none text-slate-900">Mariana Albuquerque</p>
-            <p className="mt-1 text-xs text-slate-500">V-commerce CEO</p>
-          </div>
+        <div className="hidden sm:block">
+          <p className="text-sm font-semibold leading-none text-slate-900">Mariana Albuquerque</p>
+          <p className="mt-1 text-xs text-slate-500">V-Commerce CEO</p>
         </div>
       </div>
     </header>
   )
 }
 
-function Dashboard() {
+function Dashboard({ metrics, onExport }: { metrics: Metric[]; onExport: () => void }) {
   return (
-    <section className="relative flex-1 px-5 py-6 md:px-7">
-      <PageTitle title="Dashboard" />
-
-      <div className="grid gap-4 lg:grid-cols-4">
-        {dashboardMetrics.map((metric) => (
-          <MetricCard key={metric.label} metric={metric} />
-        ))}
-      </div>
+    <PageShell title="Dashboard">
+      <MetricGrid metrics={metrics} />
 
       <div className="mt-8 grid gap-4 xl:grid-cols-[minmax(0,1fr)_220px]">
-        <RevenueChart />
+        <RevenueChart onExport={onExport} />
         <OrderSummary />
       </div>
 
       <div className="mt-7 grid gap-4 xl:grid-cols-3">
         <InsightCard
-          label="Pedidos no prazo"
-          value="42,8%"
           badge="Crítico"
           badgeClassName="bg-rose-50 text-rose-500"
           icon={Clock3}
+          label="Pedidos no prazo"
+          value="42,8%"
         />
         <InsightCard
-          label="Produto mais vendido"
-          value="IPhone 16 128GB"
           badge="1.487 unidades"
           badgeClassName="bg-emerald-50 text-emerald-500"
           icon={Smartphone}
+          label="Produto mais vendido"
+          value="iPhone 16 128GB"
         />
         <InsightCard
-          label="Top região"
-          value="São Paulo"
-          badge="28% da fatura total"
+          badge="28% do faturamento"
           badgeClassName="bg-emerald-50 text-emerald-500"
           icon={MapPin}
+          label="Top região"
+          value="São Paulo"
         />
       </div>
-
-      <FloatingAssistant />
-    </section>
+    </PageShell>
   )
 }
 
-function OrdersPage() {
+function OrdersPage({
+  filteredOrders,
+  metrics,
+  onAddOrder,
+  orderSearch,
+  orderStatusFilter,
+  ordersCount,
+  setOrderSearch,
+  setOrderStatusFilter,
+}: {
+  filteredOrders: OrderRow[]
+  metrics: Metric[]
+  onAddOrder: () => void
+  orderSearch: string
+  orderStatusFilter: FilterValue<OrderStatus>
+  ordersCount: number
+  setOrderSearch: (value: string) => void
+  setOrderStatusFilter: (value: FilterValue<OrderStatus>) => void
+}) {
   return (
-    <section className="relative flex-1 px-5 py-6 md:px-7">
-      <PageTitle title="Pedidos" />
+    <PageShell title="Pedidos">
+      <MetricGrid metrics={metrics} />
 
-      <div className="grid gap-4 lg:grid-cols-4">
-        {ordersMetrics.map((metric) => (
-          <MetricCard key={metric.label} metric={metric} />
-        ))}
-      </div>
-
-      <div className="mt-7 rounded-lg border border-slate-200 bg-white shadow-sm">
+      <DataPanel>
         <TableToolbar
           actionLabel="Criar novo"
+          filterLabel="Status"
+          filterOptions={["Todos", ...orderStatusOptions]}
+          filterValue={orderStatusFilter}
           icon={ClipboardList}
           label="Pedidos solicitados"
-          placeholder="Busque por um produto, data ou status"
+          onAction={onAddOrder}
+          onFilterChange={(value) => setOrderStatusFilter(value as FilterValue<OrderStatus>)}
+          onSearchChange={setOrderSearch}
+          placeholder="Busque por produto, cliente, data ou status"
+          searchValue={orderSearch}
         />
-        <OrdersTable />
-      </div>
-
-      <DecorativeAvatar />
-      <FloatingAssistant />
-    </section>
+        <OrdersTable rows={filteredOrders} totalCount={ordersCount} />
+      </DataPanel>
+    </PageShell>
   )
 }
 
-function SupportPage() {
+function SupportPage({
+  filteredTickets,
+  metrics,
+  onAddTicket,
+  onEditTicket,
+  setTicketSearch,
+  setTicketTypeFilter,
+  ticketSearch,
+  ticketTypeFilter,
+  ticketsCount,
+}: {
+  filteredTickets: Array<{ ticket: SupportRow; index: number }>
+  metrics: Metric[]
+  onAddTicket: () => void
+  onEditTicket: (index: number) => void
+  setTicketSearch: (value: string) => void
+  setTicketTypeFilter: (value: FilterValue<SupportType>) => void
+  ticketSearch: string
+  ticketTypeFilter: FilterValue<SupportType>
+  ticketsCount: number
+}) {
   return (
-    <section className="relative flex-1 px-5 py-6 md:px-7">
-      <PageTitle title="Suporte" />
+    <PageShell title="Suporte">
+      <MetricGrid metrics={metrics} />
 
-      <div className="grid gap-4 lg:grid-cols-4">
-        {supportMetrics.map((metric) => (
-          <MetricCard key={metric.label} metric={metric} />
-        ))}
-      </div>
-
-      <div className="mt-7 rounded-lg border border-slate-200 bg-white shadow-sm">
+      <DataPanel>
         <TableToolbar
           actionLabel="Adicionar ticket"
+          filterLabel="Tipo"
+          filterOptions={["Todos", ...supportTypeOptions]}
+          filterValue={ticketTypeFilter}
           icon={ClipboardList}
           label="Tickets de suporte"
-          placeholder="Busque por um produto, código ou categoria"
+          onAction={onAddTicket}
+          onFilterChange={(value) => setTicketTypeFilter(value as FilterValue<SupportType>)}
+          onSearchChange={setTicketSearch}
+          placeholder="Busque por ticket, cliente, tipo ou avaliação"
+          searchValue={ticketSearch}
         />
-        <SupportTable />
-      </div>
+        <SupportTable onEditTicket={onEditTicket} rows={filteredTickets} totalCount={ticketsCount} />
+      </DataPanel>
+    </PageShell>
+  )
+}
 
-      <FloatingAssistant />
+function PageShell({ children, title }: { children: React.ReactNode; title: string }) {
+  return (
+    <section className="relative flex-1 px-5 py-6 md:px-7">
+      <h1 className="mb-6 text-xl font-bold text-slate-800">{title}</h1>
+      {children}
     </section>
   )
 }
 
-function PageTitle({ title }: { title: string }) {
+function MetricGrid({ metrics }: { metrics: Metric[] }) {
   return (
-    <div className="mb-6 flex items-center justify-between">
-      <h1 className="text-xl font-bold text-slate-800">{title}</h1>
+    <div className="grid gap-4 lg:grid-cols-4">
+      {metrics.map((metric) => (
+        <MetricCard key={metric.label} metric={metric} />
+      ))}
     </div>
   )
 }
@@ -591,7 +639,7 @@ function MetricCard({ metric }: { metric: Metric }) {
   )
 }
 
-function RevenueChart() {
+function RevenueChart({ onExport }: { onExport: () => void }) {
   return (
     <article className="relative rounded-lg border border-slate-200 bg-white p-5 shadow-lg shadow-slate-900/10">
       <div className="mb-3 flex items-start justify-between gap-3">
@@ -600,28 +648,18 @@ function RevenueChart() {
             <BarChart3 className="size-4" />
           </span>
           <div>
-            <p className="text-sm font-semibold text-indigo-600">Gráfico de Renda</p>
+            <p className="text-sm font-semibold text-indigo-600">Gráfico de renda</p>
             <p className="mt-0.5 text-xs text-slate-500">Hoje: 27 de abril de 2026</p>
           </div>
         </div>
 
         <div className="hidden items-center gap-4 text-xs text-slate-500 sm:flex">
-          <span className="flex items-center gap-1.5">
-            <span className="size-2 rounded-sm bg-slate-400" />
-            Mês passado
-          </span>
-          <span className="flex items-center gap-1.5">
-            <span className="size-2 rounded-sm bg-indigo-600" />
-            Mês atual
-          </span>
+          <ChartLegend color="bg-slate-400" label="Mês passado" />
+          <ChartLegend color="bg-indigo-600" label="Mês atual" />
         </div>
       </div>
 
       <div className="relative">
-        <div className="absolute left-[75%] top-2 z-10 hidden -translate-x-1/2 rounded-full bg-white p-1 shadow-lg ring-1 ring-slate-200 sm:block">
-          <Avatar size="md" />
-        </div>
-
         <div className="absolute left-[68%] top-20 z-10 hidden rounded-md border border-slate-200 bg-white px-3 py-2 text-[10px] shadow-lg shadow-slate-900/10 sm:block">
           <p className="mb-1 font-semibold text-slate-700">Comparativo mensal</p>
           <p className="flex items-center justify-between gap-5 text-slate-500">
@@ -629,14 +667,14 @@ function RevenueChart() {
               <span className="size-1.5 rounded-full bg-slate-500" />
               Março
             </span>
-            <span className="font-medium text-slate-700">R$180K</span>
+            <span className="font-medium text-slate-700">R$ 180K</span>
           </p>
           <p className="mt-1 flex items-center justify-between gap-5 text-slate-500">
             <span className="flex items-center gap-1.5">
               <span className="size-1.5 rounded-full bg-indigo-600" />
               Abril
             </span>
-            <span className="font-medium text-slate-700">R$150K</span>
+            <span className="font-medium text-slate-700">R$ 150K</span>
           </p>
         </div>
 
@@ -695,7 +733,11 @@ function RevenueChart() {
           Março teve o melhor impacto na sua renda, cerca de 92% de aumento.
         </p>
 
-        <button className="flex h-8 w-fit items-center gap-2 rounded-full bg-slate-950 px-5 text-xs font-semibold text-white transition hover:bg-slate-800">
+        <button
+          className="flex h-8 w-fit items-center gap-2 rounded-full bg-slate-950 px-5 text-xs font-semibold text-white transition hover:bg-slate-800"
+          onClick={onExport}
+          type="button"
+        >
           Exportar relatório
           <Download className="size-3.5" />
         </button>
@@ -704,7 +746,30 @@ function RevenueChart() {
   )
 }
 
+function ChartLegend({ color, label }: { color: string; label: string }) {
+  return (
+    <span className="flex items-center gap-1.5">
+      <span className={`size-2 rounded-sm ${color}`} />
+      {label}
+    </span>
+  )
+}
+
 function OrderSummary() {
+  const summary = [
+    { label: "47%", value: "Entregues", width: "47%", color: "bg-emerald-500" },
+    { label: "16%", value: "Em trânsito", width: "16%", color: "bg-amber-400" },
+    { label: "37%", value: "Processando", width: "37%", color: "bg-indigo-600" },
+    { label: "1%", value: "Cancelados", width: "7%", color: "bg-rose-500" },
+  ]
+
+  const cards = [
+    { label: "Entregues", value: "987", detail: "pedidos", color: "bg-emerald-500" },
+    { label: "Em trânsito", value: "340", detail: "pedidos", color: "bg-amber-400" },
+    { label: "Processando", value: "777", detail: "pedidos", color: "bg-indigo-600" },
+    { label: "Cancelados", value: "12", detail: "pedidos", color: "bg-rose-500" },
+  ]
+
   return (
     <article className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
       <div className="mb-5 flex items-center gap-3">
@@ -715,7 +780,7 @@ function OrderSummary() {
       </div>
 
       <div className="space-y-3">
-        {orderSummary.map((item) => (
+        {summary.map((item) => (
           <div key={item.value} className="grid grid-cols-[1fr_34px] items-center gap-2">
             <div className="h-4 overflow-hidden rounded-sm bg-slate-100">
               <div className={`h-full rounded-sm ${item.color}`} style={{ width: item.width }} />
@@ -726,7 +791,7 @@ function OrderSummary() {
       </div>
 
       <div className="mt-5 grid grid-cols-2 gap-2">
-        {deliveryCards.map((item) => (
+        {cards.map((item) => (
           <div key={item.label} className="rounded-md border border-slate-200 p-3">
             <span className={`mb-3 block h-1 w-5 rounded-full ${item.color}`} />
             <p className="text-xs font-medium text-slate-600">{item.label}</p>
@@ -740,51 +805,117 @@ function OrderSummary() {
   )
 }
 
+function DataPanel({ children }: { children: React.ReactNode }) {
+  return <div className="mt-7 rounded-lg border border-slate-200 bg-white shadow-sm">{children}</div>
+}
+
 function TableToolbar({
   actionLabel,
+  filterLabel,
+  filterOptions,
+  filterValue,
   icon: Icon,
   label,
+  onAction,
+  onFilterChange,
+  onSearchChange,
   placeholder,
+  searchValue,
 }: {
   actionLabel: string
+  filterLabel: string
+  filterOptions: string[]
+  filterValue: string
   icon: LucideIcon
   label: string
+  onAction: () => void
+  onFilterChange: (value: string) => void
+  onSearchChange: (value: string) => void
   placeholder: string
+  searchValue: string
 }) {
+  const [isFilterOpen, setIsFilterOpen] = useState(false)
+
   return (
-    <div className="flex flex-col gap-4 border-b border-slate-200 px-5 py-4 xl:flex-row xl:items-center xl:justify-between">
-      <div className="flex items-center gap-3">
-        <span className="grid size-7 place-items-center rounded-full bg-indigo-100 text-indigo-600">
-          <Icon className="size-4" />
-        </span>
-        <p className="text-sm font-semibold text-indigo-600">{label}</p>
+    <div className="border-b border-slate-200 px-5 py-4">
+      <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+        <div className="flex items-center gap-3">
+          <span className="grid size-7 place-items-center rounded-full bg-indigo-100 text-indigo-600">
+            <Icon className="size-4" />
+          </span>
+          <p className="text-sm font-semibold text-indigo-600">{label}</p>
+        </div>
+
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          <label className="relative block">
+            <Search className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
+            <input
+              className="h-9 w-full rounded-full border border-slate-200 bg-white pl-10 pr-4 text-sm text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-indigo-300 focus:ring-4 focus:ring-indigo-100 sm:w-[310px]"
+              onChange={(event) => onSearchChange(event.target.value)}
+              placeholder={placeholder}
+              type="search"
+              value={searchValue}
+            />
+          </label>
+
+          <button
+            className={[
+              "flex h-9 items-center justify-center gap-2 rounded-full border px-4 text-sm font-semibold transition",
+              filterValue === "Todos"
+                ? "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+                : "border-indigo-200 bg-indigo-50 text-indigo-600",
+            ].join(" ")}
+            onClick={() => setIsFilterOpen((current) => !current)}
+            type="button"
+          >
+            <SlidersHorizontal className="size-4" />
+            Filtro
+          </button>
+
+          <button
+            className="flex h-9 items-center justify-center gap-2 rounded-full bg-slate-950 px-5 text-sm font-semibold text-white transition hover:bg-slate-800"
+            onClick={onAction}
+            type="button"
+          >
+            <Plus className="size-4" />
+            {actionLabel}
+          </button>
+        </div>
       </div>
 
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-        <label className="relative block">
-          <Search className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
-          <input
-            className="h-9 w-full rounded-full border border-slate-200 bg-white pl-10 pr-4 text-sm text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-indigo-300 focus:ring-4 focus:ring-indigo-100 sm:w-[310px]"
-            placeholder={placeholder}
-            type="search"
-          />
-        </label>
-
-        <button className="flex h-9 items-center justify-center gap-2 rounded-full border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">
-          <SlidersHorizontal className="size-4" />
-          Filter
-        </button>
-
-        <button className="flex h-9 items-center justify-center gap-2 rounded-full bg-slate-950 px-5 text-sm font-semibold text-white transition hover:bg-slate-800">
-          <Plus className="size-4" />
-          {actionLabel}
-        </button>
-      </div>
+      {isFilterOpen && (
+        <div className="mt-4 flex flex-col gap-2 rounded-lg border border-slate-200 bg-slate-50 p-3 sm:flex-row sm:items-center sm:justify-end">
+          <label className="text-xs font-semibold text-slate-500" htmlFor={`${label}-filter`}>
+            {filterLabel}
+          </label>
+          <select
+            className="h-9 rounded-md border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 outline-none transition focus:border-indigo-300 focus:ring-4 focus:ring-indigo-100"
+            id={`${label}-filter`}
+            onChange={(event) => onFilterChange(event.target.value)}
+            value={filterValue}
+          >
+            {filterOptions.map((option) => (
+              <option key={option} value={option}>
+                {option}
+              </option>
+            ))}
+          </select>
+          {filterValue !== "Todos" && (
+            <button
+              className="h-9 rounded-md px-3 text-sm font-semibold text-indigo-600 transition hover:bg-indigo-100"
+              onClick={() => onFilterChange("Todos")}
+              type="button"
+            >
+              Limpar
+            </button>
+          )}
+        </div>
+      )}
     </div>
   )
 }
 
-function OrdersTable() {
+function OrdersTable({ rows, totalCount }: { rows: OrderRow[]; totalCount: number }) {
   return (
     <div className="overflow-x-auto">
       <table className="min-w-[900px] table-fixed text-left">
@@ -803,7 +934,7 @@ function OrdersTable() {
           </tr>
         </thead>
         <tbody>
-          {orderRows.map((row) => (
+          {rows.map((row) => (
             <tr key={row.id} className="h-[58px] border-b border-slate-100 text-sm text-slate-700 last:border-b-0">
               <td className="pl-5 font-medium text-slate-400">{row.id}</td>
               <td className="font-semibold text-slate-800">{row.product}</td>
@@ -819,12 +950,21 @@ function OrdersTable() {
           ))}
         </tbody>
       </table>
-      <TablePagination />
+      {rows.length === 0 && <EmptyTableState message="Nenhum pedido encontrado." />}
+      <TablePagination filteredCount={rows.length} totalCount={totalCount} />
     </div>
   )
 }
 
-function SupportTable() {
+function SupportTable({
+  onEditTicket,
+  rows,
+  totalCount,
+}: {
+  onEditTicket: (index: number) => void
+  rows: Array<{ ticket: SupportRow; index: number }>
+  totalCount: number
+}) {
   return (
     <div className="overflow-x-auto">
       <table className="min-w-[900px] table-fixed text-left">
@@ -846,7 +986,7 @@ function SupportTable() {
           </tr>
         </thead>
         <tbody>
-          {supportRows.map((row, index) => (
+          {rows.map(({ ticket: row, index }) => (
             <tr
               key={`${row.ticket}-${index}`}
               className="h-[58px] border-b border-slate-100 text-sm text-slate-700 last:border-b-0"
@@ -864,7 +1004,11 @@ function SupportTable() {
                 </StatusBadge>
               </td>
               <td>
-                <button className="text-sm font-semibold text-indigo-600 transition hover:text-indigo-500">
+                <button
+                  className="text-sm font-semibold text-indigo-600 transition hover:text-indigo-500"
+                  onClick={() => onEditTicket(index)}
+                  type="button"
+                >
                   Editar
                 </button>
               </td>
@@ -872,7 +1016,8 @@ function SupportTable() {
           ))}
         </tbody>
       </table>
-      <TablePagination />
+      {rows.length === 0 && <EmptyTableState message="Nenhum ticket encontrado." />}
+      <TablePagination filteredCount={rows.length} totalCount={totalCount} />
     </div>
   )
 }
@@ -896,20 +1041,41 @@ function TableHead({
   )
 }
 
-function TablePagination() {
+function EmptyTableState({ message }: { message: string }) {
+  return (
+    <div className="min-w-[900px] border-t border-slate-100 px-5 py-8 text-center text-sm font-medium text-slate-500">
+      {message}
+    </div>
+  )
+}
+
+function TablePagination({ filteredCount, totalCount }: { filteredCount: number; totalCount: number }) {
   return (
     <div className="flex min-w-[900px] flex-col gap-3 px-5 py-4 text-sm text-slate-700 sm:flex-row sm:items-center sm:justify-between">
       <div className="flex items-center gap-5">
-        <button className="font-medium transition hover:text-indigo-600">Anterior</button>
-        <button className="font-medium transition hover:text-indigo-600">1</button>
-        <button className="grid size-8 place-items-center rounded-md border border-slate-200 bg-white font-medium shadow-sm">2</button>
-        <button className="font-medium transition hover:text-indigo-600">3</button>
-        <button className="font-medium transition hover:text-indigo-600">4</button>
+        <button className="font-medium transition hover:text-indigo-600" type="button">
+          Anterior
+        </button>
+        <button className="font-medium transition hover:text-indigo-600" type="button">
+          1
+        </button>
+        <button className="grid size-8 place-items-center rounded-md border border-slate-200 bg-white font-medium shadow-sm" type="button">
+          2
+        </button>
+        <button className="font-medium transition hover:text-indigo-600" type="button">
+          3
+        </button>
         <span>...</span>
-        <button className="font-medium transition hover:text-indigo-600">10</button>
-        <button className="font-medium transition hover:text-indigo-600">Próximo</button>
+        <button className="font-medium transition hover:text-indigo-600" type="button">
+          10
+        </button>
+        <button className="font-medium transition hover:text-indigo-600" type="button">
+          Próximo
+        </button>
       </div>
-      <p className="text-slate-600">Mostrando 6 de 1.000 resultados</p>
+      <p className="text-slate-600">
+        Mostrando {filteredCount} de {totalCount} resultados
+      </p>
     </div>
   )
 }
@@ -923,17 +1089,17 @@ function StatusBadge({ children, className }: { children: React.ReactNode; class
 }
 
 function InsightCard({
-  label,
-  value,
   badge,
   badgeClassName,
   icon: Icon,
+  label,
+  value,
 }: {
-  label: string
-  value: string
   badge: string
   badgeClassName: string
   icon: LucideIcon
+  label: string
+  value: string
 }) {
   return (
     <article className="flex min-h-[66px] items-center justify-between rounded-lg border border-slate-200 bg-white px-5 shadow-sm">
@@ -952,50 +1118,522 @@ function InsightCard({
   )
 }
 
-function Avatar({ size }: { size: "sm" | "md" | "lg" }) {
-  const sizeClass = {
-    sm: "size-9",
-    md: "size-11",
-    lg: "size-16",
-  }[size]
+function OrderFormModal({
+  onClose,
+  onSubmit,
+}: {
+  onClose: () => void
+  onSubmit: (values: OrderFormValues) => void
+}) {
+  const [form, setForm] = useState<OrderFormValues>(emptyOrderForm)
 
   return (
-    <div className="relative">
-      <div
-        className={`${sizeClass} grid place-items-center overflow-hidden rounded-full border-2 border-white bg-[linear-gradient(135deg,#0f766e_0%,#eab308_37%,#f8d7ad_38%,#7c2d12_67%,#0f172a_68%)] shadow-md`}
+    <ModalFrame title="Criar novo pedido" onClose={onClose}>
+      <form
+        className="grid gap-4"
+        onSubmit={(event) => {
+          event.preventDefault()
+          onSubmit(form)
+        }}
       >
-        <span className="translate-y-2 text-[10px] font-bold text-white">MA</span>
-      </div>
-      {size === "sm" && (
-        <span className="absolute -bottom-0.5 -right-0.5 size-3 rounded-full border-2 border-white bg-emerald-500" />
-      )}
+        <FormInput label="Produto" onChange={(value) => setForm({ ...form, product: value })} value={form.product} />
+        <FormInput label="Cliente" onChange={(value) => setForm({ ...form, customer: value })} value={form.customer} />
+        <div className="grid gap-4 sm:grid-cols-2">
+          <FormInput label="Valor" onChange={(value) => setForm({ ...form, value })} placeholder="R$ 199,90" value={form.value} />
+          <FormInput label="Estoque" onChange={(value) => setForm({ ...form, stock: value })} placeholder="24" value={form.stock} />
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <FormInput label="Data" onChange={(value) => setForm({ ...form, date: value })} placeholder="05/05/2026" value={form.date} />
+          <FormInput label="Quantidade" onChange={(value) => setForm({ ...form, quantity: value })} placeholder="1x" value={form.quantity} />
+        </div>
+        <FormSelect
+          label="Status"
+          onChange={(value) => setForm({ ...form, status: value as OrderStatus })}
+          options={orderStatusOptions}
+          value={form.status}
+        />
+        <ModalActions onClose={onClose} submitLabel="Adicionar pedido" />
+      </form>
+    </ModalFrame>
+  )
+}
+
+function SupportFormModal({
+  initialValues = emptySupportForm,
+  onClose,
+  onSubmit,
+  title,
+}: {
+  initialValues?: SupportFormValues
+  onClose: () => void
+  onSubmit: (values: SupportFormValues) => void
+  title: string
+}) {
+  const [form, setForm] = useState<SupportFormValues>(initialValues)
+
+  return (
+    <ModalFrame title={title} onClose={onClose}>
+      <form
+        className="grid gap-4"
+        onSubmit={(event) => {
+          event.preventDefault()
+          onSubmit(form)
+        }}
+      >
+        <FormInput label="Cliente" onChange={(value) => setForm({ ...form, customer: value })} value={form.customer} />
+        <FormSelect
+          label="Tipo"
+          onChange={(value) => setForm({ ...form, type: value as SupportType })}
+          options={supportTypeOptions}
+          value={form.type}
+        />
+        <div className="grid gap-4 sm:grid-cols-2">
+          <FormInput label="Data de criação" onChange={(value) => setForm({ ...form, createdAt: value })} value={form.createdAt} />
+          <FormInput
+            label="Data de resolução"
+            onChange={(value) => setForm({ ...form, resolvedIn: value })}
+            required={false}
+            value={form.resolvedIn}
+          />
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <FormInput label="Avaliação" onChange={(value) => setForm({ ...form, rating: value })} placeholder="4.5" value={form.rating} />
+          <FormSelect
+            label="Classificação"
+            onChange={(value) => setForm({ ...form, ratingLabel: value as RatingLabel })}
+            options={ratingLabelOptions}
+            value={form.ratingLabel}
+          />
+        </div>
+        <ModalActions onClose={onClose} submitLabel={title === "Editar ticket" ? "Salvar alterações" : "Adicionar ticket"} />
+      </form>
+    </ModalFrame>
+  )
+}
+
+function ModalFrame({
+  children,
+  onClose,
+  title,
+}: {
+  children: React.ReactNode
+  onClose: () => void
+  title: string
+}) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 px-4 py-6">
+      <section className="w-full max-w-xl rounded-lg bg-white p-5 shadow-2xl shadow-slate-950/25">
+        <div className="mb-5 flex items-center justify-between gap-4">
+          <h2 className="text-lg font-bold text-slate-900">{title}</h2>
+          <button
+            aria-label="Fechar"
+            className="grid size-8 place-items-center rounded-full text-slate-500 transition hover:bg-slate-100 hover:text-slate-900"
+            onClick={onClose}
+            type="button"
+          >
+            <X className="size-4" />
+          </button>
+        </div>
+        {children}
+      </section>
     </div>
   )
 }
 
-function DecorativeAvatar() {
+function ModalActions({ onClose, submitLabel }: { onClose: () => void; submitLabel: string }) {
   return (
-    <>
-      <div className="absolute left-[28%] top-[190px] hidden rounded-full bg-white p-1 shadow-lg ring-1 ring-slate-200 xl:block">
-        <Avatar size="md" />
-      </div>
-      <div className="absolute -right-6 top-[170px] hidden rounded-full bg-white p-4 shadow-xl ring-1 ring-slate-200 xl:block">
-        <Avatar size="lg" />
-      </div>
-    </>
+    <div className="mt-2 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+      <button
+        className="h-10 rounded-md border border-slate-200 px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+        onClick={onClose}
+        type="button"
+      >
+        Cancelar
+      </button>
+      <button className="h-10 rounded-md bg-slate-950 px-5 text-sm font-semibold text-white transition hover:bg-slate-800" type="submit">
+        {submitLabel}
+      </button>
+    </div>
   )
 }
 
-function FloatingAssistant() {
+function FormInput({
+  label,
+  onChange,
+  placeholder,
+  required = true,
+  value,
+}: {
+  label: string
+  onChange: (value: string) => void
+  placeholder?: string
+  required?: boolean
+  value: string
+}) {
+  return (
+    <label className="grid gap-1.5 text-sm font-semibold text-slate-700">
+      {label}
+      <input
+        className="h-10 rounded-md border border-slate-200 px-3 text-sm font-medium text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-indigo-300 focus:ring-4 focus:ring-indigo-100"
+        onChange={(event) => onChange(event.target.value)}
+        placeholder={placeholder ?? label}
+        required={required}
+        value={value}
+      />
+    </label>
+  )
+}
+
+function FormSelect({
+  label,
+  onChange,
+  options,
+  value,
+}: {
+  label: string
+  onChange: (value: string) => void
+  options: string[]
+  value: string
+}) {
+  return (
+    <label className="grid gap-1.5 text-sm font-semibold text-slate-700">
+      {label}
+      <select
+        className="h-10 rounded-md border border-slate-200 bg-white px-3 text-sm font-medium text-slate-800 outline-none transition focus:border-indigo-300 focus:ring-4 focus:ring-indigo-100"
+        onChange={(event) => onChange(event.target.value)}
+        value={value}
+      >
+        {options.map((option) => (
+          <option key={option} value={option}>
+            {option}
+          </option>
+        ))}
+      </select>
+    </label>
+  )
+}
+
+function FloatingAssistant({ onClick }: { onClick: () => void }) {
   return (
     <button
       aria-label="Assistente inteligente"
-      className="absolute bottom-7 right-5 grid size-16 place-items-center rounded-full bg-indigo-600 text-white shadow-xl shadow-indigo-500/35 transition hover:-translate-y-0.5 hover:bg-indigo-500 md:right-7"
+      className="fixed bottom-7 right-5 z-30 grid size-16 place-items-center rounded-full bg-indigo-600 text-white shadow-xl shadow-indigo-500/35 transition hover:-translate-y-0.5 hover:bg-indigo-500 md:right-7"
+      onClick={onClick}
       type="button"
     >
       <Sparkles className="size-7" />
     </button>
   )
+}
+
+function AssistantPanel({
+  currentPage,
+  onClose,
+  orders,
+  tickets,
+}: {
+  currentPage: PageKey
+  onClose: () => void
+  orders: OrderRow[]
+  tickets: SupportRow[]
+}) {
+  const quickActions = ["Resumo geral", "Pedidos pendentes", "Tickets críticos", "Reembolsos"]
+  const [question, setQuestion] = useState("")
+  const [messages, setMessages] = useState<ChatMessage[]>(() => [
+    {
+      id: "welcome",
+      role: "assistant" as const,
+      content: getAssistantSummary(currentPage, orders, tickets),
+    },
+  ])
+
+  function sendMessage(message: string) {
+    const trimmedMessage = message.trim()
+    if (!trimmedMessage) return
+
+    setMessages((current) => [
+      ...current,
+      { id: crypto.randomUUID(), role: "user" as const, content: trimmedMessage },
+      {
+        id: crypto.randomUUID(),
+        role: "assistant" as const,
+        content: getAssistantAnswer(trimmedMessage, currentPage, orders, tickets),
+      },
+    ])
+    setQuestion("")
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-end bg-slate-950/25 sm:bg-slate-950/20">
+      <section className="flex h-[86dvh] w-full flex-col rounded-t-lg bg-white shadow-2xl shadow-slate-950/25 sm:mb-5 sm:mr-5 sm:h-[calc(100dvh-2.5rem)] sm:max-w-[420px] sm:rounded-lg">
+        <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
+          <div className="flex items-center gap-3">
+            <span className="grid size-9 place-items-center rounded-full bg-indigo-100 text-indigo-600">
+              <Sparkles className="size-5" />
+            </span>
+            <div>
+              <h2 className="text-sm font-bold text-slate-900">Assistente IA</h2>
+              <p className="text-xs text-slate-500">Conversa sobre o CRM</p>
+            </div>
+          </div>
+          <button
+            aria-label="Fechar assistente"
+            className="grid size-8 place-items-center rounded-full text-slate-500 transition hover:bg-slate-100 hover:text-slate-900"
+            onClick={onClose}
+            type="button"
+          >
+            <X className="size-4" />
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto px-5 py-4">
+          <div className="space-y-3">
+            {messages.map((message) => (
+              <div
+                className={message.role === "user" ? "flex justify-end" : "flex justify-start"}
+                key={message.id}
+              >
+                <p
+                  className={[
+                    "max-w-[86%] rounded-lg px-3 py-2 text-sm leading-6",
+                    message.role === "user" ? "bg-indigo-600 text-white" : "bg-slate-100 text-slate-700",
+                  ].join(" ")}
+                >
+                  {message.content}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="border-t border-slate-200 px-5 py-4">
+          <div className="mb-3 flex gap-2 overflow-x-auto pb-1">
+            {quickActions.map((action) => (
+              <button
+                className="h-8 shrink-0 rounded-full border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-600 transition hover:border-indigo-200 hover:bg-indigo-50 hover:text-indigo-600"
+                key={action}
+                onClick={() => sendMessage(action)}
+                type="button"
+              >
+                {action}
+              </button>
+            ))}
+          </div>
+          <form
+            className="flex gap-2"
+            onSubmit={(event) => {
+              event.preventDefault()
+              sendMessage(question)
+            }}
+          >
+            <input
+              className="h-10 min-w-0 flex-1 rounded-md border border-slate-200 px-3 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-indigo-300 focus:ring-4 focus:ring-indigo-100"
+              onChange={(event) => setQuestion(event.target.value)}
+              placeholder="Pergunte sobre pedidos ou tickets"
+              value={question}
+            />
+            <button
+              className="h-10 rounded-md bg-slate-950 px-4 text-sm font-semibold text-white transition hover:bg-slate-800"
+              type="submit"
+            >
+              Enviar
+            </button>
+          </form>
+        </div>
+      </section>
+    </div>
+  )
+}
+
+function Notice({ message }: { message: string }) {
+  return (
+    <div className="fixed right-6 top-6 z-50 rounded-md bg-slate-950 px-4 py-3 text-sm font-semibold text-white shadow-xl">
+      {message}
+    </div>
+  )
+}
+
+function getDashboardMetrics(orders: OrderRow[], tickets: SupportRow[]): Metric[] {
+  return [
+    {
+      label: "Receita total",
+      value: "R$ 150K",
+      helper: "+20% vs mês anterior",
+      tone: "rose",
+      icon: CircleDollarSign,
+    },
+    {
+      label: "Taxa de satisfação",
+      value: "4.6/5.0",
+      helper: "+12% NPS médio",
+      tone: "emerald",
+      icon: Smile,
+    },
+    {
+      label: "Total de pedidos",
+      value: String(orders.length),
+      helper: "Pedidos cadastrados",
+      tone: "indigo",
+      icon: Tag,
+    },
+    {
+      label: "Tickets resolvidos hoje",
+      value: String(tickets.length),
+      helper: "Tickets",
+      tone: "violet",
+      icon: Heart,
+    },
+  ]
+}
+
+function getOrdersMetrics(orders: OrderRow[]): Metric[] {
+  const pendingOrders = orders.filter((order) => order.status === "Processando").length
+  const deliveredOrders = orders.filter((order) => order.status === "Entregue").length
+
+  return [
+    {
+      label: "Pedidos pendentes",
+      value: String(pendingOrders),
+      helper: "Em processamento",
+      tone: "indigo",
+      icon: Users,
+    },
+    {
+      label: "Total de pedidos",
+      value: String(orders.length),
+      helper: "Pedidos cadastrados",
+      tone: "indigo",
+      icon: Smile,
+    },
+    {
+      label: "Receita total",
+      value: "R$ 150K",
+      helper: "+20% vs mês anterior",
+      tone: "rose",
+      icon: CircleDollarSign,
+    },
+    {
+      label: "Pedidos entregues",
+      value: String(deliveredOrders),
+      helper: "Concluídos",
+      tone: "emerald",
+      icon: Heart,
+    },
+  ]
+}
+
+function getSupportMetrics(tickets: SupportRow[]): Metric[] {
+  const criticalTickets = tickets.filter((ticket) => ticket.ratingLabel === "Crítico").length
+
+  return [
+    {
+      label: "Tickets resolvidos",
+      value: String(tickets.length),
+      helper: "+3% vs mês anterior",
+      tone: "emerald",
+      icon: Users,
+    },
+    {
+      label: "Satisfação média",
+      value: "4.6/5.0",
+      helper: "+12% NPS médio",
+      tone: "emerald",
+      icon: Smile,
+    },
+    {
+      label: "Tickets críticos",
+      value: String(criticalTickets),
+      helper: "Atenção prioritária",
+      tone: "rose",
+      icon: Users,
+    },
+    {
+      label: "Resolvidos hoje",
+      value: String(tickets.length),
+      helper: "Tickets",
+      tone: "violet",
+      icon: Heart,
+    },
+  ]
+}
+
+function getAssistantSummary(currentPage: PageKey, orders: OrderRow[], tickets: SupportRow[]) {
+  const pendingOrders = orders.filter((order) => order.status === "Processando").length
+  const transitOrders = orders.filter((order) => order.status === "Em trânsito").length
+  const criticalTickets = tickets.filter((ticket) => ticket.ratingLabel === "Crítico").length
+
+  if (currentPage === "orders") {
+    return `Você tem ${orders.length} pedidos cadastrados. ${pendingOrders} estão em processamento e ${transitOrders} estão em trânsito.`
+  }
+
+  if (currentPage === "support") {
+    return `Você tem ${tickets.length} tickets cadastrados. ${criticalTickets} precisam de atenção crítica.`
+  }
+
+  return `Resumo geral: ${orders.length} pedidos, ${tickets.length} tickets e ${criticalTickets} ticket(s) críticos no suporte.`
+}
+
+function getAssistantAnswer(question: string, currentPage: PageKey, orders: OrderRow[], tickets: SupportRow[]) {
+  const normalizedQuestion = normalizeText(question)
+
+  if (!normalizedQuestion) {
+    return getAssistantSummary(currentPage, orders, tickets)
+  }
+
+  if (normalizedQuestion.includes("pedido") || normalizedQuestion.includes("venda")) {
+    const deliveredOrders = orders.filter((order) => order.status === "Entregue").length
+    const canceledOrders = orders.filter((order) => order.status === "Cancelado").length
+
+    return `Pedidos: ${orders.length} no total, ${deliveredOrders} entregues e ${canceledOrders} cancelados. Use o filtro de status para isolar cada grupo.`
+  }
+
+  if (normalizedQuestion.includes("ticket") || normalizedQuestion.includes("suporte")) {
+    const refundTickets = tickets.filter((ticket) => ticket.type === "Reembolso").length
+    const criticalTickets = tickets.filter((ticket) => ticket.ratingLabel === "Crítico").length
+
+    return `Suporte: ${tickets.length} tickets no total, ${refundTickets} sobre reembolso e ${criticalTickets} críticos. Tickets críticos merecem prioridade.`
+  }
+
+  if (normalizedQuestion.includes("critico") || normalizedQuestion.includes("problema")) {
+    const criticalTickets = tickets.filter((ticket) => ticket.ratingLabel === "Crítico")
+
+    return criticalTickets.length
+      ? `Encontrei ${criticalTickets.length} ticket(s) críticos. O primeiro é ${criticalTickets[0].ticket}, do cliente ${criticalTickets[0].customer}.`
+      : "Não há tickets críticos agora."
+  }
+
+  return getAssistantSummary(currentPage, orders, tickets)
+}
+
+function normalizeText(value: string) {
+  return value
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+}
+
+function rowIncludes(row: Record<string, string>, search: string) {
+  const normalizedSearch = normalizeText(search.trim())
+  if (!normalizedSearch) return true
+
+  return Object.values(row).some((value) => normalizeText(value).includes(normalizedSearch))
+}
+
+function readStoredRows<Row>(storageKey: string, fallback: Row[]) {
+  try {
+    const storedRows = localStorage.getItem(storageKey)
+    return storedRows ? (JSON.parse(storedRows) as Row[]) : fallback
+  } catch {
+    return fallback
+  }
+}
+
+function createOrderId(orders: OrderRow[]) {
+  return `PROD-${String(orders.length + 1).padStart(4, "0")}`
+}
+
+function createTicketId(tickets: SupportRow[]) {
+  return `TCK-${String(tickets.length + 1).padStart(4, "0")}`
 }
 
 export default App

@@ -121,8 +121,18 @@
   * {
     @apply border-border outline-ring/50;
     }
+  html,
+  body,
+  #root {
+    width: 100%;
+    min-height: 100%;
+    }
   body {
     @apply bg-background text-foreground antialiased;
+    margin: 0;
+    }
+  #root {
+    min-height: 100vh;
     }
   html {
     @apply font-sans;
