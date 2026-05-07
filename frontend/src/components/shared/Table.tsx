@@ -1,5 +1,17 @@
 import { ArrowUpDown } from "lucide-react"
 
+import { cn } from "@/lib/utils"
+import {
+  Table,
+  TableBody,
+  TableCaption,
+  TableCell,
+  TableFooter,
+  TableHead as ShadcnTableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
+
 export function TableHead({
   children,
   className = "",
@@ -10,12 +22,12 @@ export function TableHead({
   sortable?: boolean
 }) {
   return (
-    <th className={`font-semibold ${className}`}>
+    <ShadcnTableHead className={`font-semibold ${className}`}>
       <span className="inline-flex items-center gap-1">
         {children}
         {sortable && <ArrowUpDown className="size-3 text-slate-400" />}
       </span>
-    </th>
+    </ShadcnTableHead>
   )
 }
 
@@ -27,27 +39,68 @@ export function EmptyTableState({ message }: { message: string }) {
   )
 }
 
-export function TablePagination({ filteredCount, totalCount }: { filteredCount: number; totalCount: number }) {
+function getPageNumbers(current: number, total: number): (number | "…")[] {
+  if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1)
+  const pages: (number | "…")[] = [1]
+  if (current > 3) pages.push("…")
+  const start = Math.max(2, current - 1)
+  const end = Math.min(total - 1, current + 1)
+  for (let i = start; i <= end; i++) pages.push(i)
+  if (current < total - 2) pages.push("…")
+  pages.push(total)
+  return pages
+}
+
+export function TablePagination({
+  currentPage,
+  filteredCount,
+  onPageChange,
+  pageCount,
+  totalCount,
+}: {
+  currentPage: number
+  filteredCount: number
+  onPageChange: (page: number) => void
+  pageCount: number
+  totalCount: number
+}) {
+  const pages = getPageNumbers(currentPage, pageCount)
   return (
     <div className="flex min-w-[900px] flex-col gap-3 px-5 py-4 text-sm text-slate-700 sm:flex-row sm:items-center sm:justify-between">
-      <div className="flex items-center gap-5">
-        <button className="font-medium transition hover:text-indigo-600" type="button">
+      <div className="flex items-center gap-2">
+        <button
+          className="font-medium transition hover:text-indigo-600 disabled:cursor-not-allowed disabled:opacity-40"
+          disabled={currentPage <= 1}
+          onClick={() => onPageChange(currentPage - 1)}
+          type="button"
+        >
           Anterior
         </button>
-        <button className="font-medium transition hover:text-indigo-600" type="button">
-          1
-        </button>
-        <button className="grid size-8 place-items-center rounded-md border border-slate-200 bg-white font-medium shadow-sm" type="button">
-          2
-        </button>
-        <button className="font-medium transition hover:text-indigo-600" type="button">
-          3
-        </button>
-        <span>...</span>
-        <button className="font-medium transition hover:text-indigo-600" type="button">
-          10
-        </button>
-        <button className="font-medium transition hover:text-indigo-600" type="button">
+        {pages.map((p, i) =>
+          p === "…" ? (
+            <span key={`ellipsis-${i}`} className="select-none text-slate-400">…</span>
+          ) : (
+            <button
+              key={p}
+              className={cn(
+                "min-w-[2rem] font-medium transition",
+                p === currentPage
+                  ? "grid size-8 place-items-center rounded-md border border-slate-200 bg-white shadow-sm"
+                  : "hover:text-indigo-600",
+              )}
+              onClick={() => onPageChange(p as number)}
+              type="button"
+            >
+              {p}
+            </button>
+          ),
+        )}
+        <button
+          className="font-medium transition hover:text-indigo-600 disabled:cursor-not-allowed disabled:opacity-40"
+          disabled={currentPage >= pageCount || pageCount === 0}
+          onClick={() => onPageChange(currentPage + 1)}
+          type="button"
+        >
           Próximo
         </button>
       </div>
@@ -57,3 +110,5 @@ export function TablePagination({ filteredCount, totalCount }: { filteredCount: 
     </div>
   )
 }
+
+export { Table, TableBody, TableCaption, TableCell, TableFooter, TableHeader, TableRow }
