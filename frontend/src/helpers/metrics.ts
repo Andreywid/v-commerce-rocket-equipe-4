@@ -2,18 +2,33 @@ import type { ClientRow, Metric, OrderRow, SupportRow } from "@/types"
 import { CircleDollarSign, Heart, MapPin, Smile, Tag, Users } from "lucide-react"
 
 export function getDashboardMetrics(orders: OrderRow[], tickets: SupportRow[]): Metric[] {
+  const totalRevenue = orders.reduce((sum, o) => {
+    const num = parseFloat(o.value.replace("R$ ", "").replace(/\./g, "").replace(",", ".")) || 0
+    return sum + num
+  }, 0)
+
+  const revenueStr =
+    totalRevenue >= 1_000_000
+      ? `R$ ${(totalRevenue / 1_000_000).toFixed(1)}M`
+      : `R$ ${Math.round(totalRevenue / 1_000)}K`
+
+  const avgRating =
+    tickets.length > 0
+      ? (tickets.reduce((sum, t) => sum + parseFloat(t.rating), 0) / tickets.length).toFixed(1)
+      : "0.0"
+
   return [
     {
       label: "Receita total",
-      value: "R$ 150K",
+      value: revenueStr,
       helper: "+20% vs mês anterior",
       tone: "rose",
       icon: CircleDollarSign,
     },
     {
       label: "Taxa de satisfação",
-      value: "4.6/5.0",
-      helper: "+12% NPS médio",
+      value: `${avgRating}/5.0`,
+      helper: "NPS médio do período",
       tone: "emerald",
       icon: Smile,
     },
@@ -25,9 +40,9 @@ export function getDashboardMetrics(orders: OrderRow[], tickets: SupportRow[]): 
       icon: Tag,
     },
     {
-      label: "Tickets resolvidos hoje",
+      label: "Tickets resolvidos",
       value: String(tickets.length),
-      helper: "Tickets",
+      helper: "Tickets no período",
       tone: "violet",
       icon: Heart,
     },
