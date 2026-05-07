@@ -1,6 +1,10 @@
 import { useState } from "react"
 import { Plus, Search, SlidersHorizontal, type LucideIcon } from "lucide-react"
 
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+
 export function TableToolbar({
   actionLabel,
   filterLabel,
@@ -30,7 +34,7 @@ export function TableToolbar({
 
   return (
     <div className="border-b border-slate-200 px-5 py-4">
-      <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex items-center gap-3">
           <span className="grid size-7 place-items-center rounded-full bg-indigo-100 text-indigo-600">
             <Icon className="size-4" />
@@ -39,39 +43,38 @@ export function TableToolbar({
         </div>
 
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-          <label className="relative block">
+          <div className="relative">
             <Search className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
-            <input
-              className="h-9 w-full rounded-full border border-slate-200 bg-white pl-10 pr-4 text-sm text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-indigo-300 focus:ring-4 focus:ring-indigo-100 sm:w-[310px]"
-              onChange={(event) => onSearchChange(event.target.value)}
+            <Input
+              className="h-9 rounded-full pl-10 pr-4 sm:w-[310px]"
+              onChange={(e) => onSearchChange(e.target.value)}
               placeholder={placeholder}
               type="search"
               value={searchValue}
             />
-          </label>
+          </div>
 
-          <button
+          <Button
+            variant="outline"
             className={[
-              "flex h-9 items-center justify-center gap-2 rounded-full border px-4 text-sm font-semibold transition",
-              filterValue === "Todos"
-                ? "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
-                : "border-indigo-200 bg-indigo-50 text-indigo-600",
+              "h-9 rounded-full px-4",
+              filterValue !== "Todos" ? "border-indigo-200 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 hover:text-indigo-700" : "",
             ].join(" ")}
-            onClick={() => setIsFilterOpen((current) => !current)}
+            onClick={() => setIsFilterOpen((c) => !c)}
             type="button"
           >
             <SlidersHorizontal className="size-4" />
             Filtro
-          </button>
+          </Button>
 
-          <button
-            className="flex h-9 items-center justify-center gap-2 rounded-full bg-slate-950 px-5 text-sm font-semibold text-white transition hover:bg-slate-800"
+          <Button
+            className="h-9 rounded-full px-5"
             onClick={onAction}
             type="button"
           >
             <Plus className="size-4" />
             {actionLabel}
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -80,26 +83,27 @@ export function TableToolbar({
           <label className="text-xs font-semibold text-slate-500" htmlFor={`${label}-filter`}>
             {filterLabel}
           </label>
-          <select
-            className="h-9 rounded-md border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 outline-none transition focus:border-indigo-300 focus:ring-4 focus:ring-indigo-100"
-            id={`${label}-filter`}
-            onChange={(event) => onFilterChange(event.target.value)}
-            value={filterValue}
-          >
-            {filterOptions.map((option) => (
-              <option key={option} value={option}>
-                {option}
-              </option>
-            ))}
-          </select>
+          <Select value={filterValue} onValueChange={(v) => onFilterChange(v ?? filterValue)}>
+            <SelectTrigger className="h-9" id={`${label}-filter`}>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {filterOptions.map((option) => (
+                <SelectItem key={option} value={option}>
+                  {option}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           {filterValue !== "Todos" && (
-            <button
-              className="h-9 rounded-md px-3 text-sm font-semibold text-indigo-600 transition hover:bg-indigo-100"
+            <Button
+              variant="ghost"
+              className="h-9 px-3 text-indigo-600 hover:bg-indigo-100 hover:text-indigo-700"
               onClick={() => onFilterChange("Todos")}
               type="button"
             >
               Limpar
-            </button>
+            </Button>
           )}
         </div>
       )}

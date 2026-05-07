@@ -11,8 +11,10 @@ import { DataPanel } from "@/components/shared/DataPanel"
 import { MetricGrid } from "@/components/shared/MetricCard"
 import { PageShell } from "@/components/shared/PageShell"
 import { StatusBadge } from "@/components/shared/StatusBadge"
-import { EmptyTableState, TableHead, TablePagination } from "@/components/shared/Table"
+import { EmptyTableState, TableHead, TableBody, TableHeader, TableRow, TableCell, TablePagination } from "@/components/shared/Table"
 import { TableToolbar } from "@/components/shared/TableToolbar"
+
+const PAGE_SIZE = 5
 
 const statusClasses: Record<ClientStatus, string> = {
   Novo: "bg-indigo-50 text-indigo-500 ring-indigo-200",
@@ -28,19 +30,27 @@ function getInitials(name: string): string {
 type FilteredClient = { client: ClientRow; index: number }
 
 function ClientsTable({
+  currentPage,
+  filteredCount,
   onEditClient,
+  onPageChange,
+  pageCount,
   rows,
   totalCount,
 }: {
+  currentPage: number
+  filteredCount: number
   onEditClient: (index: number) => void
+  onPageChange: (page: number) => void
+  pageCount: number
   rows: FilteredClient[]
   totalCount: number
 }) {
   return (
     <div className="overflow-x-auto">
-      <table className="min-w-[900px] table-fixed text-left">
-        <thead>
-          <tr className="h-12 border-b border-slate-200 text-sm text-slate-950">
+      <table className="min-w-[900px] w-full table-fixed text-left">
+        <TableHeader>
+          <TableRow className="h-12 border-slate-200 text-sm text-slate-950 hover:bg-transparent">
             <TableHead sortable className="w-[220px] pl-5">Nome</TableHead>
             <TableHead className="w-[190px]">Localização</TableHead>
             <TableHead className="w-[130px]">Status</TableHead>
@@ -48,27 +58,27 @@ function ClientsTable({
             <TableHead className="w-[130px]">Qt de Pedidos</TableHead>
             <TableHead sortable className="w-[140px]">Total</TableHead>
             <TableHead className="w-[80px]" />
-          </tr>
-        </thead>
-        <tbody>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
           {rows.map(({ client: row, index }) => (
-            <tr key={row.id} className="h-[58px] border-b border-slate-100 text-sm text-slate-700 last:border-b-0">
-              <td className="pl-5">
+            <TableRow key={row.id} className="h-[58px] border-slate-100 text-sm text-slate-700">
+              <TableCell className="pl-5">
                 <div className="flex items-center gap-3">
                   <span className="grid size-8 shrink-0 place-items-center rounded-full bg-indigo-100 text-xs font-bold text-indigo-600">
                     {getInitials(row.name)}
                   </span>
                   <span className="font-semibold text-slate-800">{row.name}</span>
                 </div>
-              </td>
-              <td className="text-slate-400">{row.location}</td>
-              <td>
+              </TableCell>
+              <TableCell className="text-slate-400">{row.location}</TableCell>
+              <TableCell>
                 <StatusBadge className={statusClasses[row.status]}>{row.status}</StatusBadge>
-              </td>
-              <td className="font-medium">{row.lastOrder}</td>
-              <td>{row.orderCount}</td>
-              <td className="font-medium">{row.total}</td>
-              <td>
+              </TableCell>
+              <TableCell className="font-medium">{row.lastOrder}</TableCell>
+              <TableCell>{row.orderCount}</TableCell>
+              <TableCell className="font-medium">{row.total}</TableCell>
+              <TableCell>
                 <button
                   className="text-sm font-semibold text-indigo-600 transition hover:text-indigo-500"
                   onClick={() => onEditClient(index)}
@@ -76,13 +86,19 @@ function ClientsTable({
                 >
                   Editar
                 </button>
-              </td>
-            </tr>
+              </TableCell>
+            </TableRow>
           ))}
-        </tbody>
+        </TableBody>
       </table>
       {rows.length === 0 && <EmptyTableState message="Nenhum cliente encontrado." />}
-      <TablePagination filteredCount={rows.length} totalCount={totalCount} />
+      <TablePagination
+        currentPage={currentPage}
+        filteredCount={filteredCount}
+        onPageChange={onPageChange}
+        pageCount={pageCount}
+        totalCount={totalCount}
+      />
     </div>
   )
 }
@@ -109,11 +125,26 @@ export function ClientsPage() {
   const { clients, addClient, updateClient, showNotice } = useAppContext()
   const [search, setSearch] = useState("")
   const [statusFilter, setStatusFilter] = useState<FilterValue<ClientStatus>>("Todos")
+  const [currentPage, setCurrentPage] = useState(1)
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
   const [editingIndex, setEditingIndex] = useState<number | null>(null)
 
   const filteredClients = useFilteredClients(search, statusFilter)
   const metrics = getClientsMetrics(clients)
+
+  const pageCount = Math.max(1, Math.ceil(filteredClients.length / PAGE_SIZE))
+  const safePage = Math.min(currentPage, pageCount)
+  const paginatedClients = filteredClients.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE)
+
+  function handleSearchChange(value: string) {
+    setSearch(value)
+    setCurrentPage(1)
+  }
+
+  function handleFilterChange(value: string) {
+    setStatusFilter(value as FilterValue<ClientStatus>)
+    setCurrentPage(1)
+  }
 
   function handleAdd(values: ClientFormValues) {
     addClient(values)
@@ -141,14 +172,18 @@ export function ClientsPage() {
           icon={Users}
           label="Lista de clientes"
           onAction={() => setIsAddModalOpen(true)}
-          onFilterChange={(value) => setStatusFilter(value as FilterValue<ClientStatus>)}
-          onSearchChange={setSearch}
+          onFilterChange={handleFilterChange}
+          onSearchChange={handleSearchChange}
           placeholder="Busque por um cliente, localização ou status"
           searchValue={search}
         />
         <ClientsTable
+          currentPage={safePage}
+          filteredCount={filteredClients.length}
           onEditClient={setEditingIndex}
-          rows={filteredClients}
+          onPageChange={setCurrentPage}
+          pageCount={pageCount}
+          rows={paginatedClients}
           totalCount={clients.length}
         />
       </DataPanel>

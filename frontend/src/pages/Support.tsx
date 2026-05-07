@@ -11,8 +11,10 @@ import { MetricGrid } from "@/components/shared/MetricCard"
 import { PageShell } from "@/components/shared/PageShell"
 import { StatusBadge } from "@/components/shared/StatusBadge"
 import { SupportFormModal } from "@/components/shared/SupportFormModal"
-import { EmptyTableState, TableHead, TablePagination } from "@/components/shared/Table"
+import { EmptyTableState, TableHead, TableBody, TableHeader, TableRow, TableCell, TablePagination } from "@/components/shared/Table"
 import { TableToolbar } from "@/components/shared/TableToolbar"
+
+const PAGE_SIZE = 5
 
 const supportTypeClasses: Record<SupportType, string> = {
   Pagamento: "bg-indigo-50 text-indigo-500 ring-indigo-200",
@@ -30,19 +32,27 @@ const ratingClasses: Record<RatingLabel, string> = {
 type FilteredTicket = { ticket: SupportRow; index: number }
 
 function SupportTable({
+  currentPage,
+  filteredCount,
   onEditTicket,
+  onPageChange,
+  pageCount,
   rows,
   totalCount,
 }: {
+  currentPage: number
+  filteredCount: number
   onEditTicket: (index: number) => void
+  onPageChange: (page: number) => void
+  pageCount: number
   rows: FilteredTicket[]
   totalCount: number
 }) {
   return (
     <div className="overflow-x-auto">
-      <table className="min-w-[900px] table-fixed text-left">
-        <thead>
-          <tr className="h-12 border-b border-slate-200 text-sm text-slate-950">
+      <table className="min-w-[900px] w-full table-fixed text-left">
+        <TableHeader>
+          <TableRow className="h-12 border-slate-200 text-sm text-slate-950 hover:bg-transparent">
             <TableHead sortable className="w-[170px] pl-5">Ticket</TableHead>
             <TableHead className="w-[160px]">Cliente</TableHead>
             <TableHead className="w-[130px]">Tipo</TableHead>
@@ -50,27 +60,27 @@ function SupportTable({
             <TableHead className="w-[150px]">Data de resolução</TableHead>
             <TableHead sortable className="w-[140px]">Avaliação</TableHead>
             <TableHead className="w-[90px]" />
-          </tr>
-        </thead>
-        <tbody>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
           {rows.map(({ ticket: row, index }) => (
-            <tr
+            <TableRow
               key={`${row.ticket}-${index}`}
-              className="h-[58px] border-b border-slate-100 text-sm text-slate-700 last:border-b-0"
+              className="h-[58px] border-slate-100 text-sm text-slate-700"
             >
-              <td className="pl-5 font-semibold text-slate-800">{row.ticket}</td>
-              <td>{row.customer}</td>
-              <td>
+              <TableCell className="pl-5 font-semibold text-slate-800">{row.ticket}</TableCell>
+              <TableCell>{row.customer}</TableCell>
+              <TableCell>
                 <StatusBadge className={supportTypeClasses[row.type]}>{row.type}</StatusBadge>
-              </td>
-              <td className="font-medium">{row.createdAt}</td>
-              <td>{row.resolvedIn}</td>
-              <td>
+              </TableCell>
+              <TableCell className="font-medium">{row.createdAt}</TableCell>
+              <TableCell>{row.resolvedIn}</TableCell>
+              <TableCell>
                 <StatusBadge className={ratingClasses[row.ratingLabel]}>
                   {row.rating} {row.ratingLabel}
                 </StatusBadge>
-              </td>
-              <td>
+              </TableCell>
+              <TableCell>
                 <button
                   className="text-sm font-semibold text-indigo-600 transition hover:text-indigo-500"
                   onClick={() => onEditTicket(index)}
@@ -78,13 +88,19 @@ function SupportTable({
                 >
                   Editar
                 </button>
-              </td>
-            </tr>
+              </TableCell>
+            </TableRow>
           ))}
-        </tbody>
+        </TableBody>
       </table>
       {rows.length === 0 && <EmptyTableState message="Nenhum ticket encontrado." />}
-      <TablePagination filteredCount={rows.length} totalCount={totalCount} />
+      <TablePagination
+        currentPage={currentPage}
+        filteredCount={filteredCount}
+        onPageChange={onPageChange}
+        pageCount={pageCount}
+        totalCount={totalCount}
+      />
     </div>
   )
 }
@@ -108,11 +124,26 @@ export function SupportPage() {
   const { tickets, addTicket, updateTicket, showNotice } = useAppContext()
   const [ticketSearch, setTicketSearch] = useState("")
   const [ticketTypeFilter, setTicketTypeFilter] = useState<FilterValue<SupportType>>("Todos")
+  const [currentPage, setCurrentPage] = useState(1)
   const [isTicketModalOpen, setIsTicketModalOpen] = useState(false)
   const [editingTicketIndex, setEditingTicketIndex] = useState<number | null>(null)
 
   const filteredTickets = useFilteredTickets(ticketSearch, ticketTypeFilter)
   const metrics = getSupportMetrics(tickets)
+
+  const pageCount = Math.max(1, Math.ceil(filteredTickets.length / PAGE_SIZE))
+  const safePage = Math.min(currentPage, pageCount)
+  const paginatedTickets = filteredTickets.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE)
+
+  function handleSearchChange(value: string) {
+    setTicketSearch(value)
+    setCurrentPage(1)
+  }
+
+  function handleFilterChange(value: string) {
+    setTicketTypeFilter(value as FilterValue<SupportType>)
+    setCurrentPage(1)
+  }
 
   function handleAddTicket(values: SupportFormValues) {
     addTicket(values)
@@ -140,14 +171,18 @@ export function SupportPage() {
           icon={ClipboardList}
           label="Tickets de suporte"
           onAction={() => setIsTicketModalOpen(true)}
-          onFilterChange={(value) => setTicketTypeFilter(value as FilterValue<SupportType>)}
-          onSearchChange={setTicketSearch}
+          onFilterChange={handleFilterChange}
+          onSearchChange={handleSearchChange}
           placeholder="Busque por ticket, cliente, tipo ou avaliação"
           searchValue={ticketSearch}
         />
         <SupportTable
+          currentPage={safePage}
+          filteredCount={filteredTickets.length}
           onEditTicket={setEditingTicketIndex}
-          rows={filteredTickets}
+          onPageChange={setCurrentPage}
+          pageCount={pageCount}
+          rows={paginatedTickets}
           totalCount={tickets.length}
         />
       </DataPanel>
