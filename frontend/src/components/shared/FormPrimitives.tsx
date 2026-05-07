@@ -1,4 +1,8 @@
-import { X } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 export function ModalFrame({
   children,
@@ -10,38 +14,24 @@ export function ModalFrame({
   title: string
 }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 px-4 py-6">
-      <section className="w-full max-w-xl rounded-lg bg-white p-5 shadow-2xl shadow-slate-950/25">
-        <div className="mb-5 flex items-center justify-between gap-4">
-          <h2 className="text-lg font-bold text-slate-900">{title}</h2>
-          <button
-            aria-label="Fechar"
-            className="grid size-8 place-items-center rounded-full text-slate-500 transition hover:bg-slate-100 hover:text-slate-900"
-            onClick={onClose}
-            type="button"
-          >
-            <X className="size-4" />
-          </button>
-        </div>
+    <Dialog open onOpenChange={(open) => { if (!open) onClose() }}>
+      <DialogContent className="sm:max-w-xl">
+        <DialogHeader>
+          <DialogTitle>{title}</DialogTitle>
+        </DialogHeader>
         {children}
-      </section>
-    </div>
+      </DialogContent>
+    </Dialog>
   )
 }
 
 export function ModalActions({ onClose, submitLabel }: { onClose: () => void; submitLabel: string }) {
   return (
     <div className="mt-2 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-      <button
-        className="h-10 rounded-md border border-slate-200 px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
-        onClick={onClose}
-        type="button"
-      >
+      <Button variant="outline" onClick={onClose} type="button">
         Cancelar
-      </button>
-      <button className="h-10 rounded-md bg-slate-950 px-5 text-sm font-semibold text-white transition hover:bg-slate-800" type="submit">
-        {submitLabel}
-      </button>
+      </Button>
+      <Button type="submit">{submitLabel}</Button>
     </div>
   )
 }
@@ -59,17 +49,20 @@ export function FormInput({
   required?: boolean
   value: string
 }) {
+  const id = label.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "")
   return (
-    <label className="grid gap-1.5 text-sm font-semibold text-slate-700">
-      {label}
-      <input
-        className="h-10 rounded-md border border-slate-200 px-3 text-sm font-medium text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-indigo-300 focus:ring-4 focus:ring-indigo-100"
-        onChange={(event) => onChange(event.target.value)}
+    <div className="grid gap-1.5">
+      <Label htmlFor={id} className="text-sm font-semibold text-slate-700">
+        {label}
+      </Label>
+      <Input
+        id={id}
+        onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder ?? label}
         required={required}
         value={value}
       />
-    </label>
+    </div>
   )
 }
 
@@ -85,19 +78,20 @@ export function FormSelect({
   value: string
 }) {
   return (
-    <label className="grid gap-1.5 text-sm font-semibold text-slate-700">
-      {label}
-      <select
-        className="h-10 rounded-md border border-slate-200 bg-white px-3 text-sm font-medium text-slate-800 outline-none transition focus:border-indigo-300 focus:ring-4 focus:ring-indigo-100"
-        onChange={(event) => onChange(event.target.value)}
-        value={value}
-      >
-        {options.map((option) => (
-          <option key={option} value={option}>
-            {option}
-          </option>
-        ))}
-      </select>
-    </label>
+    <div className="grid gap-1.5">
+      <Label className="text-sm font-semibold text-slate-700">{label}</Label>
+      <Select value={value} onValueChange={(v) => onChange(v ?? "")}>
+        <SelectTrigger className="w-full">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {options.map((option) => (
+            <SelectItem key={option} value={option}>
+              {option}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
   )
 }

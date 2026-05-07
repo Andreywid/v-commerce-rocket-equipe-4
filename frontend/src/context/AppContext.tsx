@@ -1,5 +1,6 @@
 /* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useEffect, useState } from "react"
+import { toast } from "sonner"
 
 import type { ClientFormValues, ClientRow, OrderFormValues, OrderRow, ProductFormValues, ProductRow, SupportFormValues, SupportRow } from "@/types"
 import { initialClients, clientsStorageKey } from "@/mocks/clients"
@@ -20,7 +21,6 @@ type AppContextValue = {
   clients: ClientRow[]
   addClient: (values: ClientFormValues) => void
   updateClient: (index: number, values: ClientFormValues) => void
-  notice: string
   showNotice: (message: string) => void
 }
 
@@ -31,8 +31,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [tickets, setTickets] = useState<SupportRow[]>(() => readStoredRows(supportStorageKey, initialSupportTickets))
   const [products, setProducts] = useState<ProductRow[]>(() => readStoredRows(productsStorageKey, initialProducts))
   const [clients, setClients] = useState<ClientRow[]>(() => readStoredRows(clientsStorageKey, initialClients))
-  const [notice, setNotice] = useState("")
-
   useEffect(() => {
     localStorage.setItem(ordersStorageKey, JSON.stringify(orders))
   }, [orders])
@@ -50,8 +48,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, [clients])
 
   function showNotice(message: string) {
-    setNotice(message)
-    window.setTimeout(() => setNotice(""), 1800)
+    toast(message)
   }
 
   function addOrder(values: OrderFormValues) {
@@ -89,7 +86,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <AppContext.Provider value={{ orders, addOrder, tickets, addTicket, updateTicket, products, addProduct, updateProduct, clients, addClient, updateClient, notice, showNotice }}>
+    <AppContext.Provider value={{ orders, addOrder, tickets, addTicket, updateTicket, products, addProduct, updateProduct, clients, addClient, updateClient, showNotice }}>
       {children}
     </AppContext.Provider>
   )

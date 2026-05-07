@@ -1,4 +1,5 @@
 import type { Metric, MetricTone } from "@/types"
+import { Card } from "@/components/ui/card"
 
 const toneClasses: Record<MetricTone, string> = {
   rose: "text-rose-500",
@@ -11,7 +12,7 @@ export function MetricCard({ metric }: { metric: Metric }) {
   const Icon = metric.icon
 
   return (
-    <article className="flex min-h-[78px] items-center justify-between rounded-lg border border-slate-200 bg-white px-5 shadow-sm">
+    <Card className="min-h-[78px] flex-row items-center justify-between gap-0 px-5 py-0">
       <div>
         <p className="text-xs font-semibold text-indigo-600">{metric.label}</p>
         <p className="mt-1 text-lg font-bold leading-tight text-slate-900">{metric.value}</p>
@@ -21,13 +22,13 @@ export function MetricCard({ metric }: { metric: Metric }) {
       <div className="grid size-8 place-items-center rounded-full bg-indigo-100 text-indigo-600">
         <Icon className="size-4" />
       </div>
-    </article>
+    </Card>
   )
 }
 
 export function MetricGrid({ metrics }: { metrics: Metric[] }) {
   return (
-    <div className="grid gap-4 lg:grid-cols-4">
+    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
       {metrics.map((metric) => (
         <MetricCard key={metric.label} metric={metric} />
       ))}
