@@ -19,10 +19,7 @@ export function Header({
         >
           <Menu className="size-5" />
         </button>
-        <div className="flex items-end gap-1.5">
-          <span className="text-base font-bold text-indigo-600">V-Commerce</span>
-          <span className="pb-0.5 text-[9px] font-medium text-slate-500">CRM 360</span>
-        </div>
+        <img src="/V-Horizontal.svg" alt="V-Commerce" className="h-4 w-auto" />
       </div>
       <div className="hidden md:block" />
 

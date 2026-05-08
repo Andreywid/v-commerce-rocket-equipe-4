@@ -17,11 +17,14 @@ const navItems: NavItem[] = [
   { to: "/suporte", label: "Suporte", icon: HeartHandshake },
 ]
 
-function SidebarLogo() {
+function SidebarLogo({ variant = "desktop" }: { variant?: "desktop" | "mobile" }) {
   return (
-    <div className="flex items-center gap-3 px-8 py-8">
-      <span className="text-xl font-bold leading-tight text-indigo-600">V-Commerce</span>
-      <span className="text-[11px] font-semibold text-slate-500">CRM 360</span>
+    <div className="flex items-center px-8 py-8">
+      <img
+        src={variant === "desktop" ? "/V-Horizontal.svg" : "/V.svg"}
+        alt="V-Commerce"
+        className={variant === "desktop" ? "h-8 w-auto" : "h-10 w-auto"}
+      />
     </div>
   )
 }
@@ -84,7 +87,7 @@ export function Sidebar({
       <Sheet open={isOpen} onOpenChange={(open) => { if (!open) onClose() }}>
         <SheetContent side="left" showCloseButton={false} className="max-w-[270px] gap-0 p-0">
           <SheetTitle className="sr-only">Menu de navegação</SheetTitle>
-          <SidebarLogo />
+          <SidebarLogo variant="mobile" />
           <SidebarNav onItemClick={onClose} />
           <SidebarLogout />
         </SheetContent>
