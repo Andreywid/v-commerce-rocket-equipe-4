@@ -1,18 +1,24 @@
 import { useMemo, useState } from "react"
-import { ClipboardList } from "lucide-react"
+import { ClipboardList, Eye, Pencil } from "lucide-react"
 
-import type { FilterValue, RatingLabel, SupportFormValues, SupportRow, SupportType } from "@/types"
+import type { FilterValue, SupportFormValues, SupportRow, SupportType } from "@/types"
 import { supportTypeOptions } from "@/mocks/tickets"
 import { useAppContext } from "@/context/AppContext"
 import { getSupportMetrics } from "@/helpers/metrics"
 import { rowIncludes } from "@/helpers/storage"
+import { Button } from "@/components/ui/button"
 import { DataPanel } from "@/components/shared/DataPanel"
-import { MetricGrid } from "@/components/shared/MetricCard"
+import { DataCard, DataGrid } from "@/components/shared/MetricCards" 
 import { PageShell } from "@/components/shared/PageShell"
 import { StatusBadge } from "@/components/shared/StatusBadge"
 import { SupportFormModal } from "@/components/shared/SupportFormModal"
-import { EmptyTableState, TableHead, TableBody, TableHeader, TableRow, TableCell, TablePagination } from "@/components/shared/Table"
+import { TableRow, TableCell } from "@/components/shared/Table"
 import { TableToolbar } from "@/components/shared/TableToolbar"
+import { DataTable, type Columns } from "@/components/shared/DataTable"
+import { useTableSort } from "@/hooks/useTableSort"
+import { useTableFilters } from "@/hooks/useTableFilter"
+import { RatingBadge } from "@/components/shared/RatingBadge"
+import { DeadlineBadge } from "@/components/shared/DeadlineBadge"
 
 const PAGE_SIZE = 5
 
@@ -22,168 +28,155 @@ const supportTypeClasses: Record<SupportType, string> = {
   Reembolso: "bg-rose-50 text-rose-500 ring-rose-200",
 }
 
-const ratingClasses: Record<RatingLabel, string> = {
-  Ótimo: "bg-amber-50 text-amber-500 ring-amber-200",
-  Bom: "bg-indigo-50 text-indigo-500 ring-indigo-200",
-  Excelente: "bg-emerald-50 text-emerald-500 ring-emerald-200",
-  Crítico: "bg-rose-50 text-rose-500 ring-rose-200",
-}
-
-type FilteredTicket = { ticket: SupportRow; index: number }
-
-function SupportTable({
-  currentPage,
-  filteredCount,
-  onEditTicket,
-  onPageChange,
-  pageCount,
-  rows,
-  totalCount,
-}: {
-  currentPage: number
-  filteredCount: number
-  onEditTicket: (index: number) => void
-  onPageChange: (page: number) => void
-  pageCount: number
-  rows: FilteredTicket[]
-  totalCount: number
-}) {
-  return (
-    <div className="overflow-x-auto">
-      <table className="min-w-[900px] w-full table-fixed text-left">
-        <TableHeader>
-          <TableRow className="h-12 border-slate-200 text-sm text-slate-950 hover:bg-transparent">
-            <TableHead sortable className="w-[170px] pl-5">Ticket</TableHead>
-            <TableHead className="w-[160px]">Cliente</TableHead>
-            <TableHead className="w-[130px]">Tipo</TableHead>
-            <TableHead sortable className="w-[170px]">Data de criação</TableHead>
-            <TableHead className="w-[150px]">Data de resolução</TableHead>
-            <TableHead sortable className="w-[140px]">Avaliação</TableHead>
-            <TableHead className="w-[90px]" />
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {rows.map(({ ticket: row, index }) => (
-            <TableRow
-              key={`${row.ticket}-${index}`}
-              className="h-[58px] border-slate-100 text-sm text-slate-700"
-            >
-              <TableCell className="pl-5 font-semibold text-slate-800">{row.ticket}</TableCell>
-              <TableCell>{row.customer}</TableCell>
-              <TableCell>
-                <StatusBadge className={supportTypeClasses[row.type]}>{row.type}</StatusBadge>
-              </TableCell>
-              <TableCell className="font-medium">{row.createdAt}</TableCell>
-              <TableCell>{row.resolvedIn}</TableCell>
-              <TableCell>
-                <StatusBadge className={ratingClasses[row.ratingLabel]}>
-                  {row.rating} {row.ratingLabel}
-                </StatusBadge>
-              </TableCell>
-              <TableCell>
-                <button
-                  className="text-sm font-semibold text-indigo-600 transition hover:text-indigo-500"
-                  onClick={() => onEditTicket(index)}
-                  type="button"
-                >
-                  Editar
-                </button>
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </table>
-      {rows.length === 0 && <EmptyTableState message="Nenhum ticket encontrado." />}
-      <TablePagination
-        currentPage={currentPage}
-        filteredCount={filteredCount}
-        onPageChange={onPageChange}
-        pageCount={pageCount}
-        totalCount={totalCount}
-      />
-    </div>
-  )
-}
-
 function useFilteredTickets(search: string, typeFilter: FilterValue<SupportType>) {
   const { tickets } = useAppContext()
   return useMemo(
     () =>
-      tickets
-        .map((ticket, index) => ({ ticket, index }))
-        .filter(({ ticket }) => {
-          const matchesSearch = rowIncludes(ticket, search)
-          const matchesType = typeFilter === "Todos" || ticket.type === typeFilter
-          return matchesSearch && matchesType
-        }),
+      tickets.filter((ticket) => {
+        const formattedDate = new Intl.DateTimeFormat("pt-BR").format(new Date(ticket.createdAt))
+        
+        const matchesSearch = rowIncludes(
+          { 
+            ticket: ticket.ticket, 
+            customer: ticket.customer, 
+            type: ticket.type, 
+            date: formattedDate,
+            rating: ticket.rating.toString(),
+            timeline: ticket.timeline 
+          },
+          search,
+        )
+        const matchesType = typeFilter === "Todos" || ticket.type === typeFilter
+        return matchesSearch && matchesType
+      }),
     [tickets, search, typeFilter],
   )
 }
 
 export function SupportPage() {
   const { tickets, addTicket, updateTicket, showNotice } = useAppContext()
-  const [ticketSearch, setTicketSearch] = useState("")
-  const [ticketTypeFilter, setTicketTypeFilter] = useState<FilterValue<SupportType>>("Todos")
-  const [currentPage, setCurrentPage] = useState(1)
   const [isTicketModalOpen, setIsTicketModalOpen] = useState(false)
   const [editingTicketIndex, setEditingTicketIndex] = useState<number | null>(null)
 
-  const filteredTickets = useFilteredTickets(ticketSearch, ticketTypeFilter)
+  const {
+    search,
+    filterValue,
+    currentPage,
+    setCurrentPage,
+    handleSearchChange,
+    handleFilterChange,
+  } = useTableFilters<SupportType>()
+
+  const filteredTickets = useFilteredTickets(search, filterValue)
   const metrics = getSupportMetrics(tickets)
 
-  const pageCount = Math.max(1, Math.ceil(filteredTickets.length / PAGE_SIZE))
+  const { sortedData, sortConfig, handleSort } = useTableSort(
+    filteredTickets,
+    (item, key) => item[key as keyof SupportRow]
+  )
+
+  const pageCount = Math.max(1, Math.ceil(sortedData.length / PAGE_SIZE))
   const safePage = Math.min(currentPage, pageCount)
-  const paginatedTickets = filteredTickets.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE)
+  const paginatedTickets = sortedData.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE)
 
-  function handleSearchChange(value: string) {
-    setTicketSearch(value)
-    setCurrentPage(1)
-  }
-
-  function handleFilterChange(value: string) {
-    setTicketTypeFilter(value as FilterValue<SupportType>)
-    setCurrentPage(1)
-  }
+  const columns: Columns<SupportRow>[] = [
+    { label: "Prazo", className: "w-[140px] pl-10", sortable: true, accessorKey: "timeline" },
+    { label: "Ticket", className: "w-[150px]", sortable: true, accessorKey: "ticket" },
+    { label: "Cliente", className: "w-[200px]", sortable: true, accessorKey: "customer" },
+    { label: "Tipo", className: "w-[130px] text-center pr-25" },
+    { label: "Data de criação", className: "w-[180px] text-center", sortable: true, accessorKey: "createdAt" },
+    { label: "Avaliação", className: "w-[160px] text-center pr-10", sortable: true, accessorKey: "rating" },
+    { label: "Ações", className: "w-[90px] pl-5" },
+  ]
 
   function handleAddTicket(values: SupportFormValues) {
     addTicket(values)
     setIsTicketModalOpen(false)
-    showNotice("Ticket adicionado")
+    showNotice("Ticket adicionado com sucesso!")
   }
 
   function handleUpdateTicket(values: SupportFormValues) {
     if (editingTicketIndex === null) return
     updateTicket(editingTicketIndex, values)
     setEditingTicketIndex(null)
-    showNotice("Ticket atualizado")
+    showNotice("Ticket atualizado com sucesso!")
   }
 
   return (
     <PageShell title="Suporte">
-      <MetricGrid metrics={metrics} />
-
+      <DataGrid>
+        {metrics.map((m) => (
+          <DataCard
+            key={m.label}
+            label={m.label}
+            value={m.value}
+            helper={m.helper}
+            tone={m.tone}
+            icon={m.icon}
+          />
+        ))}
+      </DataGrid>
       <DataPanel>
         <TableToolbar
           actionLabel="Adicionar ticket"
           filterLabel="Tipo"
           filterOptions={["Todos", ...supportTypeOptions]}
-          filterValue={ticketTypeFilter}
+          filterValue={filterValue}
           icon={ClipboardList}
           label="Tickets de suporte"
           onAction={() => setIsTicketModalOpen(true)}
           onFilterChange={handleFilterChange}
           onSearchChange={handleSearchChange}
           placeholder="Busque por ticket, cliente, tipo ou avaliação"
-          searchValue={ticketSearch}
+          searchValue={search}
         />
-        <SupportTable
+        <DataTable
+          columns={columns}
+          data={paginatedTickets}
+          emptyMessage="Nenhum ticket encontrado."
           currentPage={safePage}
-          filteredCount={filteredTickets.length}
-          onEditTicket={setEditingTicketIndex}
           onPageChange={setCurrentPage}
+          filteredCount={filteredTickets.length}
           pageCount={pageCount}
-          rows={paginatedTickets}
           totalCount={tickets.length}
+          onSort={handleSort}
+          sortConfig={sortConfig}
+          renderRow={(row) => (
+            <TableRow key={row.ticket} className="h-[58px] border-slate-100 text-sm text-slate-700">
+              <TableCell className="pl-10">
+                <DeadlineBadge status={row.timeline} />
+              </TableCell>
+              <TableCell className="font-semibold text-slate-800">{row.ticket}</TableCell>
+              <TableCell>{row.customer}</TableCell>
+              <TableCell className="text-center pr-25">
+                <StatusBadge className={supportTypeClasses[row.type]}>{row.type}</StatusBadge>
+              </TableCell>
+              <TableCell className="text-center font-medium">
+                {new Intl.DateTimeFormat("pt-BR").format(new Date(row.createdAt))}
+              </TableCell>
+              <TableCell className="text-center pr-10">
+                <RatingBadge rating={row.rating} />
+              </TableCell>
+              <TableCell>
+                <div className="flex items-center gap-1">
+                  <Button 
+                    variant="ghost" 
+                    size="icon-sm" 
+                    onClick={() => {}}
+                  >
+                    <Eye className="size-4" />
+                  </Button>
+                  <Button 
+                    variant="ghost" 
+                    size="icon-sm" 
+                    onClick={() => setEditingTicketIndex(tickets.findIndex(t => t.ticket === row.ticket))}
+                  >
+                    <Pencil className="size-4" />
+                  </Button>
+                </div>
+              </TableCell>
+            </TableRow>
+          )}
         />
       </DataPanel>
 
