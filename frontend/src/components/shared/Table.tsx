@@ -1,4 +1,4 @@
-import { ArrowUpDown } from "lucide-react"
+import { ArrowUpDown, ArrowDown, ArrowUp } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 import {
@@ -16,17 +16,49 @@ export function TableHead({
   children,
   className = "",
   sortable = false,
+  onClick,
+  isActive = false,
+  direction = null,
 }: {
   children?: React.ReactNode
   className?: string
   sortable?: boolean
+  onClick?: () => void
+  isActive?: boolean
+  direction?: "asc" | "desc" | null
 }) {
+  const SortIcon = direction === "asc" ? ArrowUp : direction === "desc" ? ArrowDown : ArrowUpDown
+
+  const alignmentClass = className.includes("text-center") 
+    ? "justify-center" 
+    : className.includes("text-right") 
+    ? "justify-end" 
+    : "justify-start"
+
   return (
     <ShadcnTableHead className={`font-semibold ${className}`}>
-      <span className="inline-flex items-center gap-1">
-        {children}
-        {sortable && <ArrowUpDown className="size-3 text-slate-400" />}
-      </span>
+      {sortable ? (
+        <button
+          type="button"
+          onClick={onClick}
+          className={cn(
+            "inline-flex w-full items-center gap-1 outline-none transition-colors hover:text-indigo-600 focus:text-indigo-600",
+            alignmentClass
+          )}
+        >
+          {children}
+          <SortIcon
+            className={cn(
+              "size-3 transition-colors shrink-0",
+              isActive ? "text-indigo-600" : "text-slate-400"
+            )}
+          />
+        </button>
+      ) : (
+        <span className={cn("inline-flex items-center gap-1 w-full", alignmentClass)}>
+          {children}
+        </span>
+      )}
     </ShadcnTableHead>
   )
 }
@@ -66,7 +98,7 @@ export function TablePagination({
 }) {
   const pages = getPageNumbers(currentPage, pageCount)
   return (
-    <div className="flex min-w-[900px] flex-col gap-3 px-5 py-4 text-sm text-slate-700 sm:flex-row sm:items-center sm:justify-between">
+    <div className="flex min-w-[900px] flex-col gap-3 px-10 py-4 text-sm text-slate-700 sm:flex-row sm:items-center sm:justify-between">
       <div className="flex items-center gap-2">
         <button
           className="font-medium transition hover:text-indigo-600 disabled:cursor-not-allowed disabled:opacity-40"

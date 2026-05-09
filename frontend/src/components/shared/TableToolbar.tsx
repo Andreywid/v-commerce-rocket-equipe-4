@@ -33,20 +33,20 @@ export function TableToolbar({
   const [isFilterOpen, setIsFilterOpen] = useState(false)
 
   return (
-    <div className="border-b border-slate-200 px-5 py-4">
+    <div className="border-b border-slate-200 px-10 py-4">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex items-center gap-3">
           <span className="grid size-7 place-items-center rounded-full bg-indigo-100 text-indigo-600">
             <Icon className="size-4" />
           </span>
-          <p className="text-sm font-semibold text-indigo-600">{label}</p>
+          <p className="text-md font-semibold text-indigo-600 cursor-default">{label}</p>
         </div>
 
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
           <div className="relative">
-            <Search className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
+            <Search className="pointer-default-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
             <Input
-              className="h-9 rounded-full pl-10 pr-4 sm:w-[310px]"
+              className="h-9 rounded-full pl-10 truncate sm:w-[365px]"
               onChange={(e) => onSearchChange(e.target.value)}
               placeholder={placeholder}
               type="search"
@@ -57,18 +57,18 @@ export function TableToolbar({
           <Button
             variant="outline"
             className={[
-              "h-9 rounded-full px-4",
+              "h-9 rounded-full px-5 gap-2",
               filterValue !== "Todos" ? "border-indigo-200 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 hover:text-indigo-700" : "",
             ].join(" ")}
             onClick={() => setIsFilterOpen((c) => !c)}
             type="button"
           >
             <SlidersHorizontal className="size-4" />
-            Filtro
+            Filtros
           </Button>
 
           <Button
-            className="h-9 rounded-full px-5"
+            className="h-9 rounded-full pr-6 pl-5 sm:w-[185px]"
             onClick={onAction}
             type="button"
           >
