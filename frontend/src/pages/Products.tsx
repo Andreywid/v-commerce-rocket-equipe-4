@@ -1,8 +1,7 @@
 import { useMemo, useState } from "react"
 import { Eye, Package, Pencil } from "lucide-react"
 
-import type { FilterValue, ProductCategory, ProductFormValues, ProductRow, RatingLabel } from "@/types"
-import { productCategoryOptions } from "@/mocks/products"
+import type { ProductFormValues, ProductRow, RatingLabel } from "@/types"
 import { useAppContext } from "@/context/AppContext"
 import { rowIncludes } from "@/helpers/storage"
 import { Button } from "@/components/ui/button"
@@ -10,6 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { DataPanel } from "@/components/shared/DataPanel"
 import { PageShell } from "@/components/shared/PageShell"
 import { ProductFormModal } from "@/components/shared/ProductFormModal"
+import { ProductFilterModal, type ProductFilterState, DEFAULT_PRODUCT_FILTER } from "@/components/shared/ProductFilterModal"
 import { StatusBadge } from "@/components/shared/StatusBadge"
 import { EmptyTableState, TableHead, TableBody, TableHeader, TableRow, TableCell, TablePagination } from "@/components/shared/Table"
 import { TableToolbar } from "@/components/shared/TableToolbar"
@@ -220,34 +220,52 @@ function ProductsTable({
   )
 }
 
-function useFilteredProducts(search: string, categoryFilter: FilterValue<ProductCategory>) {
+function parsePrice(price: string): number {
+  return parseFloat(price.replace(/[R$\s.]/g, "").replace(",", ".")) || 0
+}
+
+function isFilterActive(f: ProductFilterState): boolean {
+  return f.search !== "" || f.categories.length > 0 || f.ratings.length > 0 || f.minPrice > 0 || f.maxPrice < 100_000
+}
+
+function useFilteredProducts(toolbarSearch: string, filter: ProductFilterState) {
   const { products } = useAppContext()
   return useMemo(
     () =>
       products
         .map((product, index) => ({ product, index }))
         .filter(({ product }) => {
-          const matchesSearch = rowIncludes(
-            { name: product.name, id: product.id, price: product.price, rating: product.rating, ratingLabel: product.ratingLabel, categories: product.categories.join(" ") },
-            search,
-          )
-          const matchesCategory = categoryFilter === "Todos" || product.categories.includes(categoryFilter)
-          return matchesSearch && matchesCategory
+          const searchTarget = {
+            name: product.name,
+            id: product.id,
+            price: product.price,
+            rating: product.rating,
+            ratingLabel: product.ratingLabel,
+            categories: product.categories.join(" "),
+          }
+          if (toolbarSearch && !rowIncludes(searchTarget, toolbarSearch)) return false
+          if (filter.search && !rowIncludes(searchTarget, filter.search)) return false
+          if (filter.categories.length > 0 && !product.categories.some((c) => filter.categories.includes(c))) return false
+          if (filter.ratings.length > 0 && !(filter.ratings as RatingLabel[]).includes(product.ratingLabel)) return false
+          const price = parsePrice(product.price)
+          if (price < filter.minPrice || price > filter.maxPrice) return false
+          return true
         }),
-    [products, search, categoryFilter],
+    [products, toolbarSearch, filter],
   )
 }
 
 export function ProductsPage() {
   const { products, addProduct, updateProduct, showNotice } = useAppContext()
   const [search, setSearch] = useState("")
-  const [categoryFilter, setCategoryFilter] = useState<FilterValue<ProductCategory>>("Todos")
+  const [advancedFilter, setAdvancedFilter] = useState<ProductFilterState>(DEFAULT_PRODUCT_FILTER)
+  const [filterOpen, setFilterOpen] = useState(false)
   const [currentPage, setCurrentPage] = useState(1)
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
   const [editingIndex, setEditingIndex] = useState<number | null>(null)
   const [viewingIndex, setViewingIndex] = useState<number | null>(null)
 
-  const filteredProducts = useFilteredProducts(search, categoryFilter)
+  const filteredProducts = useFilteredProducts(search, advancedFilter)
   const highlights = useProductHighlights(products)
 
   const pageCount = Math.max(1, Math.ceil(filteredProducts.length / PAGE_SIZE))
@@ -259,9 +277,10 @@ export function ProductsPage() {
     setCurrentPage(1)
   }
 
-  function handleFilterChange(value: string) {
-    setCategoryFilter(value as FilterValue<ProductCategory>)
+  function handleSaveFilter(filters: ProductFilterState) {
+    setAdvancedFilter(filters)
     setCurrentPage(1)
+    if (isFilterActive(filters)) showNotice("Filtros aplicados")
   }
 
   function handleAdd(values: ProductFormValues) {
@@ -278,6 +297,13 @@ export function ProductsPage() {
   }
 
   return (
+    <>
+      <ProductFilterModal
+        open={filterOpen}
+        onClose={() => setFilterOpen(false)}
+        onSave={handleSaveFilter}
+        initial={advancedFilter}
+      />
     <PageShell title="Produtos">
       {highlights && (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -311,13 +337,11 @@ export function ProductsPage() {
       <DataPanel>
         <TableToolbar
           actionLabel="Adicionar produto"
-          filterLabel="Categoria"
-          filterOptions={["Todos", ...productCategoryOptions]}
-          filterValue={categoryFilter}
+          advancedFilterActive={isFilterActive(advancedFilter)}
           icon={Package}
           label="Lista de produtos"
           onAction={() => setIsAddModalOpen(true)}
-          onFilterChange={handleFilterChange}
+          onAdvancedFilter={() => setFilterOpen(true)}
           onSearchChange={handleSearchChange}
           placeholder="Busque por um produto, código ou categoria"
           searchValue={search}
@@ -356,5 +380,6 @@ export function ProductsPage() {
         />
       )}
     </PageShell>
+    </>
   )
 }
