@@ -1,5 +1,38 @@
 import type { ClientRow, Metric, OrderRow, SupportRow } from "@/types"
-import { CircleDollarSign, Heart, MapPin, Smile, Tag, Users } from "lucide-react"
+import { CircleDollarSign, Clock3, Heart, MapPin, Smartphone, Smile, Tag, Users } from "lucide-react"
+
+export const revenueData = [
+  { day: "1",  lastMonth: 105, currentMonth: 68 },
+  { day: "2",  lastMonth: 118, currentMonth: 75 },
+  { day: "3",  lastMonth: 138, currentMonth: 82 },
+  { day: "4",  lastMonth: 162, currentMonth: 88 },
+  { day: "5",  lastMonth: 178, currentMonth: 92 },
+  { day: "6",  lastMonth: 192, currentMonth: 98 },
+  { day: "7",  lastMonth: 185, currentMonth: 105 },
+  { day: "8",  lastMonth: 172, currentMonth: 115 },
+  { day: "9",  lastMonth: 162, currentMonth: 122 },
+  { day: "10", lastMonth: 148, currentMonth: 118 },
+  { day: "11", lastMonth: 138, currentMonth: 110 },
+  { day: "12", lastMonth: 128, currentMonth: 98 },
+  { day: "13", lastMonth: 140, currentMonth: 88 },
+  { day: "14", lastMonth: 152, currentMonth: 82 },
+  { day: "15", lastMonth: 162, currentMonth: 88 },
+  { day: "16", lastMonth: 175, currentMonth: 95 },
+  { day: "17", lastMonth: 170, currentMonth: 102 },
+  { day: "18", lastMonth: 162, currentMonth: 108 },
+  { day: "19", lastMonth: 155, currentMonth: 115 },
+  { day: "20", lastMonth: 148, currentMonth: 120 },
+  { day: "21", lastMonth: 140, currentMonth: 118 },
+  { day: "22", lastMonth: 135, currentMonth: 115 },
+  { day: "23", lastMonth: 148, currentMonth: 122 },
+  { day: "24", lastMonth: 160, currentMonth: 130 },
+  { day: "25", lastMonth: 172, currentMonth: 140 },
+  { day: "26", lastMonth: 182, currentMonth: 150 },
+  { day: "27", lastMonth: 188, currentMonth: 158 },
+  { day: "28", lastMonth: 192, currentMonth: 162 },
+  { day: "29", lastMonth: 190, currentMonth: 160 },
+  { day: "30", lastMonth: 185, currentMonth: 155 },
+]
 
 export function getDashboardMetrics(orders: OrderRow[], tickets: SupportRow[]): Metric[] {
   const totalRevenue = orders.reduce((sum, o) => {
@@ -45,6 +78,51 @@ export function getDashboardMetrics(orders: OrderRow[], tickets: SupportRow[]): 
       helper: "Tickets no período",
       tone: "violet",
       icon: Heart,
+    },
+  ]
+}
+
+export function getDashboardInsights(orders: OrderRow[], clients: ClientRow[]) {
+  const onTimeRate =
+    orders.length > 0
+      ? Math.round((orders.filter((o) => o.status === "Entregue").length / orders.length) * 100)
+      : 0
+
+  const sales: Record<string, number> = {}
+  orders.forEach((o) => {
+    const qty = parseInt(o.quantity.replace("x", ""), 10) || 1
+    sales[o.product] = (sales[o.product] || 0) + qty
+  })
+  const sortedSales = Object.entries(sales).sort(([, a], [, b]) => b - a)
+
+  const regions: Record<string, number> = {}
+  clients.forEach((c) => {
+    const city = c.location.split(",")[0]
+    regions[city] = (regions[city] || 0) + 1
+  })
+  const topReg = Object.entries(regions).sort(([, a], [, b]) => b - a)[0]?.[0] ?? "—"
+
+  return [
+    {
+      label: "Pedidos no prazo",
+      value: `${onTimeRate}% entregues`,
+      helper: onTimeRate >= 75 ? "Ótimo" : "Atenção",
+      tone: (onTimeRate >= 75 ? "emerald" : "rose") as Metric["tone"],
+      icon: Clock3,
+    },
+    {
+      label: "Produto mais pedido",
+      value: sortedSales[0]?.[0] ?? "—",
+      helper: `${sortedSales[0]?.[1] ?? 0} unid. vendidas`,
+      tone: "indigo" as Metric["tone"],
+      icon: Smartphone,
+    },
+    {
+      label: "Top região",
+      value: topReg,
+      helper: "Maior volume de clientes",
+      tone: "violet" as Metric["tone"],
+      icon: MapPin,
     },
   ]
 }
