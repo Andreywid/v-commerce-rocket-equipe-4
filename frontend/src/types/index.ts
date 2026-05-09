@@ -15,6 +15,7 @@ export type ProductCategory =
   | "Instrumentos Musicais"
   | "Tecnologia"
 export type ClientStatus = "Novo" | "Recorrente"
+export type OrderTimeline = "No Prazo" | "Fora do Prazo"
 
 export type NavItem = {
   id: PageKey
@@ -34,30 +35,32 @@ export type OrderRow = {
   id: string
   product: string
   customer: string
-  value: string
-  stock: string
-  date: string
+  value: number     
+  stock: number      
+  date: Date         
   status: OrderStatus
-  quantity: string
+  quantity: number 
+  timeline: OrderTimeline
 }
 
 export type SupportRow = {
   ticket: string
   customer: string
   type: SupportType
-  createdAt: string
+  createdAt: Date 
   resolvedIn: string
-  rating: string
+  rating: number
   ratingLabel: RatingLabel
+  timeline: OrderTimeline
 }
 
 export type ProductRow = {
   id: string
   name: string
   categories: ProductCategory[]
-  price: string
+  price: number
   stock: number
-  rating: string
+  rating: number
   ratingLabel: RatingLabel
   sold: number
 }
@@ -67,9 +70,9 @@ export type ClientRow = {
   name: string
   location: string
   status: ClientStatus
-  lastOrder: string
+  lastOrder: Date
   orderCount: number
-  total: string
+  total: number
 }
 
 export type OrderFormValues = Omit<OrderRow, "id">
