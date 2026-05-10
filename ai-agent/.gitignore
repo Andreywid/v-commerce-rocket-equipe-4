@@ -1,1 +1,26 @@
-app/database/mock_gold.sqlite
+# Segredos
+.env
+.env.*
+!.env.example
+
+# Virtualenv
+.venv/
+venv/
+env/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+
+# Ferramentas
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# IDE / SO
+.idea/
+.DS_Store
+Thumbs.db
