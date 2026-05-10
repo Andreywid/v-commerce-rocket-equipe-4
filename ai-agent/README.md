@@ -2,9 +2,9 @@
 
 Este diretório contém a implementação do Agente de IA Conversacional (Text-to-SQL) do projeto V-Commerce. O objetivo deste módulo é permitir que os usuários façam perguntas em linguagem natural e recebam respostas e dados precisos do banco de dados (Camada Gold).
 
-## 🧠 O Arquivo `schema_gold.py`: Base de Conhecimento e Governança
+## 🧠 O módulo `app/database/schema_registry.py`: Base de Conhecimento e Governança
 
-Em vez de documentar o banco de dados em um arquivo de texto estático (como um Word ou PDF), o mapeamento foi construído diretamente em código através de um dicionário Python. Isso cria uma **Documentação Viva** que é processada em milissegundos pela IA a cada interação, garantindo que o modelo de linguagem tenha o contexto exato e atualizado antes de gerar qualquer query SQL.
+Em vez de documentar o banco de dados em um arquivo de texto estático (como um Word ou PDF), o mapeamento foi construído diretamente em código através de um dicionário Python (`GOLD_SCHEMA`). Isso cria uma **Documentação Viva** que é processada em milissegundos pela IA a cada interação, garantindo que o modelo de linguagem tenha o contexto exato e atualizado antes de gerar qualquer query SQL.
 
 Abaixo está o detalhamento técnico do **porquê** cada elemento foi estruturado dessa forma, focado na prevenção de "alucinações" e erros lógicos:
 
@@ -27,3 +27,5 @@ Após escolher a tabela, a IA precisa construir as cláusulas `SELECT` e `WHERE`
 Esta função atua como o compilador do prompt. Ela transforma a estrutura de dados (JSON/Dicionário) em um **System Prompt** linear em linguagem natural, otimizado para o Mecanismo de Atenção (Attention Mechanism) de modelos LLM. Ela injeta regras de conduta universais (ex: *"Não invente nomes de tabelas"*, *"Se a pergunta for ambígua, solicite esclarecimento"*) e anexa toda a documentação das tabelas de forma estruturada. 
 
 O resultado final desta função é o contexto inviolável que o Agente utilizará para basear suas respostas.
+
+Import sugerido: `from app.database.schema_registry import GOLD_SCHEMA, get_schema_prompt`. O arquivo na raiz `schema_gold.py` reexporta os mesmos símbolos para compatibilidade.

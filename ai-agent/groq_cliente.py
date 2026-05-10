@@ -10,6 +10,9 @@ from pydantic_ai import Agent
 
 from datetime import datetime
 
+from app.database.schema_registry import get_schema_prompt
+from app.prompts.examples import SQL_EXAMPLES, VALUE_EXAMPLES
+
 load_dotenv()
 
 # ============================================
@@ -25,111 +28,6 @@ if sys.platform == "win32" and hasattr(sys.stdout, "reconfigure"):
             )
         except Exception:
             pass
-
-# ============================================
-# DATABASE SCHEMA
-# ============================================
-
-DB_SCHEMA = """
-CREATE TABLE vendas (
-    id INT,
-    produto VARCHAR,
-    valor DECIMAL,
-    data DATE
-);
-
-CREATE TABLE clientes (
-    id INT,
-    nome VARCHAR,
-    email VARCHAR,
-    telefone VARCHAR
-);
-
-CREATE TABLE produtos (
-    id INT,
-    nome VARCHAR,
-    preco DECIMAL
-);
-
-CREATE TABLE pedidos (
-    id INT,
-    cliente_id INT,
-    produto_id INT,
-    quantidade INT,
-    data DATE
-);
-
-CREATE TABLE suporte (
-    id INT,
-    cliente_id INT,
-    produto_id INT,
-    quantidade INT,
-    data DATE
-);
-
-CREATE TABLE avaliacoes (
-    id INT,
-    cliente_id INT,
-    produto_id INT,
-    avaliacao INT,
-    data DATE
-);
-
-CREATE TABLE clickstream (
-    id INT,
-    cliente_id INT,
-    produto_id INT,
-    quantidade INT,
-    data DATE
-);
-"""
-
-# ============================================
-# FEW-SHOT SQL EXAMPLES
-# ============================================
-
-SQL_EXAMPLES = [
-    """
-    Pergunta:
-    Qual foi o total faturado ontem?
-
-    SQL:
-    SELECT SUM(valor) AS total_faturado
-    FROM vendas
-    WHERE data = CURRENT_DATE - INTERVAL '1 day';
-    """,
-
-    """
-    Pergunta:
-    Clientes cadastrados com gmail
-
-    SQL:
-    SELECT *
-    FROM clientes
-    WHERE email ILIKE '%gmail.com';
-    """,
-
-    """
-    Pergunta:
-    Produtos acima de 100 reais
-
-    SQL:
-    SELECT *
-    FROM produtos
-    WHERE preco > 100;
-    """,
-]
-
-# ============================================
-# VALUE EXAMPLES
-# ============================================
-
-VALUE_EXAMPLES = [
-    "gmail.com",
-    "hotmail.com",
-    "Notebook",
-    "Mouse Gamer",
-]
 
 # ============================================
 # DEPENDÊNCIAS
@@ -340,7 +238,7 @@ class AgentTextToSQLClient:
 
         prompt = build_prompt(
             question=question,
-            schema=DB_SCHEMA,
+            schema=get_schema_prompt(),
             examples=SQL_EXAMPLES,
             values=VALUE_EXAMPLES,
             current_date=datetime.now().strftime("%Y-%m-%d"),
