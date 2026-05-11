@@ -58,9 +58,13 @@ function SidebarNav({ onItemClick }: { onItemClick?: () => void }) {
   )
 }
 
-function SidebarLogout() {
+function SidebarLogout({ onLogout }: { onLogout: () => void }) {
   return (
-    <button className="mt-auto flex h-11 items-center gap-3 px-7 text-sm font-medium text-slate-600 transition hover:text-indigo-600">
+    <button
+      className="mt-auto flex h-11 items-center gap-3 px-7 text-sm font-medium text-slate-600 transition hover:text-indigo-600"
+      onClick={onLogout}
+      type="button"
+    >
       <LogOut className="size-4" />
       Sair
     </button>
@@ -70,9 +74,11 @@ function SidebarLogout() {
 export function Sidebar({
   isOpen,
   onClose,
+  onLogout,
 }: {
   isOpen: boolean
   onClose: () => void
+  onLogout: () => void
 }) {
   return (
     <>
@@ -80,7 +86,7 @@ export function Sidebar({
       <aside className="hidden min-h-screen flex-col border-r border-slate-200 bg-white md:flex">
         <SidebarLogo />
         <SidebarNav />
-        <SidebarLogout />
+        <SidebarLogout onLogout={onLogout} />
       </aside>
 
       {/* ── Mobile Sheet ─────────────────────────────────────────────── */}
@@ -89,7 +95,7 @@ export function Sidebar({
           <SheetTitle className="sr-only">Menu de navegação</SheetTitle>
           <SidebarLogo variant="mobile" />
           <SidebarNav onItemClick={onClose} />
-          <SidebarLogout />
+          <SidebarLogout onLogout={onLogout} />
         </SheetContent>
       </Sheet>
     </>

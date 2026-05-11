@@ -1,9 +1,11 @@
 import { Bell, Menu } from "lucide-react"
 
 export function Header({
+  email,
   onMenuOpen,
   onNotify,
 }: {
+  email: string
   onMenuOpen: () => void
   onNotify: () => void
 }) {
@@ -36,7 +38,7 @@ export function Header({
 
         <div className="hidden sm:block">
           <p className="text-sm font-semibold leading-none text-slate-900">Mariana Albuquerque</p>
-          <p className="mt-1 text-xs text-slate-500">V-Commerce CEO</p>
+          <p className="mt-1 text-xs text-slate-500">{email}</p>
         </div>
       </div>
     </header>

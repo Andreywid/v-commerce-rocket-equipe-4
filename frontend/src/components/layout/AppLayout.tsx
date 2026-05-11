@@ -15,7 +15,7 @@ function deriveCurrentPage(pathname: string): PageKey {
   return "dashboard"
 }
 
-export function AppLayout() {
+export function AppLayout({ email, onLogout }: { email: string; onLogout: () => void }) {
   const { orders, tickets, showNotice } = useAppContext()
   const { pathname } = useLocation()
   const [isAssistantOpen, setIsAssistantOpen] = useState(false)
@@ -24,9 +24,10 @@ export function AppLayout() {
   return (
     <main className="min-h-dvh w-full bg-[#fbfcff] text-slate-900">
       <div className="grid min-h-dvh w-full grid-cols-1 bg-[#fbfcff] md:grid-cols-[270px_1fr]">
-        <Sidebar isOpen={isMobileMenuOpen} onClose={() => setIsMobileMenuOpen(false)} />
+        <Sidebar isOpen={isMobileMenuOpen} onClose={() => setIsMobileMenuOpen(false)} onLogout={onLogout} />
         <div className="flex min-w-0 flex-col">
           <Header
+            email={email}
             onMenuOpen={() => setIsMobileMenuOpen(true)}
             onNotify={() => showNotice("Nenhuma nova notificação")}
           />
