@@ -5,6 +5,8 @@ import loginHero from "@/assets/login-hero.png"
 
 export function LoginPage({ onLogin }: { onLogin: (email: string) => void }) {
   const [email, setEmail] = useState("")
+  const [mode, setMode] = useState<"login" | "register">("login")
+  const isRegistering = mode === "register"
 
   return (
     <main className="grid min-h-dvh bg-white text-slate-900 lg:grid-cols-[minmax(0,1fr)_minmax(420px,1fr)]">
@@ -30,8 +32,14 @@ export function LoginPage({ onLogin }: { onLogin: (email: string) => void }) {
             }}
           >
             <div>
-              <h1 className="text-xl font-bold text-slate-950">Entrar na sua conta</h1>
-              <p className="mt-2 text-xs text-slate-500">Insira seu e-mail para entrar na sua conta</p>
+              <h1 className="text-xl font-bold text-slate-950">
+                {isRegistering ? "Crie uma conta" : "Entrar na sua conta"}
+              </h1>
+              <p className="mt-2 text-xs text-slate-500">
+                {isRegistering
+                  ? "Insira seu e-mail abaixo para criar uma conta"
+                  : "Insira seu e-mail para entrar na sua conta"}
+              </p>
             </div>
 
             <label className="block text-left">
@@ -50,8 +58,8 @@ export function LoginPage({ onLogin }: { onLogin: (email: string) => void }) {
               className="flex h-10 w-full items-center justify-center gap-2 rounded-md bg-slate-950 text-sm font-semibold text-white transition hover:bg-slate-800"
               type="submit"
             >
-              <LogIn className="size-4" />
-              Entrar
+              {!isRegistering && <LogIn className="size-4" />}
+              {isRegistering ? "Criar conta" : "Entrar"}
             </button>
 
             <p className="mx-auto max-w-[290px] text-xs leading-5 text-slate-500">
@@ -59,9 +67,14 @@ export function LoginPage({ onLogin }: { onLogin: (email: string) => void }) {
             </p>
 
             <div className="flex items-center justify-center gap-5 pt-8 text-xs">
-              <span className="text-slate-500">Não tem uma conta?</span>
-              <button className="font-semibold text-slate-900 transition hover:text-indigo-600" type="button">
-                Criar uma conta
+              {!isRegistering && <span className="text-slate-500">Não tem uma conta?</span>}
+              <button
+                className="inline-flex items-center gap-2 font-semibold text-slate-900 transition hover:text-indigo-600"
+                onClick={() => setMode(isRegistering ? "login" : "register")}
+                type="button"
+              >
+                {isRegistering && <LogIn className="size-3.5" />}
+                {isRegistering ? "Entrar em conta existente" : "Criar uma conta"}
               </button>
             </div>
           </form>
