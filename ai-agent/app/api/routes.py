@@ -12,8 +12,11 @@ from app.api.dependencies import (
     get_conversation_store,
     get_orchestrator,
 )
-from app.database.mock_gold import build_mock_sqlite
-from app.memory.conversation_store import InMemoryConversationStore
+from app.database.mock_gold import ensure_mock_sqlite
+from app.memory.conversation_store import (
+    InMemoryConversationStore,
+    build_question_with_memory,
+)
 from app.models.api import AskRequest, AskResponse, HealthResponse
 
 
@@ -39,18 +42,27 @@ async def ask(
         request.conversation_id
         or conversation_store.new_conversation_id()
     )
+    previous_turns = conversation_store.list_turns(
+        conversation_id=conversation_id,
+        tenant_id=request.tenant_id,
+        user_id=request.user_id,
+    )
+    question_for_agent = build_question_with_memory(
+        request.question,
+        previous_turns,
+    )
 
     conn: sqlite3.Connection | None = None
     try:
         if request.execute:
-            mock_path = build_mock_sqlite()
+            mock_path = ensure_mock_sqlite()
             conn = sqlite3.connect(mock_path)
 
         deps = deps_from_request(request, conn=conn)
         deps.conversation_id = conversation_id
 
         result = await orchestrator.ask(
-            question=request.question,
+            question=question_for_agent,
             deps=deps,
         )
     finally:

@@ -67,6 +67,7 @@ class APITest(unittest.TestCase):
                 "allowed_columns": {
                     "gold_vendas_kpis": ["ano_mes", "receita_bruta"],
                 },
+                "allow_all_schema_access": True,
                 "require_tenant": True,
             },
         )
@@ -86,6 +87,7 @@ class APITest(unittest.TestCase):
             fake.deps.allowed_columns,
             {"gold_vendas_kpis": frozenset({"ano_mes", "receita_bruta"})},
         )
+        self.assertTrue(fake.deps.allow_all_schema_access)
         self.assertTrue(fake.deps.require_tenant)
         self.assertIsNone(fake.deps.conn)
         self.assertEqual(fake.deps.conversation_id, "conv-1")
@@ -121,6 +123,40 @@ class APITest(unittest.TestCase):
         self.assertIsInstance(conversation_id, str)
         self.assertTrue(conversation_id)
         self.assertEqual(fake.deps.conversation_id, conversation_id)
+
+    def test_ask_endpoint_injects_previous_turns_for_same_conversation(self) -> None:
+        api = create_app()
+        fake = FakeOrchestrator()
+        store = InMemoryConversationStore()
+        api.dependency_overrides[get_orchestrator] = lambda: fake
+        api.dependency_overrides[get_conversation_store] = lambda: store
+        client = TestClient(api)
+
+        first = client.post(
+            "/ask",
+            json={
+                "conversation_id": "conv-1",
+                "question": "Qual foi a receita em 2024-11?",
+                "user_id": "user-1",
+                "tenant_id": "tenant-1",
+            },
+        )
+        self.assertEqual(first.status_code, 200)
+
+        second = client.post(
+            "/ask",
+            json={
+                "conversation_id": "conv-1",
+                "question": "E em 2024-10?",
+                "user_id": "user-1",
+                "tenant_id": "tenant-1",
+            },
+        )
+
+        self.assertEqual(second.status_code, 200)
+        self.assertIn("CONTEXTO CONVERSACIONAL SEGURO", fake.question or "")
+        self.assertIn("Qual foi a receita em 2024-11?", fake.question or "")
+        self.assertIn("E em 2024-10?", fake.question or "")
 
     def test_ask_endpoint_passes_mock_connection_when_execute_is_true(self) -> None:
         api = create_app()

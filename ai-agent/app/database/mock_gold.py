@@ -534,7 +534,17 @@ def build_mock_sqlite(path: str | Path | None = None) -> Path:
     return out
 
 
-__all__ = ["build_mock_sqlite"]
+def ensure_mock_sqlite(path: str | Path | None = None) -> Path:
+    """Retorna o mock existente ou cria um novo quando o arquivo ainda não existe."""
+
+    base = Path(__file__).resolve().parent
+    out = Path(path) if path is not None else base / "mock_gold.sqlite"
+    if out.exists():
+        return out
+    return build_mock_sqlite(out)
+
+
+__all__ = ["build_mock_sqlite", "ensure_mock_sqlite"]
 
 
 if __name__ == "__main__":

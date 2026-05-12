@@ -7,7 +7,10 @@ import unittest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from app.memory.conversation_store import InMemoryConversationStore
+from app.memory.conversation_store import (
+    InMemoryConversationStore,
+    build_question_with_memory,
+)
 from app.models.responses import OrchestratorResult
 
 
@@ -88,6 +91,74 @@ class InMemoryConversationStoreTest(unittest.TestCase):
         )
 
         self.assertEqual(turns, [])
+
+    def test_build_question_with_memory_includes_safe_previous_context(self) -> None:
+        store = InMemoryConversationStore()
+        store.append_result(
+            conversation_id="conv-1",
+            tenant_id="tenant-1",
+            user_id="user-1",
+            question="Qual foi a receita em 2024-11?",
+            result=_result(
+                "SELECT receita_bruta FROM gold_vendas_kpis WHERE ano_mes = '2024-11' LIMIT 100"
+            ),
+        )
+        turns = store.list_turns(
+            conversation_id="conv-1",
+            tenant_id="tenant-1",
+            user_id="user-1",
+        )
+
+        prompt = build_question_with_memory("E em 2024-10?", turns)
+
+        self.assertIn("CONTEXTO CONVERSACIONAL SEGURO", prompt)
+        self.assertIn("Qual foi a receita em 2024-11?", prompt)
+        self.assertIn("2024-11", prompt)
+        self.assertIn("PERGUNTA ATUAL", prompt)
+        self.assertIn("E em 2024-10?", prompt)
+
+    def test_build_question_with_memory_preserves_aggregate_semantics(self) -> None:
+        store = InMemoryConversationStore()
+        store.append_result(
+            conversation_id="conv-1",
+            tenant_id="tenant-1",
+            user_id="user-1",
+            question="Qual a quantidade de vendas e valor total por ano?",
+            result=OrchestratorResult(
+                explanation="resposta",
+                sql=(
+                    "SELECT ano, SUM(qtd_pedidos_aprovados) AS quantidade_vendas, "
+                    "SUM(receita_bruta) AS valor_total "
+                    "FROM gold_vendas_kpis GROUP BY ano ORDER BY ano LIMIT 100"
+                ),
+                interpretation=(
+                    "Quantidade de vendas e valor total agregados por ano."
+                ),
+                reasoning=[
+                    "valor_total significa SUM(receita_bruta) agrupado por ano",
+                ],
+                assumptions=[
+                    "vendas significa qtd_pedidos_aprovados",
+                ],
+            ),
+        )
+        turns = store.list_turns(
+            conversation_id="conv-1",
+            tenant_id="tenant-1",
+            user_id="user-1",
+        )
+
+        prompt = build_question_with_memory(
+            "qual o ano de maior venda no valor total",
+            turns,
+        )
+
+        self.assertIn("REGRAS PARA FOLLOW-UP ANALÍTICO", prompt)
+        self.assertIn("preserve a mesma definição de métrica", prompt)
+        self.assertIn("Não ordene linhas brutas", prompt)
+        self.assertIn("SUM(receita_bruta) AS valor_total", prompt)
+        self.assertIn("GROUP BY ano", prompt)
+        self.assertIn("valor_total significa SUM(receita_bruta)", prompt)
 
 
 if __name__ == "__main__":

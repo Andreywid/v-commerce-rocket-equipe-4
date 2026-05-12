@@ -180,7 +180,11 @@ class QueryPolicy:
     def _validate_tables(access: SQLAccess, deps: Deps) -> None:
         """Confere se todas as tabelas acessadas estão no escopo permitido."""
 
-        allowed_tables = deps.allowed_tables or frozenset(ALLOWED_TABLES)
+        allowed_tables = (
+            frozenset(ALLOWED_TABLES)
+            if deps.allow_all_schema_access
+            else deps.allowed_tables or frozenset(ALLOWED_TABLES)
+        )
         normalized_allowed_tables = {
             table.casefold()
             for table in allowed_tables
@@ -197,7 +201,7 @@ class QueryPolicy:
     def _validate_columns(access: SQLAccess, deps: Deps) -> None:
         """Aplica allowlist de colunas quando o request informar restrições."""
 
-        if not deps.allowed_columns:
+        if deps.allow_all_schema_access or not deps.allowed_columns:
             return
 
         normalized_allowed_columns = {

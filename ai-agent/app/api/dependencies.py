@@ -47,6 +47,7 @@ def deps_from_request(request: AskRequest, *, conn: Any | None = None) -> Deps:
             else None
         ),
         allowed_columns=allowed_columns,
+        allow_all_schema_access=request.allow_all_schema_access,
         allow_sensitive_pii=request.allow_sensitive_pii,
         require_tenant=request.require_tenant,
     )

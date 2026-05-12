@@ -17,5 +17,6 @@ class Deps:
     roles: frozenset[str] = field(default_factory=frozenset)
     allowed_tables: frozenset[str] | None = None
     allowed_columns: dict[str, frozenset[str]] | None = None
+    allow_all_schema_access: bool = False
     allow_sensitive_pii: bool = False
     require_tenant: bool = False

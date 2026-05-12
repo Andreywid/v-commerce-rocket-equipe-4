@@ -5,6 +5,7 @@ from datetime import datetime
 from pydantic_ai import Agent
 
 from app.database.schema_registry import get_schema_prompt
+from app.agents.model_config import configure_provider_api_keys, get_model_name
 from app.models.deps import Deps
 from app.models.responses import InvalidRequest, Response, Success
 from app.prompts.examples import SQL_EXAMPLES, VALUE_EXAMPLES
@@ -18,11 +19,12 @@ class AgentTextToSQLClient:
 
     def __init__(
         self,
-        model_name: str = "llama-3.1-8b-instant",
+        model_name: str | None = None,
         max_retries: int = 3,
     ):
 
-        model = f"groq:{model_name}"
+        configure_provider_api_keys()
+        model = model_name or get_model_name()
 
         self.agent = Agent(
             model=model,

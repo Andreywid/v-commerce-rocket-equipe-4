@@ -78,6 +78,29 @@ class QueryPolicyTest(unittest.TestCase):
                 ),
             )
 
+    def test_allow_all_schema_access_ignores_user_table_and_column_scope(self) -> None:
+        self.policy.validate_sql(
+            "SELECT id_cliente FROM gold_cliente_360 LIMIT 100",
+            Deps(
+                conn=None,
+                allowed_tables=frozenset({"gold_vendas_kpis"}),
+                allowed_columns={
+                    "gold_cliente_360": frozenset({"cidade"}),
+                },
+                allow_all_schema_access=True,
+            ),
+        )
+
+    def test_allow_all_schema_access_still_blocks_sensitive_pii(self) -> None:
+        with self.assertRaises(PolicyViolation):
+            self.policy.validate_sql(
+                "SELECT email FROM gold_cliente_360 LIMIT 100",
+                Deps(
+                    conn=None,
+                    allow_all_schema_access=True,
+                ),
+            )
+
     def test_count_star_is_not_treated_as_pii_projection(self) -> None:
         self.policy.validate_sql(
             "SELECT COUNT(*) FROM gold_cliente_360 LIMIT 100",

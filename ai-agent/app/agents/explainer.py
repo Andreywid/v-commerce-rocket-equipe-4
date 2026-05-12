@@ -4,6 +4,7 @@ from typing import Any
 
 from pydantic_ai import Agent
 
+from app.agents.model_config import configure_provider_api_keys, get_model_name
 from app.models.responses import Success
 from app.prompts.explainer_prompt_builder import (
     EXPLAINER_SYSTEM,
@@ -16,13 +17,15 @@ class ResultExplainer:
 
     def __init__(
         self,
-        model_name: str = "llama-3.1-8b-instant",
+        model_name: str | None = None,
         max_retries: int = 2,
         max_rows_in_prompt: int = 10,
     ) -> None:
+        configure_provider_api_keys()
+        model = model_name or get_model_name()
         self._prompt_builder = ExplainerPromptBuilder(max_rows=max_rows_in_prompt)
         self._agent = Agent(
-            model=f"groq:{model_name}",
+            model=model,
             output_type=str,
             retries=max_retries,
             system_prompt=EXPLAINER_SYSTEM,

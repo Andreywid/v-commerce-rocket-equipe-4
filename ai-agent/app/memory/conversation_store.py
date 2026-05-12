@@ -10,6 +10,64 @@ from app.models.conversation import ConversationKey, ConversationTurn
 from app.models.responses import OrchestratorResult
 
 
+def build_question_with_memory(
+    question: str,
+    turns: list[ConversationTurn],
+    *,
+    max_turns: int = 3,
+) -> str:
+    """Acrescenta contexto conversacional seguro a perguntas de follow-up."""
+
+    recent_turns = turns[-max_turns:]
+    if not recent_turns:
+        return question
+
+    context_blocks = []
+    for index, turn in enumerate(recent_turns, start=1):
+        lines = [
+            f"Turno anterior {index}:",
+            f"- Pergunta: {turn.question}",
+        ]
+        if turn.interpretation:
+            lines.append(f"- Interpretação: {turn.interpretation}")
+        if turn.sql:
+            lines.append(f"- SQL aprovado: {turn.sql}")
+        if turn.reasoning:
+            lines.append(
+                "- Raciocínio estruturado: "
+                + " | ".join(turn.reasoning)
+            )
+        if turn.assumptions:
+            lines.append(
+                "- Premissas: "
+                + " | ".join(turn.assumptions)
+            )
+        if turn.error:
+            lines.append(f"- Erro: {turn.error}")
+        context_blocks.append("\n".join(lines))
+
+    context = "\n\n".join(context_blocks)
+    return (
+        "# CONTEXTO CONVERSACIONAL SEGURO\n"
+        "Use o contexto abaixo apenas para resolver referências do usuário, "
+        "como 'e no mês anterior?' ou 'faça o mesmo para outro período'. "
+        "Não copie SQL sem revalidar e não assuma dados que não estejam no schema.\n\n"
+        "# REGRAS PARA FOLLOW-UP ANALÍTICO\n"
+        "- Se a pergunta atual pedir maior, menor, top, ranking ou comparação sobre "
+        "um resultado agregado anterior, preserve a mesma definição de métrica e "
+        "a mesma granularidade analítica do turno anterior.\n"
+        "- Não ordene linhas brutas quando o turno anterior calculou totais com "
+        "SUM, COUNT, AVG, MIN ou MAX. Recalcule a agregação com GROUP BY e só então "
+        "ordene pelo agregado.\n"
+        "- Reutilize aliases e definições aprovadas quando fizer sentido. Exemplo: "
+        "se valor_total foi SUM(receita_bruta), então 'maior valor total' deve "
+        "ordenar por SUM(receita_bruta), não por receita_bruta de uma linha isolada.\n\n"
+        f"{context}\n\n"
+        "# PERGUNTA ATUAL\n"
+        f"{question}"
+    )
+
+
 class InMemoryConversationStore:
     """
     Guarda histórico curto por conversation_id + tenant_id + user_id.
