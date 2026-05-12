@@ -8,8 +8,23 @@ import { PageShell } from "@/components/shared/PageShell"
 import { DataCard, DataGrid } from "@/components/shared/MetricCards"
 import { RevenueChart, type RevenueChartPoint } from "@/components/shared/RevenueChart"
 import { OrderSummary } from "@/components/shared/OrderSummary"
-import { FilterModal, type FilterState } from "@/components/shared/FilterModal"
-import type { KPIsResponse } from "@/types/dashboard"
+import { FilterModal, type FilterState, MONTHS } from "@/components/shared/FilterModal"
+import type { KPIsResponse, VendasKPIMes } from "@/types/dashboard"
+
+const DEFAULT_FILTER: FilterState = { comparisonDate: "", months: [], years: [] }
+
+function hasAnyFilter(f: FilterState): boolean {
+  return f.months.length > 0 || f.years.length > 0 || f.comparisonDate !== ""
+}
+
+function applyFilters(meses: VendasKPIMes[], f: FilterState): VendasKPIMes[] {
+  return meses.filter((m) => {
+    if (f.months.length > 0 && !f.months.includes(MONTHS[m.mes - 1])) return false
+    if (f.years.length > 0 && !f.years.includes(String(m.ano))) return false
+    if (f.comparisonDate !== "" && m.ano_mes < f.comparisonDate.slice(0, 7)) return false
+    return true
+  })
+}
 
 function CardSkeleton() {
   return (
@@ -26,6 +41,7 @@ export function Dashboard() {
   const [kpis, setKpis] = useState<KPIsResponse | null>(null)
   const [loading, setLoading] = useState(true)
   const [filterOpen, setFilterOpen] = useState(false)
+  const [appliedFilters, setAppliedFilters] = useState<FilterState>(DEFAULT_FILTER)
 
   useEffect(() => {
     fetchKpis("12m")
@@ -39,23 +55,28 @@ export function Dashboard() {
   const handleExport = () => showNotice("Relatório exportado com sucesso!")
   const handleFilter = () => setFilterOpen(true)
   const handleSaveFilter = (filters: FilterState) => {
-    const parts: string[] = []
-    if (filters.months.length) parts.push(filters.months.join(", "))
-    if (filters.years.length) parts.push(filters.years.join(", "))
-    showNotice(parts.length ? `Filtros aplicados: ${parts.join(" · ")}` : "Filtros limpos")
+    setAppliedFilters(filters)
+    if (hasAnyFilter(filters)) {
+      toast.success("Filtros aplicados")
+    } else {
+      toast.info("Filtros limpos")
+    }
   }
 
-  const ultimoMes = kpis ? kpis.meses[kpis.meses.length - 1] : null
+  const activeFilters = hasAnyFilter(appliedFilters)
+  const allMeses = kpis?.meses ?? []
+  const filteredMeses = activeFilters ? applyFilters(allMeses, appliedFilters) : allMeses
+  const ultimoMes: VendasKPIMes | null = filteredMeses.length > 0
+    ? filteredMeses[filteredMeses.length - 1]
+    : null
 
   const metrics = ultimoMes ? getKpiCards(ultimoMes) : []
   const insights = ultimoMes ? getKpiInsights(ultimoMes) : []
 
-  const chartData: RevenueChartPoint[] = kpis
-    ? kpis.meses.map((m) => ({
-        mes: formatMesLabel(m.ano_mes),
-        receita: parseFloat((m.receita_bruta / 1000).toFixed(1)),
-      }))
-    : []
+  const chartData: RevenueChartPoint[] = filteredMeses.map((m) => ({
+    mes: formatMesLabel(m.ano_mes),
+    receita: parseFloat((m.receita_bruta / 1000).toFixed(1)),
+  }))
 
   const orderSummary = ultimoMes
     ? {
@@ -66,17 +87,26 @@ export function Dashboard() {
       }
     : { aprovados: 0, processando: 0, recusados: 0, reembolsados: 0 }
 
+  const emptyFiltered = !loading && activeFilters && filteredMeses.length === 0
+
   return (
     <>
       <FilterModal
         open={filterOpen}
         onClose={() => setFilterOpen(false)}
         onSave={handleSaveFilter}
+        initial={appliedFilters}
       />
       <PageShell title="Dashboard">
         <DataGrid>
           {loading
             ? Array.from({ length: 4 }).map((_, i) => <CardSkeleton key={i} />)
+            : emptyFiltered
+            ? (
+              <p className="col-span-full py-2 text-sm text-slate-500">
+                Nenhum dado para o período selecionado. Ajuste os filtros para ver métricas.
+              </p>
+            )
             : metrics.map((metric) => (
                 <DataCard
                   key={metric.label}
@@ -90,7 +120,12 @@ export function Dashboard() {
         </DataGrid>
 
         <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_377px]">
-          <RevenueChart data={chartData} onExport={handleExport} onFilter={handleFilter} />
+          <RevenueChart
+            data={chartData}
+            onExport={handleExport}
+            onFilter={handleFilter}
+            hasActiveFilters={activeFilters}
+          />
           <OrderSummary data={orderSummary} />
         </div>
 

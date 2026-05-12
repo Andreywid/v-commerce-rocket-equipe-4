@@ -8,7 +8,7 @@ import {
   YAxis,
 } from "recharts"
 import { BarChart3, Download, SlidersHorizontal } from "lucide-react"
-
+import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 
 export type RevenueChartPoint = {
@@ -47,11 +47,24 @@ export function RevenueChart({
   data,
   onExport,
   onFilter,
+  hasActiveFilters = false,
 }: {
   data: RevenueChartPoint[]
   onExport: () => void
   onFilter: () => void
+  hasActiveFilters?: boolean
 }) {
+  const subtitle =
+    data.length >= 2
+      ? `Receita bruta — ${data[0].mes} a ${data[data.length - 1].mes}`
+      : data.length === 1
+      ? `Receita bruta — ${data[0].mes}`
+      : "Receita bruta — últimos 12 meses"
+
+  const peakMes = data.length > 0
+    ? data.reduce((a, b) => (a.receita > b.receita ? a : b)).mes
+    : null
+
   return (
     <article className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
       <div className="mb-6 flex items-start justify-between gap-3">
@@ -61,17 +74,23 @@ export function RevenueChart({
           </span>
           <div>
             <p className="text-xl font-bold text-slate-900 leading-none">Gráfico de receita</p>
-            <p className="mt-1.5 text-xs text-slate-500">Receita bruta — últimos 12 meses</p>
+            <p className="mt-1.5 text-xs text-slate-500">{subtitle}</p>
           </div>
         </div>
         <div className="flex items-center gap-4">
           <Button
             variant="outline"
             size="sm"
-            className="h-9 rounded-full px-5 text-sm gap-2 border-slate-200 hover:bg-slate-50"
+            className={cn(
+              "relative h-9 rounded-full px-5 text-sm gap-2 border-slate-200 hover:bg-slate-50",
+              hasActiveFilters && "border-indigo-300 text-indigo-600 hover:bg-indigo-50",
+            )}
             onClick={onFilter}
           >
             <SlidersHorizontal size={14} /> Filtros
+            {hasActiveFilters && (
+              <span className="absolute -right-1 -top-1 size-2 rounded-full bg-indigo-600" />
+            )}
           </Button>
         </div>
       </div>
@@ -116,10 +135,14 @@ export function RevenueChart({
 
       <div className="mt-5 flex flex-col gap-4 border-t border-slate-100 pt-5 sm:flex-row sm:items-center sm:justify-between">
         <p className="flex items-center gap-2 text-[11px] font-medium text-slate-500">
-          <span className="size-2 rounded-full bg-emerald-500" />
-          {data.length > 0
-            ? `Pico em ${data.reduce((a, b) => (a.receita > b.receita ? a : b)).mes}`
-            : "Carregando dados..."}
+          {peakMes ? (
+            <>
+              <span className="size-2 rounded-full bg-emerald-500" />
+              {`Pico em ${peakMes}`}
+            </>
+          ) : (
+            "Nenhum dado para o período selecionado"
+          )}
         </p>
         <Button className="h-9 gap-2 rounded-full px-6 text-sm" onClick={onExport} type="button">
           Exportar relatório
