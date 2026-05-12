@@ -13,19 +13,23 @@ export function TableToolbar({
   icon: Icon,
   label,
   onAction,
+  onAdvancedFilter,
+  advancedFilterActive,
   onFilterChange,
   onSearchChange,
   placeholder,
   searchValue,
 }: {
   actionLabel: string
-  filterLabel: string
-  filterOptions: string[]
-  filterValue: string
+  filterLabel?: string
+  filterOptions?: string[]
+  filterValue?: string
   icon: LucideIcon
   label: string
   onAction: () => void
-  onFilterChange: (value: string) => void
+  onAdvancedFilter?: () => void
+  advancedFilterActive?: boolean
+  onFilterChange?: (value: string) => void
   onSearchChange: (value: string) => void
   placeholder: string
   searchValue: string
@@ -46,7 +50,7 @@ export function TableToolbar({
           <div className="relative">
             <Search className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
             <Input
-              className="h-9 rounded-full pl-10 pr-4 sm:w-[310px]"
+              className="h-9 rounded-full pl-10 pr-4 sm:w-77.5"
               onChange={(e) => onSearchChange(e.target.value)}
               placeholder={placeholder}
               type="search"
@@ -58,9 +62,11 @@ export function TableToolbar({
             variant="outline"
             className={[
               "h-9 rounded-full px-4",
-              filterValue !== "Todos" ? "border-indigo-200 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 hover:text-indigo-700" : "",
+              (onAdvancedFilter ? advancedFilterActive : filterValue !== "Todos")
+                ? "border-indigo-200 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 hover:text-indigo-700"
+                : "",
             ].join(" ")}
-            onClick={() => setIsFilterOpen((c) => !c)}
+            onClick={onAdvancedFilter ? onAdvancedFilter : () => setIsFilterOpen((c) => !c)}
             type="button"
           >
             <SlidersHorizontal className="size-4" />
@@ -78,7 +84,7 @@ export function TableToolbar({
         </div>
       </div>
 
-      {isFilterOpen && (
+      {!onAdvancedFilter && isFilterOpen && filterLabel && filterOptions && filterValue && onFilterChange && (
         <div className="mt-4 flex flex-col gap-2 rounded-lg border border-slate-200 bg-slate-50 p-3 sm:flex-row sm:items-center sm:justify-end">
           <label className="text-xs font-semibold text-slate-500" htmlFor={`${label}-filter`}>
             {filterLabel}
