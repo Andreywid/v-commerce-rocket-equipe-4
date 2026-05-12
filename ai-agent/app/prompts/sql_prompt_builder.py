@@ -1,3 +1,5 @@
+"""Builder do prompt de usuário enviado ao agente Text-to-SQL."""
+
 from datetime import datetime
 
 # ============================================
@@ -11,6 +13,8 @@ def build_prompt(
     values: list[str],
     current_date: datetime,
 ) -> str:
+    """Combina schema, exemplos, valores válidos e pergunta em um único prompt."""
+
     current_date = current_date.strftime("%Y-%m-%d")
 
     examples_text = "\n\n".join(examples)

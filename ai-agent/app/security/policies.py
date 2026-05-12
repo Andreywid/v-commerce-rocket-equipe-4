@@ -1,3 +1,5 @@
+"""Constantes de política usadas pelo validador SQL e pelos guardrails."""
+
 from app.database.schema_registry import (
     GOLD_SCHEMA,
 )
@@ -6,6 +8,7 @@ SQL_DIALECT = "postgres"
 
 MAX_SQL_LENGTH = 10_000
 
+# As tabelas permitidas vêm do registry para manter a política alinhada ao schema.
 ALLOWED_TABLES = frozenset(GOLD_SCHEMA)
 
 BLOCKED_FUNCTIONS = {
@@ -53,6 +56,7 @@ DEFAULT_LIMIT = 100
 
 MAX_COMPLEXITY_SCORE = 100
 
+# Pesos simples para impedir consultas geradas muito caras ou difíceis de auditar.
 COMPLEXITY_WEIGHTS = {
     "base_select": 5,
     "table": 4,

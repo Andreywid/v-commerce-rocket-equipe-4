@@ -55,6 +55,8 @@ from app.prompts import system_prompt as system_prompt_module
 
 
 def _print_bulleted_section(title: str, items: list[str]) -> None:
+    """Imprime listas opcionais mantendo a saída de CLI legível."""
+
     print(f"\n{title}")
     if not items:
         print("  (nenhuma)")
@@ -179,6 +181,8 @@ async def run_orchestrator_text_to_sql(
     mock_db_path: Path | None = None,
     exec_on_mock: bool = True,
 ) -> None:
+    """Executa o orquestrador e renderiza a resposta no terminal."""
+
     from app.agents.orchestrator import AgentOrchestrator
 
     orchestrator = AgentOrchestrator()
@@ -223,6 +227,8 @@ async def run_orchestrator_text_to_sql(
 
 
 def main() -> None:
+    """Processa argumentos de CLI e escolhe o fluxo local solicitado."""
+
     parser = argparse.ArgumentParser(
         description="Testes locais: mock Gold, prompt modular, orquestrador Text-to-SQL e validação"
     )

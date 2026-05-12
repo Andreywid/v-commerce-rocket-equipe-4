@@ -1,3 +1,5 @@
+"""Exemplos curtos que ajudam o LLM a seguir o schema Gold e valores válidos."""
+
 # ============================================
 # FEW-SHOT SQL EXAMPLES (camada Gold / schema_registry)
 # ============================================

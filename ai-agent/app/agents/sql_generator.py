@@ -1,3 +1,5 @@
+"""Cliente LLM responsável por transformar perguntas de negócio em SQL seguro."""
+
 from datetime import datetime
 
 from pydantic_ai import Agent
@@ -12,6 +14,7 @@ from app.security.sql_validator import validate_sql
 
 
 class AgentTextToSQLClient:
+    """Envelopa o ``pydantic_ai.Agent`` configurado para respostas Text-to-SQL."""
 
     def __init__(
         self,
@@ -30,18 +33,29 @@ class AgentTextToSQLClient:
         )
 
     def _build_prompt(self, question: str) -> str:
+        """Monta o prompt com schema, exemplos e data atual."""
+
         return build_prompt(
             question=question,
             schema=get_schema_prompt(),
-            examples=SQL_EXAMPLES,
+            examples=self._select_examples(),
             values=VALUE_EXAMPLES,
             current_date=datetime.now(),
         )
 
     @staticmethod
+    def _select_examples(limit: int = 2) -> list[str]:
+        """Seleciona poucos exemplos para manter o prompt compacto."""
+
+        return SQL_EXAMPLES[:limit]
+
+    @staticmethod
     def _validate_output(output: Success | InvalidRequest) -> Success | InvalidRequest:
+        """Garante que respostas de sucesso passem novamente pelo validador SQL."""
+
         if isinstance(output, Success):
-            validate_sql(output.sql)
+            validated_sql = validate_sql(output.sql)
+            return output.model_copy(update={"sql": validated_sql})
 
         return output
 
@@ -50,6 +64,7 @@ class AgentTextToSQLClient:
         question: str,
         deps: Deps,
     ) -> Success | InvalidRequest:
+        """Versão síncrona usada por scripts e testes locais."""
 
         result = self.agent.run_sync(
             self._build_prompt(question),
@@ -63,6 +78,7 @@ class AgentTextToSQLClient:
         question: str,
         deps: Deps,
     ) -> Success | InvalidRequest:
+        """Versão assíncrona usada pelo orquestrador e pela API."""
 
         result = await self.agent.run(
             self._build_prompt(question),

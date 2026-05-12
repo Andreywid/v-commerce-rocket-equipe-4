@@ -18,10 +18,14 @@ _SQL_TYPES = {
 
 
 def _sql_type(meta: dict) -> str:
+    """Converte o tipo semântico do registry para um tipo aceito pelo SQLite."""
+
     return _SQL_TYPES.get(meta.get("tipo", "texto"), "TEXT")
 
 
 def _create_tables(cur: sqlite3.Cursor) -> None:
+    """Cria todas as tabelas Gold usando a ordem de colunas do registry."""
+
     for table, spec in GOLD_SCHEMA.items():
         cols = ", ".join(
             f'"{name}" {_sql_type(meta)}' for name, meta in spec["colunas"].items()
@@ -30,6 +34,8 @@ def _create_tables(cur: sqlite3.Cursor) -> None:
 
 
 def _seed(cur: sqlite3.Cursor) -> None:
+    """Insere uma amostra pequena e coerente para smoke tests locais."""
+
     ref = "2026-05-10"
 
     cur.executemany(

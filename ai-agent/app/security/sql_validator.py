@@ -1,3 +1,5 @@
+"""Validador determinístico para SQL gerado pelo agente Text-to-SQL."""
+
 import sqlglot
 
 from sqlglot import exp
@@ -38,8 +40,11 @@ PREDICATE_EXPRESSION_NAMES = (
 
 
 class SQLValidator:
+    """Aplica uma política conservadora: um único SELECT, tabelas Gold e LIMIT."""
 
     def validate(self, sql: str) -> str:
+        """Valida, normaliza e devolve SQL PostgreSQL seguro para execução."""
+
         try:
             sql_text = self._normalize_input(sql)
             tree = self._parse_sql(sql_text)
@@ -66,6 +71,8 @@ class SQLValidator:
 
     @staticmethod
     def _normalize_input(sql: str) -> str:
+        """Rejeita entradas vazias, não textuais, grandes demais ou malformadas."""
+
         if not isinstance(sql, str):
             raise SQLValidationError(
                 "SQL deve ser uma string"
@@ -92,6 +99,8 @@ class SQLValidator:
 
     @staticmethod
     def _parse_sql(sql: str) -> exp.Expression:
+        """Converte texto SQL em AST e exige exatamente um statement."""
+
         try:
             parsed = [
                 expression
@@ -116,6 +125,8 @@ class SQLValidator:
 
     @staticmethod
     def _validate_statement(tree: exp.Expression) -> None:
+        """Permite apenas SELECT de topo."""
+
         if not isinstance(tree, exp.Select):
             raise SQLValidationError(
                 "Apenas SELECT é permitido"
@@ -123,12 +134,16 @@ class SQLValidator:
 
     @staticmethod
     def _validate_ctes(tree: exp.Expression) -> None:
+        """Bloqueia CTEs para reduzir complexidade e caminhos de bypass."""
+
         if tree.find(exp.With):
             raise SQLValidationError(
                 "CTEs não permitidas"
             )
 
     def _block_set_operations(self, tree: exp.Expression) -> None:
+        """Impede UNION/EXCEPT/INTERSECT para manter a consulta auditável."""
+
         blocked_expression = self._find_expression_by_name(
             tree,
             BLOCKED_SET_OPERATION_NAMES
@@ -140,6 +155,8 @@ class SQLValidator:
             )
 
     def _block_dangerous_expressions(self, tree: exp.Expression) -> None:
+        """Bloqueia nós de AST associados a mutações ou comandos administrativos."""
+
         blocked_expression = self._find_expression_by_name(
             tree,
             BLOCKED_MUTATION_EXPRESSION_NAMES
@@ -164,6 +181,8 @@ class SQLValidator:
         return None
 
     def _validate_tables(self, tree: exp.Expression) -> None:
+        """Permite somente tabelas cadastradas no schema Gold."""
+
         allowed_tables = {
             table.lower()
             for table in ALLOWED_TABLES
@@ -187,6 +206,8 @@ class SQLValidator:
 
     @staticmethod
     def _normalize_table_name(table: exp.Table) -> str:
+        """Normaliza nomes e rejeita referências qualificadas por schema/catalog."""
+
         if table.args.get("catalog") or table.args.get("db"):
             raise SQLValidationError(
                 "Referência qualificada de tabela não permitida"
@@ -211,6 +232,8 @@ class SQLValidator:
         return table_name.lower()
 
     def _validate_functions(self, tree: exp.Expression) -> None:
+        """Bloqueia funções explicitamente proibidas e chamadas qualificadas."""
+
         blocked_functions = {
             function.lower()
             for function in BLOCKED_FUNCTIONS
@@ -242,6 +265,8 @@ class SQLValidator:
 
     @staticmethod
     def _validate_joins(tree: exp.Expression) -> None:
+        """Exige condição explícita e limita a quantidade de JOINs."""
+
         joins = list(tree.find_all(exp.Join))
 
         if len(joins) > MAX_JOINS:
@@ -256,6 +281,8 @@ class SQLValidator:
                 )
 
     def _validate_complexity(self, tree: exp.Expression) -> None:
+        """Rejeita consultas cujo score ultrapasse o limite operacional."""
+
         score = self._complexity_score(tree)
 
         if score > MAX_COMPLEXITY_SCORE:
@@ -265,6 +292,8 @@ class SQLValidator:
             )
 
     def _complexity_score(self, tree: exp.Expression) -> int:
+        """Calcula score heurístico a partir dos nós relevantes da AST."""
+
         score = COMPLEXITY_WEIGHTS["base_select"]
         score += self._count_tables(tree) * COMPLEXITY_WEIGHTS["table"]
         score += self._count_joins(tree) * COMPLEXITY_WEIGHTS["join"]
@@ -351,6 +380,8 @@ class SQLValidator:
 
     @staticmethod
     def _enforce_limit(tree: exp.Expression) -> None:
+        """Adiciona LIMIT padrão e rejeita OFFSET ou limites acima da política."""
+
         if tree.args.get("offset"):
             raise SQLValidationError(
                 "OFFSET não permitido"
@@ -396,4 +427,6 @@ _DEFAULT_VALIDATOR = SQLValidator()
 
 
 def validate_sql(sql: str) -> str:
+    """Atalho de módulo para reutilizar uma instância padrão do validador."""
+
     return _DEFAULT_VALIDATOR.validate(sql)

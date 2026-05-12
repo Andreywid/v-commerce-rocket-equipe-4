@@ -1,3 +1,5 @@
+"""Builder de prompt para o agente que explica resultados SQL."""
+
 import json
 from typing import Any
 
@@ -16,7 +18,9 @@ Regras:
 
 
 class ExplainerPromptBuilder:
-    def __init__(self, max_rows: int = 80) -> None:
+    """Monta contexto JSON limitado para o explainer responder sem inventar dados."""
+
+    def __init__(self, max_rows: int = 10) -> None:
         self._max_rows = max_rows
 
     def build_prompt(
@@ -27,12 +31,12 @@ class ExplainerPromptBuilder:
         rows: list[dict[str, Any]],
         execution_skipped: bool,
     ) -> str:
+        """Serializa pergunta, SQL e amostra de linhas em um prompt controlado."""
+
         truncated, total = self._truncate_rows(rows)
         payload = {
             "pergunta_original": question,
             "interpretacao": sql_result.interpretation,
-            "raciocinio": sql_result.reasoning,
-            "premissas": sql_result.assumptions,
             "sql_executado": sql_result.sql,
             "execucao_no_banco": not execution_skipped,
             "total_linhas_retornadas": total,
@@ -51,6 +55,8 @@ class ExplainerPromptBuilder:
     def _truncate_rows(
         self, rows: list[dict[str, Any]]
     ) -> tuple[list[dict[str, Any]], int]:
+        """Limita linhas no prompt para reduzir custo e exposição de dados."""
+
         total = len(rows)
         if total <= self._max_rows:
             return rows, total

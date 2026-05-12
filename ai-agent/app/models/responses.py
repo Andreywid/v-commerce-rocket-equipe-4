@@ -1,7 +1,11 @@
+"""Modelos Pydantic usados como contrato entre agentes e orquestrador."""
+
 from typing import Annotated, Literal
 from pydantic import BaseModel, Field
 
 class Success(BaseModel):
+    """Saída estruturada quando o modelo conseguiu gerar uma consulta segura."""
+
     kind: Literal["success"] = "success"
 
     interpretation: str = Field(
@@ -24,6 +28,8 @@ class Success(BaseModel):
 
 
 class InvalidRequest(BaseModel):
+    """Saída estruturada quando a pergunta deve ser rejeitada antes da execução."""
+
     kind: Literal["invalid"] = "invalid"
 
     error_message: str = Field(
