@@ -1,37 +1,36 @@
 import { useMemo } from "react"
 import { ShoppingCart } from "lucide-react"
-import type { OrderRow } from "@/types"
 
-export function OrderSummary({ orders }: { orders: OrderRow[] }) {
+export type OrderSummaryData = {
+  aprovados: number
+  processando: number
+  recusados: number
+  reembolsados: number
+}
+
+export function OrderSummary({ data }: { data: OrderSummaryData }) {
   const { summary, counts } = useMemo(() => {
-    const total = orders.length || 1
-
-    const stats = {
-      delivered: orders.filter((o) => o.status === "Entregue").length,
-      inTransit: orders.filter((o) => o.status === "Em trânsito").length,
-      processing: orders.filter((o) => o.status === "Processando").length,
-      cancelled: orders.filter((o) => o.status === "Cancelado").length,
-    }
+    const total = data.aprovados + data.processando + data.recusados + data.reembolsados || 1
 
     const pct = (n: number) => `${Math.round((n / total) * 100)}%`
     const barW = (n: number) => `${n > 0 ? Math.max((n / total) * 100, 6) : 0}%`
 
     const summaryData = [
-      { label: pct(stats.delivered), value: "Entregues", width: barW(stats.delivered), color: "bg-emerald-500" },
-      { label: pct(stats.inTransit), value: "Em trânsito", width: barW(stats.inTransit), color: "bg-amber-400" },
-      { label: pct(stats.processing), value: "Processando", width: barW(stats.processing), color: "bg-indigo-600" },
-      { label: pct(stats.cancelled), value: "Cancelados", width: barW(stats.cancelled), color: "bg-rose-500" },
+      { label: pct(data.aprovados),    value: "Aprovados",    width: barW(data.aprovados),    color: "bg-emerald-500" },
+      { label: pct(data.processando),  value: "Processando",  width: barW(data.processando),  color: "bg-indigo-600" },
+      { label: pct(data.recusados),    value: "Recusados",    width: barW(data.recusados),    color: "bg-rose-500" },
+      { label: pct(data.reembolsados), value: "Reembolsados", width: barW(data.reembolsados), color: "bg-amber-400" },
     ]
 
     const cardsData = [
-      { label: "Entregues", value: stats.delivered, color: "bg-emerald-500" },
-      { label: "Trânsito", value: stats.inTransit, color: "bg-amber-400" },
-      { label: "Processando", value: stats.processing, color: "bg-indigo-600" },
-      { label: "Cancelados", value: stats.cancelled, color: "bg-rose-500" },
+      { label: "Aprovados",    value: data.aprovados,    color: "bg-emerald-500" },
+      { label: "Processando",  value: data.processando,  color: "bg-indigo-600" },
+      { label: "Recusados",    value: data.recusados,    color: "bg-rose-500" },
+      { label: "Reembolsados", value: data.reembolsados, color: "bg-amber-400" },
     ]
 
     return { summary: summaryData, counts: cardsData }
-  }, [orders])
+  }, [data])
 
   return (
     <article className="flex flex-col justify-between rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
@@ -68,10 +67,8 @@ export function OrderSummary({ orders }: { orders: OrderRow[] }) {
               </p>
             </div>
             <p className="text-xl font-extrabold text-slate-900 leading-none">
-              {item.value}
-              <span className="ml-1 text-[10px] font-medium text-slate-400 lowercase">
-                unid.
-              </span>
+              {item.value.toLocaleString("pt-BR")}
+              <span className="ml-1 text-[10px] font-medium text-slate-400 lowercase">unid.</span>
             </p>
           </div>
         ))}

@@ -1,5 +1,77 @@
 import type { ClientRow, Metric, OrderRow, SupportRow } from "@/types"
+import type { VendasKPIMes } from "@/types/dashboard"
 import { CircleDollarSign, Clock3, Heart, MapPin, Smartphone, Smile, Tag, Users } from "lucide-react"
+
+const MONTH_ABBR = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
+
+export function formatMesLabel(ano_mes: string): string {
+  const [ano, mes] = ano_mes.split("-")
+  return `${MONTH_ABBR[parseInt(mes) - 1]}/${ano.slice(2)}`
+}
+
+export function getKpiCards(mes: VendasKPIMes): Metric[] {
+  const receita =
+    mes.receita_bruta >= 1_000_000
+      ? `R$ ${(mes.receita_bruta / 1_000_000).toFixed(1)}M`
+      : `R$ ${Math.round(mes.receita_bruta / 1_000)}K`
+
+  return [
+    {
+      label: "Receita bruta",
+      value: receita,
+      helper: `Referência: ${formatMesLabel(mes.ano_mes)}`,
+      tone: "rose",
+      icon: CircleDollarSign,
+    },
+    {
+      label: "Total de pedidos",
+      value: mes.qtd_pedidos.toLocaleString("pt-BR"),
+      helper: `${mes.taxa_aprovacao.toFixed(1)}% aprovados`,
+      tone: "indigo",
+      icon: Tag,
+    },
+    {
+      label: "Clientes únicos",
+      value: mes.qtd_clientes_unicos.toLocaleString("pt-BR"),
+      helper: `+${mes.qtd_clientes_novos} novos no mês`,
+      tone: "violet",
+      icon: Users,
+    },
+    {
+      label: "Ticket médio",
+      value: `R$ ${mes.ticket_medio.toFixed(2).replace(".", ",")}`,
+      helper: `${mes.taxa_recusa.toFixed(1)}% de recusa`,
+      tone: "emerald",
+      icon: Smile,
+    },
+  ]
+}
+
+export function getKpiInsights(mes: VendasKPIMes): Metric[] {
+  return [
+    {
+      label: "Top categoria",
+      value: mes.categoria_mais_vendida,
+      helper: "Categoria mais vendida no mês",
+      tone: "indigo",
+      icon: Smartphone,
+    },
+    {
+      label: "Top estado",
+      value: mes.estado_maior_receita,
+      helper: "Estado com maior receita",
+      tone: "violet",
+      icon: MapPin,
+    },
+    {
+      label: "Taxa de aprovação",
+      value: `${mes.taxa_aprovacao.toFixed(1)}%`,
+      helper: mes.taxa_aprovacao >= 80 ? "Ótimo desempenho" : "Atenção necessária",
+      tone: mes.taxa_aprovacao >= 80 ? "emerald" : "rose",
+      icon: Clock3,
+    },
+  ]
+}
 
 export const revenueData = [
   { day: "1",  lastMonth: 105, currentMonth: 68 },
