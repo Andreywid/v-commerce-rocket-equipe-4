@@ -5,7 +5,6 @@ import type { PageKey } from "@/types"
 import { useAppContext } from "@/context/AppContext"
 import { AssistantPanel } from "@/components/shared/AssistantPanel"
 import { FloatingAssistant } from "@/components/shared/FloatingAssistant"
-import { Toaster } from "@/components/ui/sonner"
 import { Header } from "./Header"
 import { Sidebar } from "./Sidebar"
 
@@ -35,7 +34,6 @@ export function AppLayout({ email, onLogout }: { email: string; onLogout: () => 
         </div>
       </div>
 
-      <Toaster />
       <FloatingAssistant onClick={() => setIsAssistantOpen(true)} />
       {isAssistantOpen && (
         <AssistantPanel
