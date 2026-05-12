@@ -1,7 +1,7 @@
 """
 Ponto de entrada para testes locais do AI Agent.
 
-Usa módulos em ``app/`` (prompt, validação) além do cliente em ``groq_cliente.py``.
+Usa módulos em ``app/``: prompt, validação, orquestrador e mock da camada Gold.
 
 Execute a partir do diretório ``ai-agent``::
 
@@ -12,18 +12,19 @@ Execute a partir do diretório ``ai-agent``::
     python -m app.main --question "..."
     python -m app.main --no-exec-mock
 
-**Code Runner:** execute o arquivo inteiro ou use ``run_main.py`` / ``main.py`` na raiz.
+**Code Runner:** execute o arquivo
+ inteiro ou use ``run_main.py`` / ``main.py`` na raiz.
 
 ``GROQ_API_KEY`` no ``.env`` (pasta ``ai-agent``) ou no ambiente para chamadas ao modelo.
 
-Nota: ``groq_cliente.py`` ainda duplica ``SYSTEM_PROMPT`` e ``build_prompt`` internos;
-este ``main.py`` usa ``app.prompts.sql_prompt_builder`` e ``app.security.sql_validator``
-onde faz sentido (pré-visualização e validação modular).
+Nota: o fluxo principal usa ``app.agents.orchestrator.AgentOrchestrator``.
+As opções de inspeção continuam usando o prompt modular para pré-visualização.
 """
 
 from __future__ import annotations
 
 import argparse
+import asyncio
 import os
 import sqlite3
 import sys
@@ -47,10 +48,10 @@ if sys.platform == "win32" and hasattr(sys.stdout, "reconfigure"):
 
 from app.database.mock_gold import build_mock_sqlite
 from app.database.schema_registry import GOLD_SCHEMA, get_schema_prompt
+from app.models.deps import Deps
 from app.prompts.examples import SQL_EXAMPLES, VALUE_EXAMPLES
 from app.prompts.sql_prompt_builder import build_prompt as build_user_prompt_modular
 from app.prompts import system_prompt as system_prompt_module
-from app.security.sql_validator import validate_sql as validate_sql_modular
 
 
 def _print_bulleted_section(title: str, items: list[str]) -> None:
@@ -106,6 +107,23 @@ def _try_run_sql_on_mock(sql: str, db_path: Path) -> None:
         conn.close()
 
 
+def _print_mock_rows(rows: list[dict], db_path: Path) -> None:
+    print(f"\n--- Execução no mock ({db_path.name}) ---")
+    if not rows:
+        print("(sem resultados)")
+        print("Total de linhas: 0")
+        return
+
+    colnames = list(rows[0].keys())
+    print(" | ".join(colnames))
+    limit = 20
+    for row in rows[:limit]:
+        print(" | ".join(str(row.get(column)) for column in colnames))
+    if len(rows) > limit:
+        print(f"... e mais {len(rows) - limit} linha(s)")
+    print(f"Total de linhas: {len(rows)}")
+
+
 def run_mock_sqlite_smoke() -> Path:
     """Recria o SQLite de exemplo e imprime contagens rápidas."""
     path = build_mock_sqlite()
@@ -155,52 +173,58 @@ def run_dry_prompt(question: str) -> None:
     print(body)
 
 
-def run_llm_text_to_sql(
+async def run_orchestrator_text_to_sql(
     question: str,
     *,
     mock_db_path: Path | None = None,
     exec_on_mock: bool = True,
 ) -> None:
-    from groq_cliente import AgentTextToSQLClient, Deps, InvalidRequest
+    from app.agents.orchestrator import AgentOrchestrator
 
-    client = AgentTextToSQLClient()
-    deps = Deps(conn=None)
+    orchestrator = AgentOrchestrator()
+    conn: sqlite3.Connection | None = None
+    if exec_on_mock and mock_db_path is not None and mock_db_path.is_file():
+        conn = sqlite3.connect(mock_db_path)
+    deps = Deps(conn=conn)
 
-    response = client.generate_sql(question=question, deps=deps)
+    try:
+        response = await orchestrator.ask(question=question, deps=deps)
+    finally:
+        if conn is not None:
+            conn.close()
 
-    if isinstance(response, InvalidRequest):
-        print("\nSolicitação inválida (modelo)")
-        print(response.error_message)
+    if response.error:
+        print("\nSolicitação inválida ou rejeitada pelo fluxo")
+        print(response.explanation)
+        if response.sql:
+            print("\nSQL rejeitado:")
+            print(response.sql)
         return
 
-    print("\nSQL gerado com sucesso\n")
-    print("INTERPRETAÇÃO:")
-    print(response.interpretation)
+    print("\nOrquestrador executado com sucesso\n")
+    print("RESULTADO DO EXPLAINER:")
+    print(response.explanation)
+    if response.interpretation:
+        print("\nINTERPRETAÇÃO:")
+        print(response.interpretation)
     _print_bulleted_section("RACIOCÍNIO:", response.reasoning)
-    print("\nSQL:")
-    print(response.sql)
+    if response.sql:
+        print("\nSQL:")
+        print(response.sql)
     _print_bulleted_section("PREMISSAS:", response.assumptions)
 
-    print("\n--- Validação modular (app.security.sql_validator) ---")
-    try:
-        validate_sql_modular(response.sql)
-        print("OK: nenhum comando proibido detectado.")
-    except ValueError as exc:
-        print(f"FALHOU: {exc}")
-        return
-
-    if exec_on_mock and mock_db_path is not None:
-        _try_run_sql_on_mock(response.sql, mock_db_path)
+    if exec_on_mock and mock_db_path is not None and response.sql and conn is not None:
+        _print_mock_rows(response.rows, mock_db_path)
     elif exec_on_mock:
         print(
             "\n--- Execução no mock ---\n"
-            "Pulada: nenhum mock_gold.sqlite disponível (rode sem --skip-mock ou gere o arquivo)."
+            "Pulada: nenhum SQL ou mock_gold.sqlite disponível (rode sem --skip-mock ou gere o arquivo)."
         )
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="Testes locais: mock Gold, prompt modular (app/prompts), validação (app/security), Text-to-SQL (groq_cliente)"
+        description="Testes locais: mock Gold, prompt modular, orquestrador Text-to-SQL e validação"
     )
     parser.add_argument(
         "--question",
@@ -266,13 +290,15 @@ def main() -> None:
         )
         return
 
-    print("=== Text-to-SQL (Groq / groq_cliente.py) ===\n")
+    print("=== Orquestrador Text-to-SQL (Groq / app.agents.orchestrator) ===\n")
     print("Pergunta:", args.question)
     try:
-        run_llm_text_to_sql(
-            args.question,
-            mock_db_path=mock_db_path,
-            exec_on_mock=not args.no_exec_mock,
+        asyncio.run(
+            run_orchestrator_text_to_sql(
+                args.question,
+                mock_db_path=mock_db_path,
+                exec_on_mock=not args.no_exec_mock,
+            )
         )
     except Exception as exc:
         print(f"\nErro na chamada ao modelo: {exc}")

@@ -60,4 +60,6 @@ Antes de gerar SQL:
    - se SQL é PostgreSQL válido
 
 4. Gere SQL final seguro
+
+5. Sempre responda em português brasileiro.
 """

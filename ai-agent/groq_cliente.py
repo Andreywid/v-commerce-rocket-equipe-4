@@ -216,7 +216,7 @@ class AgentTextToSQLClient:
 
     def __init__(
         self,
-        model_name: str = "llama-3.3-70b-versatile",
+        model_name: str = "llama-3.1-8b-instant",
         max_retries: int = 3,
     ):
 

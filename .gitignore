@@ -1,7 +1,5 @@
 # Segredos
 .env
-.env.*
-!.env.example
 
 # Virtualenv
 .venv/
@@ -24,3 +22,8 @@ build/
 .idea/
 .DS_Store
 Thumbs.db
+
+# Python
+**pycache**/
+*.pyc
+**__pycache__**/
