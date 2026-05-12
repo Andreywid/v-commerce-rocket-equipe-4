@@ -9,7 +9,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from fastapi.testclient import TestClient
 
 from app.api.app import create_app
-from app.api.dependencies import get_orchestrator
+from app.api.dependencies import get_conversation_store, get_orchestrator
+from app.memory.conversation_store import InMemoryConversationStore
 from app.models.deps import Deps
 from app.models.responses import OrchestratorResult
 
@@ -49,13 +50,16 @@ class APITest(unittest.TestCase):
     def test_ask_endpoint_maps_request_to_deps(self) -> None:
         api = create_app()
         fake = FakeOrchestrator()
+        store = InMemoryConversationStore()
         api.dependency_overrides[get_orchestrator] = lambda: fake
+        api.dependency_overrides[get_conversation_store] = lambda: store
         client = TestClient(api)
 
         response = client.post(
             "/ask",
             json={
                 "question": "Qual foi a receita do mês?",
+                "conversation_id": "conv-1",
                 "user_id": "user-1",
                 "tenant_id": "tenant-1",
                 "roles": ["analyst"],
@@ -69,6 +73,7 @@ class APITest(unittest.TestCase):
 
         self.assertEqual(response.status_code, 200)
         payload = response.json()
+        self.assertEqual(payload["conversation_id"], "conv-1")
         self.assertEqual(payload["explanation"], "resposta de teste")
         self.assertEqual(payload["sql"], "SELECT ano_mes FROM gold_vendas_kpis LIMIT 100")
         self.assertEqual(fake.question, "Qual foi a receita do mês?")
@@ -83,9 +88,44 @@ class APITest(unittest.TestCase):
         )
         self.assertTrue(fake.deps.require_tenant)
         self.assertIsNone(fake.deps.conn)
+        self.assertEqual(fake.deps.conversation_id, "conv-1")
 
-    def test_ask_endpoint_rejects_execute_until_db_is_configured(self) -> None:
+        turns = store.list_turns(
+            conversation_id="conv-1",
+            tenant_id="tenant-1",
+            user_id="user-1",
+        )
+        self.assertEqual(len(turns), 1)
+        self.assertEqual(turns[0].question, "Qual foi a receita do mês?")
+        self.assertEqual(turns[0].sql, "SELECT ano_mes FROM gold_vendas_kpis LIMIT 100")
+
+    def test_ask_endpoint_generates_conversation_id_when_missing(self) -> None:
         api = create_app()
+        fake = FakeOrchestrator()
+        store = InMemoryConversationStore()
+        api.dependency_overrides[get_orchestrator] = lambda: fake
+        api.dependency_overrides[get_conversation_store] = lambda: store
+        client = TestClient(api)
+
+        response = client.post(
+            "/ask",
+            json={
+                "question": "Qual foi a receita do mês?",
+                "user_id": "user-1",
+                "tenant_id": "tenant-1",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        conversation_id = response.json()["conversation_id"]
+        self.assertIsInstance(conversation_id, str)
+        self.assertTrue(conversation_id)
+        self.assertEqual(fake.deps.conversation_id, conversation_id)
+
+    def test_ask_endpoint_passes_mock_connection_when_execute_is_true(self) -> None:
+        api = create_app()
+        fake = FakeOrchestrator()
+        api.dependency_overrides[get_orchestrator] = lambda: fake
         client = TestClient(api)
 
         response = client.post(
@@ -96,8 +136,9 @@ class APITest(unittest.TestCase):
             },
         )
 
-        self.assertEqual(response.status_code, 501)
-        self.assertIn("Database execution is not configured", response.json()["detail"])
+        self.assertEqual(response.status_code, 200)
+        self.assertIsNotNone(fake.deps)
+        self.assertIsNotNone(fake.deps.conn)
 
 
 if __name__ == "__main__":

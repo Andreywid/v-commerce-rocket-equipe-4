@@ -2,10 +2,18 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException, status
+import sqlite3
+
+from fastapi import APIRouter, Depends
 
 from app.agents.orchestrator import AgentOrchestrator
-from app.api.dependencies import deps_from_request, get_orchestrator
+from app.api.dependencies import (
+    deps_from_request,
+    get_conversation_store,
+    get_orchestrator,
+)
+from app.database.mock_gold import build_mock_sqlite
+from app.memory.conversation_store import InMemoryConversationStore
 from app.models.api import AskRequest, AskResponse, HealthResponse
 
 
@@ -23,17 +31,41 @@ async def health() -> HealthResponse:
 async def ask(
     request: AskRequest,
     orchestrator: AgentOrchestrator = Depends(get_orchestrator),
+    conversation_store: InMemoryConversationStore = Depends(get_conversation_store),
 ) -> AskResponse:
     """Recebe uma pergunta e devolve a resposta estruturada do orquestrador."""
 
-    if request.execute:
-        raise HTTPException(
-            status_code=status.HTTP_501_NOT_IMPLEMENTED,
-            detail="Database execution is not configured for API requests yet",
-        )
-
-    result = await orchestrator.ask(
-        question=request.question,
-        deps=deps_from_request(request),
+    conversation_id = (
+        request.conversation_id
+        or conversation_store.new_conversation_id()
     )
-    return AskResponse.from_orchestrator(result)
+
+    conn: sqlite3.Connection | None = None
+    try:
+        if request.execute:
+            mock_path = build_mock_sqlite()
+            conn = sqlite3.connect(mock_path)
+
+        deps = deps_from_request(request, conn=conn)
+        deps.conversation_id = conversation_id
+
+        result = await orchestrator.ask(
+            question=request.question,
+            deps=deps,
+        )
+    finally:
+        if conn is not None:
+            conn.close()
+
+    conversation_store.append_result(
+        conversation_id=conversation_id,
+        tenant_id=request.tenant_id,
+        user_id=request.user_id,
+        question=request.question,
+        result=result,
+    )
+
+    return AskResponse.from_orchestrator(
+        result,
+        conversation_id=conversation_id,
+    )

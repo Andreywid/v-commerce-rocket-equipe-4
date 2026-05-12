@@ -1,5 +1,7 @@
 """Validador determinístico para SQL gerado pelo agente Text-to-SQL."""
 
+import re
+
 import sqlglot
 
 from sqlglot import exp
@@ -38,6 +40,10 @@ PREDICATE_EXPRESSION_NAMES = (
     "Or",
 )
 
+DOUBLE_QUOTED_LITERAL_PATTERN = re.compile(
+    r"^\d{4}-\d{2}(-\d{2})?$|^\d+([.,]\d+)?$"
+)
+
 
 class SQLValidator:
     """Aplica uma política conservadora: um único SELECT, tabelas Gold e LIMIT."""
@@ -56,6 +62,7 @@ class SQLValidator:
             self._validate_tables(tree)
             self._validate_functions(tree)
             self._validate_joins(tree)
+            self._normalize_quoted_literals(tree)
             self._validate_complexity(tree)
             self._enforce_limit(tree)
 
@@ -279,6 +286,50 @@ class SQLValidator:
                 raise SQLValidationError(
                     "JOIN sem condição explícita não permitido"
                 )
+
+    def _normalize_quoted_literals(self, tree: exp.Expression) -> None:
+        """
+        Corrige erro comum do LLM: usar aspas duplas em literais.
+
+        Em PostgreSQL, ``"2024-10"`` é identificador, não string. A normalização
+        só acontece no lado direito de predicados comparando coluna com coluna e
+        apenas para padrões que parecem valores literais, como datas e números.
+        """
+
+        for predicate in tree.find_all(exp.Predicate):
+            if not isinstance(predicate, (exp.EQ, exp.NEQ, exp.GT, exp.GTE, exp.LT, exp.LTE)):
+                continue
+
+            left = predicate.args.get("this")
+            right = predicate.args.get("expression")
+
+            if isinstance(left, exp.Column) and self._is_quoted_literal_column(right):
+                predicate.set(
+                    "expression",
+                    exp.Literal.string(right.name),
+                )
+            elif isinstance(right, exp.Column) and self._is_quoted_literal_column(left):
+                predicate.set(
+                    "this",
+                    exp.Literal.string(left.name),
+                )
+
+    @staticmethod
+    def _is_quoted_literal_column(expression: exp.Expression | None) -> bool:
+        if not isinstance(expression, exp.Column):
+            return False
+
+        if expression.table:
+            return False
+
+        identifier = expression.this
+        if (
+            not isinstance(identifier, exp.Identifier)
+            or not identifier.args.get("quoted")
+        ):
+            return False
+
+        return bool(DOUBLE_QUOTED_LITERAL_PATTERN.match(expression.name))
 
     def _validate_complexity(self, tree: exp.Expression) -> None:
         """Rejeita consultas cujo score ultrapasse o limite operacional."""

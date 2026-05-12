@@ -11,6 +11,7 @@ Execute a partir do diretório ``ai-agent``::
     python main.py --schema-info
     python -m app.main --question "..."
     python -m app.main --no-exec-mock
+    python -m app.main --serve-api
 
 **Code Runner:** execute o arquivo
  inteiro ou use ``run_main.py`` / ``main.py`` na raiz.
@@ -52,6 +53,19 @@ from app.models.deps import Deps
 from app.prompts.examples import SQL_EXAMPLES, VALUE_EXAMPLES
 from app.prompts.sql_prompt_builder import build_prompt as build_user_prompt_modular
 from app.prompts import system_prompt as system_prompt_module
+
+
+def run_api_server(*, host: str, port: int, reload: bool) -> None:
+    """Sobe a API FastAPI via Uvicorn."""
+
+    import uvicorn
+
+    uvicorn.run(
+        "app.api.app:app",
+        host=host,
+        port=port,
+        reload=reload,
+    )
 
 
 def _print_bulleted_section(title: str, items: list[str]) -> None:
@@ -262,7 +276,36 @@ def main() -> None:
         action="store_true",
         help="Não executa o SELECT gerado no SQLite mock (por padrão a consulta roda após validar)",
     )
+    parser.add_argument(
+        "--serve-api",
+        action="store_true",
+        help="Sobe a API FastAPI do AI Agent via Uvicorn",
+    )
+    parser.add_argument(
+        "--host",
+        default="127.0.0.1",
+        help="Host usado com --serve-api",
+    )
+    parser.add_argument(
+        "--port",
+        type=int,
+        default=8000,
+        help="Porta usada com --serve-api",
+    )
+    parser.add_argument(
+        "--reload",
+        action="store_true",
+        help="Ativa reload automático do Uvicorn com --serve-api",
+    )
     args = parser.parse_args()
+
+    if args.serve_api:
+        run_api_server(
+            host=args.host,
+            port=args.port,
+            reload=args.reload,
+        )
+        return
 
     if args.schema_info:
         run_schema_info()

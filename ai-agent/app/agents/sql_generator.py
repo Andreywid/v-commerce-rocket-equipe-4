@@ -44,10 +44,10 @@ class AgentTextToSQLClient:
         )
 
     @staticmethod
-    def _select_examples(limit: int = 2) -> list[str]:
+    def _select_examples() -> list[str]:
         """Seleciona poucos exemplos para manter o prompt compacto."""
 
-        return SQL_EXAMPLES[:limit]
+        return SQL_EXAMPLES[:2]
 
     @staticmethod
     def _validate_output(output: Success | InvalidRequest) -> Success | InvalidRequest:

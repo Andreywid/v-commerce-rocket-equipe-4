@@ -11,6 +11,7 @@ class Deps:
     """Dependências e contexto de autorização injetados no fluxo do agente."""
 
     conn: Any | None
+    conversation_id: str | None = None
     user_id: str | None = None
     tenant_id: str | None = None
     roles: frozenset[str] = field(default_factory=frozenset)

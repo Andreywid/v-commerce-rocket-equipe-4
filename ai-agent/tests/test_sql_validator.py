@@ -35,6 +35,20 @@ class SQLValidatorTest(unittest.TestCase):
         with self.assertRaises(SQLValidationError):
             validate_sql("SELECT ano_mes FROM gold_vendas_kpis; SELECT 1")
 
+    def test_normalizes_double_quoted_date_literal(self) -> None:
+        sql = validate_sql(
+            'SELECT receita_bruta FROM gold_vendas_kpis WHERE ano_mes = "2024-10"'
+        )
+
+        self.assertIn("ano_mes = '2024-10'", sql)
+
+    def test_does_not_normalize_arbitrary_double_quoted_identifier(self) -> None:
+        sql = validate_sql(
+            'SELECT receita_bruta FROM gold_vendas_kpis WHERE ano_mes = "outra_coluna"'
+        )
+
+        self.assertIn('"outra_coluna"', sql)
+
 
 if __name__ == "__main__":
     unittest.main()

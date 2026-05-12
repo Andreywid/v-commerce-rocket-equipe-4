@@ -8,6 +8,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from app.models.deps import Deps
 from app.security.guardrails import PolicyViolation, QueryPolicy
+from app.security.sql_validator import validate_sql
 
 
 class QueryPolicyTest(unittest.TestCase):
@@ -82,6 +83,22 @@ class QueryPolicyTest(unittest.TestCase):
             "SELECT COUNT(*) FROM gold_cliente_360 LIMIT 100",
             Deps(conn=None),
         )
+
+    def test_blocks_unpermitted_identifier_left_after_sql_validation(self) -> None:
+        sql = validate_sql(
+            'SELECT receita_bruta FROM gold_vendas_kpis WHERE ano_mes = "outra_coluna"'
+        )
+
+        with self.assertRaises(PolicyViolation):
+            self.policy.validate_sql(
+                sql,
+                Deps(
+                    conn=None,
+                    allowed_columns={
+                        "gold_vendas_kpis": frozenset({"ano_mes", "receita_bruta"}),
+                    },
+                ),
+            )
 
 
 if __name__ == "__main__":

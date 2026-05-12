@@ -19,6 +19,7 @@ class AskRequest(BaseModel):
     """Contrato de entrada para perguntas em linguagem natural ao agente."""
 
     question: str = Field(min_length=1)
+    conversation_id: str | None = None
     user_id: str | None = None
     tenant_id: str | None = None
     roles: list[str] = Field(default_factory=list)
@@ -32,6 +33,7 @@ class AskRequest(BaseModel):
 class AskResponse(BaseModel):
     """Contrato público retornado pelo endpoint ``/ask``."""
 
+    conversation_id: str | None = None
     explanation: str
     sql: str | None = None
     rows: list[dict[str, Any]] = Field(default_factory=list)
@@ -41,10 +43,16 @@ class AskResponse(BaseModel):
     error: str | None = None
 
     @classmethod
-    def from_orchestrator(cls, result: OrchestratorResult) -> "AskResponse":
+    def from_orchestrator(
+        cls,
+        result: OrchestratorResult,
+        *,
+        conversation_id: str | None = None,
+    ) -> "AskResponse":
         """Converte o resultado interno do orquestrador para o modelo da API."""
 
         return cls(
+            conversation_id=conversation_id,
             explanation=result.explanation,
             sql=result.sql,
             rows=result.rows,

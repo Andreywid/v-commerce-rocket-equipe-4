@@ -2,7 +2,13 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 from app.agents.orchestrator import AgentOrchestrator
+from app.memory.conversation_store import (
+    InMemoryConversationStore,
+    get_default_conversation_store,
+)
 from app.models.api import AskRequest
 from app.models.deps import Deps
 
@@ -13,7 +19,13 @@ def get_orchestrator() -> AgentOrchestrator:
     return AgentOrchestrator(debug=False)
 
 
-def deps_from_request(request: AskRequest) -> Deps:
+def get_conversation_store() -> InMemoryConversationStore:
+    """Retorna o store volátil de memória conversacional curta."""
+
+    return get_default_conversation_store()
+
+
+def deps_from_request(request: AskRequest, *, conn: Any | None = None) -> Deps:
     """Traduz permissões do request em ``Deps`` para guardrails e execução."""
 
     allowed_columns = None
@@ -24,7 +36,8 @@ def deps_from_request(request: AskRequest) -> Deps:
         }
 
     return Deps(
-        conn=None,
+        conn=conn,
+        conversation_id=request.conversation_id,
         user_id=request.user_id,
         tenant_id=request.tenant_id,
         roles=frozenset(request.roles),
