@@ -54,6 +54,21 @@ def _deps_from_cli_context(
     )
 
 
+def _print_memory_debug(
+    *,
+    question_for_agent: str,
+    previous_turn_count: int,
+) -> None:
+    print("\n--- DEBUG MEMORY ---")
+    print(f"Turnos carregados: {previous_turn_count}")
+    if previous_turn_count == 0:
+        print("Nenhum contexto conversacional foi injetado.")
+    else:
+        print("Prompt contextual enviado ao agente:")
+    print(question_for_agent)
+    print("--- FIM DEBUG MEMORY ---\n")
+
+
 async def _ask_with_memory(
     *,
     orchestrator: AgentOrchestrator,
@@ -75,9 +90,16 @@ async def _ask_with_memory(
         conversation_id=conversation_id,
         conn=conn,
     )
+    question_for_agent = build_question_with_memory(question, previous_turns)
+
+    if context.debug_memory:
+        _print_memory_debug(
+            question_for_agent=question_for_agent,
+            previous_turn_count=len(previous_turns),
+        )
 
     response = await orchestrator.ask(
-        question=build_question_with_memory(question, previous_turns),
+        question=question_for_agent,
         deps=deps,
     )
     conversation_store.append_result(

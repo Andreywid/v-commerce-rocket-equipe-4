@@ -20,6 +20,7 @@ class CliRunContext:
     allow_all_schema_access: bool
     allow_sensitive_pii: bool
     require_tenant: bool
+    debug_memory: bool
 
 
 @dataclass(frozen=True)

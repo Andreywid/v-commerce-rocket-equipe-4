@@ -80,6 +80,7 @@ def _build_cli_context(
         allow_all_schema_access=args.allow_all_schema_access,
         allow_sensitive_pii=args.allow_sensitive_pii,
         require_tenant=args.require_tenant,
+        debug_memory=args.debug_memory,
     )
 
 
@@ -174,6 +175,11 @@ def build_parser() -> argparse.ArgumentParser:
         "--require-tenant",
         action="store_true",
         help="Rejeita a pergunta se --tenant-id não for informado",
+    )
+    parser.add_argument(
+        "--debug-memory",
+        action="store_true",
+        help="Imprime o contexto de memória enviado ao LLM antes de cada pergunta",
     )
     parser.add_argument(
         "--serve-api",
