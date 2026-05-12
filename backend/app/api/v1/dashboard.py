@@ -1,12 +1,15 @@
-# Endpoints: Dashboard
-#
-# GET /api/v1/dashboard/kpis
-#   Retorna: receita_total, total_pedidos, ticket_medio, total_clientes, nps_medio
-#
-# GET /api/v1/dashboard/vendas
-#   Query params: periodo (daily|weekly|monthly), data_inicio, data_fim
-#
-# GET /api/v1/dashboard/por-categoria
-# GET /api/v1/dashboard/por-regiao
-# GET /api/v1/dashboard/top-produtos
-# GET /api/v1/dashboard/top-clientes
+from fastapi import APIRouter
+from app.services import dashboard_service
+from app.schemas.dashboard import KPIsResponse
+
+router = APIRouter(prefix="/dashboard", tags=["dashboard"])
+
+
+@router.get("/kpis", response_model=KPIsResponse)
+def get_kpis(periodo: str = "12m"):
+    """
+    Retorna KPIs mensais agregados (gold_vendas_kpis).
+
+    - **periodo**: janela de tempo — `3m`, `6m` ou `12m` (padrão: `12m`)
+    """
+    return dashboard_service.get_kpis(periodo)

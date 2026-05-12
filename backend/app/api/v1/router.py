@@ -1,13 +1,13 @@
 from fastapi import APIRouter
-from app.api.v1 import auth
+from app.api.v1 import auth, dashboard
 
 router = APIRouter()
 
 router.include_router(auth.router)
+router.include_router(dashboard.router)
 
-# Os routers abaixo serão incluídos conforme cada módulo for implementado:
-# from app.api.v1 import dashboard, customers, orders, products, support, agent
-# router.include_router(dashboard.router)
+# Incluir conforme cada módulo for implementado pelo time:
+# from app.api.v1 import customers, orders, products, support, agent
 # router.include_router(customers.router)
 # router.include_router(orders.router)
 # router.include_router(products.router)
