@@ -12,7 +12,15 @@ import { SupportPage } from "@/pages/Support"
 import { LoginPage } from "@/pages/Login"
 
 function App() {
-  const [sessionEmail, setSessionEmail] = useState("")
+  const [sessionEmail, setSessionEmail] = useState<string>(
+    () => localStorage.getItem("userEmail") ?? "",
+  )
+
+  function handleLogout() {
+    localStorage.removeItem("token")
+    localStorage.removeItem("userEmail")
+    setSessionEmail("")
+  }
 
   return (
     <>
@@ -23,7 +31,7 @@ function App() {
         <AppProvider>
           <BrowserRouter>
             <Routes>
-              <Route element={<AppLayout email={sessionEmail} onLogout={() => setSessionEmail("")} />}>
+              <Route element={<AppLayout email={sessionEmail} onLogout={handleLogout} />}>
                 <Route index element={<Dashboard />} />
                 <Route path="produtos" element={<ProductsPage />} />
                 <Route path="clientes" element={<ClientsPage />} />

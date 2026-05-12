@@ -49,6 +49,7 @@ export function LoginPage({ onLogin }: { onLogin: (email: string) => void }) {
     try {
       const data = await api.post<LoginResponse>("/auth/login", { email, password })
       localStorage.setItem("token", data.access_token)
+      localStorage.setItem("userEmail", data.user.email)
       toast.success(`Bem-vindo, ${data.user.name}!`)
       onLogin(data.user.email)
     } catch (err) {
