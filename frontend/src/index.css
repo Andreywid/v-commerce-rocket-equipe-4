@@ -141,3 +141,16 @@
     @apply cursor-pointer;
     }
 }
+
+/* ── Sonner: dark colorido por tipo ── */
+.cn-toast {
+  box-shadow: 0 8px 32px -4px rgb(0 0 0 / 0.45) !important;
+  border-top-width: 3px !important;
+  border-top-color: var(--color-indigo-500) !important;
+}
+.cn-toast[data-type="error"]   { border-top-color: var(--color-red-400) !important; }
+.cn-toast[data-type="success"] { border-top-color: var(--color-emerald-400) !important; }
+.cn-toast[data-type="warning"] { border-top-color: var(--color-amber-400) !important; }
+.cn-toast[data-type="info"]    { border-top-color: var(--color-indigo-400) !important; }
+
+.cn-toast-desc { color: var(--color-slate-400) !important; }
