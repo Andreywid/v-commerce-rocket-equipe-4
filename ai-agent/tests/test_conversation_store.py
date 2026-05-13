@@ -116,6 +116,7 @@ class InMemoryConversationStoreTest(unittest.TestCase):
         self.assertIn("2024-11", prompt)
         self.assertIn("PERGUNTA ATUAL", prompt)
         self.assertIn("E em 2024-10?", prompt)
+        self.assertNotIn("RESOLUÇÃO OBRIGATÓRIA (PIPELINE)", prompt)
 
     def test_build_question_with_memory_preserves_aggregate_semantics(self) -> None:
         store = InMemoryConversationStore()
@@ -159,6 +160,31 @@ class InMemoryConversationStoreTest(unittest.TestCase):
         self.assertIn("SUM(receita_bruta) AS valor_total", prompt)
         self.assertIn("GROUP BY ano", prompt)
         self.assertIn("valor_total significa SUM(receita_bruta)", prompt)
+
+    def test_build_question_with_memory_includes_demonstrative_rules(self) -> None:
+        store = InMemoryConversationStore()
+        store.append_result(
+            conversation_id="conv-1",
+            tenant_id="tenant-1",
+            user_id="user-1",
+            question="Quantos clientes estão em risco?",
+            result=_result(
+                "SELECT COUNT(id_cliente) FROM gold_cliente_360 "
+                "WHERE is_em_risco = 1 LIMIT 100"
+            ),
+        )
+        turns = store.list_turns(
+            conversation_id="conv-1",
+            tenant_id="tenant-1",
+            user_id="user-1",
+        )
+
+        prompt = build_question_with_memory("Quem são esses clientes?", turns)
+
+        self.assertIn("REFERÊNCIAS PRONOMINAIS E DEMONSTRATIVOS", prompt)
+        self.assertIn("esses clientes", prompt)
+        self.assertIn("COUNT", prompt)
+        self.assertIn("is_em_risco", prompt)
 
 
 if __name__ == "__main__":

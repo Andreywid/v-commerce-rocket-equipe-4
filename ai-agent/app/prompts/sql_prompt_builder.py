@@ -2,9 +2,13 @@
 
 from datetime import datetime
 
-# ============================================
-# PROMPT BUILDER
-# ============================================
+from app.prompts.sql_user_prompt import (
+    SqlDialect,
+    build_sql_text_to_sql_user_prompt,
+)
+
+__all__ = ["SqlDialect", "build_prompt"]
+
 
 def build_prompt(
     question: str,
@@ -12,58 +16,18 @@ def build_prompt(
     examples: list[str],
     values: list[str],
     current_date: datetime,
+    *,
+    dialect: SqlDialect = "postgresql",
 ) -> str:
     """Combina schema, exemplos, valores válidos e pergunta em um único prompt."""
 
-    current_date = current_date.strftime("%Y-%m-%d")
-
     examples_text = "\n\n".join(examples)
-
-    values_text = "\n".join(
-        f"- {v}" for v in values
+    values_text = "\n".join(f"- {v}" for v in values)
+    return build_sql_text_to_sql_user_prompt(
+        schema=schema,
+        examples_text=examples_text,
+        values_text=values_text,
+        question=question,
+        current_date=current_date,
+        dialect=dialect,
     )
-
-    return f"""
-# DATABASE SCHEMA
-
-{schema}
-
-# VALUE EXAMPLES
-
-{values_text}
-
-# FEW SHOT EXAMPLES
-
-{examples_text} 
-
-# USER QUESTION
-
-{question}
-
-# CURRENT DATE
-
-{current_date}
-
-# EXECUTION STRATEGY
-
-Antes de gerar SQL:
-
-1. Identifique:
-   - entidades
-   - métricas
-   - filtros
-   - agregações
-
-2. Determine:
-   - tabelas necessárias
-   - joins necessários
-
-3. Verifique:
-   - se colunas existem
-   - se joins fazem sentido
-   - se SQL é PostgreSQL válido
-
-4. Gere SQL final seguro
-
-5. Sempre responda em português brasileiro.
-"""

@@ -7,6 +7,16 @@ from pathlib import Path
 from app.models.responses import OrchestratorResult
 
 
+_REJECTION_TITLES: dict[str, str] = {
+    "question_policy": "Pergunta não aceita (política ou escopo)",
+    "invalid_request": "Pedido fora do contexto dos dados",
+    "sql_validation": "Consulta não permitida pelo validador",
+    "sql_policy": "Consulta bloqueada por regras de acesso",
+    "execution": "Falha ao executar no banco",
+    "sql_agent": "Falha ao gerar a consulta",
+}
+
+
 def print_bulleted_section(title: str, items: list[str]) -> None:
     """Imprime listas opcionais mantendo a saída de CLI legível."""
 
@@ -46,10 +56,17 @@ def print_agent_response(
     """Renderiza a resposta completa do agente no terminal."""
 
     if response.error:
-        print("\nSOLICITAÇÃO INVÁLIDA OU REJEITADA")
+        kind = response.error_kind or "unknown"
+        title = _REJECTION_TITLES.get(kind, "Não foi possível concluir o pedido")
+        print(f"\n=== {title} ===")
         print(response.explanation)
         if response.sql:
-            print("\nSQL rejeitado:")
+            label = (
+                "SQL que não pôde ser executado:"
+                if kind == "execution"
+                else "SQL envolvido:"
+            )
+            print(f"\n{label}")
             print(response.sql)
         return
 

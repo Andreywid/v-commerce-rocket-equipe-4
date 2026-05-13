@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from app.security.pii_mask import mask_cpf_in_rows
+
 
 class QueryExecutor:
     """Executa consultas SELECT validadas e normaliza linhas para dicionários."""
@@ -13,9 +15,10 @@ class QueryExecutor:
 
         if hasattr(conn, "fetch"):
             rows = await conn.fetch(sql)
-            return [dict(row) for row in rows]
+            return mask_cpf_in_rows([dict(row) for row in rows])
 
         cursor = conn.cursor()
         cursor.execute(sql.strip().rstrip(";"))
         colnames = [description[0] for description in (cursor.description or [])]
-        return [dict(zip(colnames, row)) for row in cursor.fetchall()]
+        raw = [dict(zip(colnames, row)) for row in cursor.fetchall()]
+        return mask_cpf_in_rows(raw)

@@ -1,5 +1,6 @@
 """Cliente LLM responsável por transformar perguntas de negócio em SQL seguro."""
 
+import sqlite3
 from datetime import datetime
 
 from pydantic_ai import Agent
@@ -9,7 +10,7 @@ from app.agents.model_config import configure_provider_api_keys, get_model_name
 from app.models.deps import Deps
 from app.models.responses import InvalidRequest, Response, Success
 from app.prompts.examples import SQL_EXAMPLES, VALUE_EXAMPLES
-from app.prompts.sql_prompt_builder import build_prompt
+from app.prompts.sql_prompt_builder import SqlDialect, build_prompt
 from app.prompts.system_prompt import SYSTEM_PROMPT
 from app.security.sql_validator import validate_sql
 
@@ -34,7 +35,15 @@ class AgentTextToSQLClient:
             system_prompt=SYSTEM_PROMPT,
         )
 
-    def _build_prompt(self, question: str) -> str:
+    @staticmethod
+    def _sql_dialect(deps: Deps) -> SqlDialect:
+        """SQLite no mock local; caso contrário assume PostgreSQL."""
+
+        if isinstance(deps.conn, sqlite3.Connection):
+            return "sqlite"
+        return "postgresql"
+
+    def _build_prompt(self, question: str, deps: Deps) -> str:
         """Monta o prompt com schema, exemplos e data atual."""
 
         return build_prompt(
@@ -43,6 +52,7 @@ class AgentTextToSQLClient:
             examples=self._select_examples(),
             values=VALUE_EXAMPLES,
             current_date=datetime.now(),
+            dialect=self._sql_dialect(deps),
         )
 
     @staticmethod
@@ -69,7 +79,7 @@ class AgentTextToSQLClient:
         """Versão síncrona usada por scripts e testes locais."""
 
         result = self.agent.run_sync(
-            self._build_prompt(question),
+            self._build_prompt(question, deps),
             deps=deps,
         )
 
@@ -83,7 +93,7 @@ class AgentTextToSQLClient:
         """Versão assíncrona usada pelo orquestrador e pela API."""
 
         result = await self.agent.run(
-            self._build_prompt(question),
+            self._build_prompt(question, deps),
             deps=deps,
         )
 

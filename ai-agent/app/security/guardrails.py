@@ -17,19 +17,6 @@ class PolicyViolation(ValueError):
     """Raised when a question or SQL violates execution policy."""
 
 
-SENSITIVE_PII_COLUMNS = frozenset(
-    {
-        "cpf",
-        "cnpj",
-        "documento",
-        "email",
-        "endereco",
-        "nome",
-        "nome_cliente",
-        "telefone",
-    }
-)
-
 PROMPT_ATTACK_PATTERNS = (
     r"\bignore\b.*\binstru",
     r"\bignorar\b.*\binstru",
@@ -83,12 +70,12 @@ class QueryPolicy:
         self._reject_patterns(
             normalized_question,
             PROMPT_ATTACK_PATTERNS,
-            "Pergunta rejeitada por tentativa de burlar instruções do sistema",
+            "Pedido incompatível com o uso do assistente: tentativa de alterar ou expor instruções internas, chaves ou segredos.",
         )
         self._reject_patterns(
             normalized_question,
             OUT_OF_DOMAIN_PATTERNS,
-            "Pergunta fora do domínio analítico da V-Commerce",
+            "Assunto fora do escopo: o assistente só responde perguntas analíticas sobre dados de comércio e vendas da V-Commerce.",
         )
 
     def validate_sql(self, sql: str, deps: Deps) -> SQLAccess:
@@ -97,7 +84,6 @@ class QueryPolicy:
         access = self._extract_access(sql)
         self._validate_tables(access, deps)
         self._validate_columns(access, deps)
-        self._validate_sensitive_pii(access, deps)
         return access
 
     @staticmethod
@@ -225,31 +211,3 @@ class QueryPolicy:
                     f"Coluna não permitida em {table}: "
                     + ", ".join(denied_columns)
                 )
-
-    @staticmethod
-    def _validate_sensitive_pii(access: SQLAccess, deps: Deps) -> None:
-        """Bloqueia PII sensível exceto quando o contexto autoriza explicitamente."""
-
-        normalized_roles = {role.casefold() for role in deps.roles}
-        if deps.allow_sensitive_pii or "pii_reader" in normalized_roles:
-            return
-
-        if access.has_star:
-            raise PolicyViolation(
-                "SELECT * não permitido por risco de exposição de PII"
-            )
-
-        sensitive_columns = sorted(
-            {
-                column
-                for columns in access.columns_by_table.values()
-                for column in columns
-                if column in SENSITIVE_PII_COLUMNS
-            }
-        )
-
-        if sensitive_columns:
-            raise PolicyViolation(
-                "Consulta bloqueada por acessar PII sensível: "
-                + ", ".join(sensitive_columns)
-            )

@@ -27,6 +27,25 @@ class FakeSQLClient:
         return self.output
 
 
+class FakeSQLClientSequence:
+    """Cliente fake que devolve uma sequência de saídas (útil para testar retries)."""
+
+    def __init__(self, outputs: list[Success | InvalidRequest]) -> None:
+        self._outputs = outputs
+        self.call_count = 0
+        self.questions_seen: list[str] = []
+
+    async def generate_sql_async(
+        self,
+        question: str,
+        deps: Deps,
+    ) -> Success | InvalidRequest:
+        self.questions_seen.append(question)
+        out = self._outputs[self.call_count]
+        self.call_count += 1
+        return out
+
+
 class FakeExecutor:
     """Executor fake para verificar qual SQL seria enviado ao banco."""
 
@@ -35,6 +54,22 @@ class FakeExecutor:
 
     async def execute(self, conn: object, sql: str) -> list[dict]:
         self.executed_sql = sql
+        return [{"ano_mes": "2024-11"}]
+
+
+class FlakyExecutor:
+    """Falha nas N primeiras execuções e depois retorna uma linha."""
+
+    def __init__(self, failures_before_success: int = 1) -> None:
+        self.failures_before_success = failures_before_success
+        self.calls = 0
+        self.last_sql: str | None = None
+
+    async def execute(self, conn: object, sql: str) -> list[dict]:
+        self.calls += 1
+        self.last_sql = sql
+        if self.calls <= self.failures_before_success:
+            raise RuntimeError("no such column: trimestre")
         return [{"ano_mes": "2024-11"}]
 
 
@@ -102,6 +137,8 @@ class AgentOrchestratorTest(unittest.IsolatedAsyncioTestCase):
         result = await orchestrator.ask("pergunta", Deps(conn=object()))
 
         self.assertEqual(result.error, "fora do escopo")
+        self.assertEqual(result.error_kind, "invalid_request")
+        self.assertIn("Motivo informado pelo agente", result.explanation)
         self.assertIsNone(executor.executed_sql)
 
     async def test_rejected_sql_short_circuits_execution(self) -> None:
@@ -117,7 +154,8 @@ class AgentOrchestratorTest(unittest.IsolatedAsyncioTestCase):
         result = await orchestrator.ask("pergunta", Deps(conn=object()))
 
         self.assertIsNotNone(result.error)
-        self.assertIn("Tabela não permitida", result.explanation)
+        self.assertEqual(result.error_kind, "sql_validation")
+        self.assertIn("validador", result.explanation.casefold())
         self.assertIsNone(executor.executed_sql)
 
     async def test_policy_rejects_question_before_llm_call(self) -> None:
@@ -136,12 +174,15 @@ class AgentOrchestratorTest(unittest.IsolatedAsyncioTestCase):
         )
 
         self.assertIsNotNone(result.error)
-        self.assertIn("Pergunta rejeitada pela política", result.explanation)
+        self.assertEqual(result.error_kind, "question_policy")
+        self.assertIn("Motivo:", result.explanation)
         self.assertFalse(sql_client.called)
         self.assertIsNone(executor.executed_sql)
 
-    async def test_policy_rejects_sensitive_pii_before_execution(self) -> None:
-        sql_client = FakeSQLClient(_success("SELECT email FROM gold_cliente_360"))
+    async def test_email_select_not_blocked_by_pii_policy(self) -> None:
+        sql_client = FakeSQLClient(
+            _success("SELECT email FROM gold_cliente_360 LIMIT 100"),
+        )
         executor = FakeExecutor()
         orchestrator = AgentOrchestrator(
             sql_client=sql_client,
@@ -152,9 +193,48 @@ class AgentOrchestratorTest(unittest.IsolatedAsyncioTestCase):
 
         result = await orchestrator.ask("listar emails de clientes", Deps(conn=object()))
 
+        self.assertIsNone(result.error)
+        self.assertIsNotNone(executor.executed_sql)
+
+    async def test_regenerates_sql_after_execution_error_then_succeeds(self) -> None:
+        ok_sql = _success("SELECT ano_mes FROM gold_vendas_kpis LIMIT 100")
+        sql_client = FakeSQLClientSequence([ok_sql, ok_sql])
+        executor = FlakyExecutor(failures_before_success=1)
+        explainer = FakeExplainer()
+        orchestrator = AgentOrchestrator(
+            sql_client=sql_client,
+            executor=executor,
+            explainer=explainer,
+            debug=False,
+            max_regenerations_on_exec_error=2,
+        )
+
+        result = await orchestrator.ask("pergunta", Deps(conn=object()))
+
+        self.assertIsNone(result.error)
+        self.assertEqual(sql_client.call_count, 2)
+        self.assertEqual(executor.calls, 2)
+        self.assertIn("# CORREÇÃO NECESSÁRIA", sql_client.questions_seen[1])
+        self.assertIn("no such column: trimestre", sql_client.questions_seen[1])
+
+    async def test_no_regeneration_when_max_regenerations_is_zero(self) -> None:
+        ok_sql = _success("SELECT ano_mes FROM gold_vendas_kpis LIMIT 100")
+        sql_client = FakeSQLClientSequence([ok_sql])
+        executor = FlakyExecutor(failures_before_success=1)
+        orchestrator = AgentOrchestrator(
+            sql_client=sql_client,
+            executor=executor,
+            explainer=FakeExplainer(),
+            debug=False,
+            max_regenerations_on_exec_error=0,
+        )
+
+        result = await orchestrator.ask("pergunta", Deps(conn=object()))
+
         self.assertIsNotNone(result.error)
-        self.assertIn("SQL rejeitado pela política", result.explanation)
-        self.assertIsNone(executor.executed_sql)
+        self.assertEqual(result.error_kind, "execution")
+        self.assertEqual(sql_client.call_count, 1)
+        self.assertEqual(executor.calls, 1)
 
 
 if __name__ == "__main__":

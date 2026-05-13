@@ -1,7 +1,17 @@
 """Modelos Pydantic usados como contrato entre agentes e orquestrador."""
 
 from typing import Annotated, Literal
+
 from pydantic import BaseModel, Field
+
+OrchestratorErrorKind = Literal[
+    "question_policy",
+    "invalid_request",
+    "sql_validation",
+    "sql_policy",
+    "execution",
+    "sql_agent",
+]
 
 class Success(BaseModel):
     """Saída estruturada quando o modelo conseguiu gerar uma consulta segura."""
@@ -55,4 +65,8 @@ class OrchestratorResult(BaseModel):
     error: str | None = Field(
         default=None,
         description="Detalhe técnico quando o fluxo falhou antes da explicação final",
+    )
+    error_kind: OrchestratorErrorKind | None = Field(
+        default=None,
+        description="Classificação do bloqueio para UI e API (rejeição, política, execução, etc.)",
     )

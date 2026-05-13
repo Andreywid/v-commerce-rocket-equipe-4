@@ -4,17 +4,10 @@ import json
 from typing import Any
 
 from app.models.responses import Success
-
-EXPLAINER_SYSTEM = """
-Você explica resultados de consultas SQL em português claro, para um usuário de negócio.
-
-Regras:
-- Responda de forma direta à pergunta original usando apenas os dados fornecidos (linhas JSON).
-- Se não houver linhas, diga explicitamente que não houve resultados ou que a consulta não foi executada, conforme o contexto.
-- Não invente números, nomes ou totais que não apareçam nos dados.
-- Se os dados forem uma amostra (primeiras linhas), deixe isso claro.
-- Não exponha chaves de API nem detalhes de infraestrutura.
-"""
+from app.prompts.explainer_prompts import (
+    EXPLAINER_USER_JSON_HEADER,
+    EXPLAINER_USER_TASK_SECTION,
+)
 
 
 class ExplainerPromptBuilder:
@@ -46,10 +39,9 @@ class ExplainerPromptBuilder:
         }
 
         return (
-            "# CONTEXTO (JSON)\n\n"
+            f"{EXPLAINER_USER_JSON_HEADER}"
             f"{json.dumps(payload, ensure_ascii=False, default=str)}\n\n"
-            "# TAREFA\n\n"
-            "Escreva a resposta final ao usuário com base apenas no contexto acima."
+            f"{EXPLAINER_USER_TASK_SECTION}"
         )
 
     def _truncate_rows(

@@ -1,5 +1,8 @@
 """
 Fluxo: pergunta → SQL (AgentTextToSQLClient) → validate_sql → execução → explainer → OrchestratorResult.
+
+Se a execução no banco falhar, o orquestrador pode chamar o gerador de novo com o erro e o SQL
+falho (até max_regenerations_on_exec_error tentativas adicionais).
 """
 
 from __future__ import annotations
@@ -8,6 +11,15 @@ import time
 from typing import TYPE_CHECKING
 
 from app.database.executor import QueryExecutor
+from app.prompts.orchestrator_prompts import format_sql_recovery_after_exec_error
+from app.messages.rejection_copy import (
+    format_execution,
+    format_invalid_request,
+    format_question_policy,
+    format_sql_agent,
+    format_sql_policy,
+    format_sql_validation,
+)
 from app.models.deps import Deps
 from app.models.responses import InvalidRequest, OrchestratorResult, Success
 from app.security.guardrails import PolicyViolation, QueryPolicy
@@ -28,12 +40,14 @@ class AgentOrchestrator:
         explainer: ResultExplainer | None = None,
         policy: QueryPolicy | None = None,
         debug: bool = True,
+        max_regenerations_on_exec_error: int = 2,
     ) -> None:
         self._sql = sql_client
         self._executor = executor or QueryExecutor()
         self._explainer = explainer
         self._policy = policy or QueryPolicy()
         self._debug = debug
+        self._max_regenerations_on_exec_error = max(0, max_regenerations_on_exec_error)
 
     @property
     def _sql_client(self) -> AgentTextToSQLClient:
@@ -69,6 +83,20 @@ class AgentOrchestrator:
 
         print(f"[orchestrator] {message}{elapsed}", flush=True)
 
+    @staticmethod
+    def _recovery_prompt_after_exec_error(
+        original_question: str,
+        failed_sql: str,
+        db_error: str,
+    ) -> str:
+        """Reformula o pedido para o gerador SQL corrigir consulta que falhou no banco."""
+
+        return format_sql_recovery_after_exec_error(
+            original_question=original_question,
+            failed_sql=failed_sql,
+            db_error=db_error,
+        )
+
     async def ask(self, question: str, deps: Deps) -> OrchestratorResult:
         """Executa o fluxo completo de Text-to-SQL para uma pergunta do usuário."""
 
@@ -79,28 +107,51 @@ class AgentOrchestrator:
         if policy_result is not None:
             return policy_result
 
-        generated = await self._generate_sql(question, deps)
-        if isinstance(generated, OrchestratorResult):
-            return generated
+        prompt = question
+        prev_exec_error: OrchestratorResult | None = None
+        generated: Success | None = None
+        rows: list[dict] = []
+        execution_skipped = False
 
-        if isinstance(generated, InvalidRequest):
-            return self._invalid_request_result(generated, flow_start)
+        for attempt_index in range(self._max_regenerations_on_exec_error + 1):
+            if attempt_index > 0 and prev_exec_error is not None:
+                err = prev_exec_error.error or ""
+                sql_failed = prev_exec_error.sql or ""
+                prompt = self._recovery_prompt_after_exec_error(question, sql_failed, err)
+                self._trace(
+                    f"nova geração SQL após erro de execução "
+                    f"({attempt_index}/{self._max_regenerations_on_exec_error})",
+                    flow_start,
+                )
 
-        validated = self._validate_generated_sql(generated)
-        if isinstance(validated, OrchestratorResult):
-            return validated
-        generated = validated
+            generated = await self._generate_sql(prompt, deps)
+            if isinstance(generated, OrchestratorResult):
+                return generated
 
-        policy_result = self._validate_execution_policy(generated, deps)
-        if policy_result is not None:
-            return policy_result
+            if isinstance(generated, InvalidRequest):
+                return self._invalid_request_result(generated, flow_start)
 
-        rows, execution_skipped, execution_error = await self._execute_sql(
-            generated,
-            deps,
-        )
-        if execution_error is not None:
-            return execution_error
+            validated = self._validate_generated_sql(generated)
+            if isinstance(validated, OrchestratorResult):
+                return validated
+            generated = validated
+
+            policy_result = self._validate_execution_policy(generated, deps)
+            if policy_result is not None:
+                return policy_result
+
+            rows, execution_skipped, execution_error = await self._execute_sql(
+                generated,
+                deps,
+            )
+            if execution_error is None:
+                break
+
+            prev_exec_error = execution_error
+            if attempt_index >= self._max_regenerations_on_exec_error:
+                return execution_error
+
+        assert generated is not None
 
         explanation = await self._explain_result(
             question=question,
@@ -133,8 +184,9 @@ class AgentOrchestrator:
             msg = f"Pergunta rejeitada pela política: {exc}"
             self._trace(msg, flow_start)
             return OrchestratorResult(
-                explanation=msg,
+                explanation=format_question_policy(str(exc)),
                 error=str(exc),
+                error_kind="question_policy",
             )
 
         return None
@@ -153,8 +205,9 @@ class AgentOrchestrator:
         except Exception as exc:
             self._trace(f"agente SQL falhou: {exc}", sql_start)
             return OrchestratorResult(
-                explanation=f"Agente SQL falhou: {exc}",
+                explanation=format_sql_agent(str(exc)),
                 error=str(exc),
+                error_kind="sql_agent",
             )
 
         self._trace(f"agente SQL finalizado: {type(generated).__name__}", sql_start)
@@ -169,8 +222,9 @@ class AgentOrchestrator:
 
         self._trace("fluxo encerrado por solicitação inválida", flow_start)
         return OrchestratorResult(
-            explanation=generated.error_message,
+            explanation=format_invalid_request(generated.error_message),
             error=generated.error_message,
+            error_kind="invalid_request",
         )
 
     def _validate_generated_sql(
@@ -188,12 +242,13 @@ class AgentOrchestrator:
             msg = f"SQL rejeitado na validação: {exc}"
             self._trace(msg, validation_start)
             return OrchestratorResult(
-                explanation=msg,
+                explanation=format_sql_validation(str(exc)),
                 sql=generated.sql,
                 interpretation=generated.interpretation,
                 reasoning=generated.reasoning,
                 assumptions=generated.assumptions,
                 error=str(exc),
+                error_kind="sql_validation",
             )
         generated = generated.model_copy(update={"sql": validated_sql})
         self._trace("validação SQL concluída", validation_start)
@@ -204,7 +259,7 @@ class AgentOrchestrator:
         generated: Success,
         deps: Deps,
     ) -> OrchestratorResult | None:
-        """Aplica regras de acesso a tabelas, colunas e PII antes da execução."""
+        """Aplica regras de acesso a tabelas e colunas declaradas antes da execução."""
 
         policy_start = time.perf_counter()
         self._trace("iniciando política de execução")
@@ -214,12 +269,13 @@ class AgentOrchestrator:
             msg = f"SQL rejeitado pela política: {exc}"
             self._trace(msg, policy_start)
             return OrchestratorResult(
-                explanation=msg,
+                explanation=format_sql_policy(str(exc)),
                 sql=generated.sql,
                 interpretation=generated.interpretation,
                 reasoning=generated.reasoning,
                 assumptions=generated.assumptions,
                 error=str(exc),
+                error_kind="sql_policy",
             )
         self._trace("política de execução concluída", policy_start)
 
@@ -244,12 +300,13 @@ class AgentOrchestrator:
                 msg = f"Erro ao executar a consulta no banco: {exc}"
                 self._trace(msg, execution_start)
                 error = OrchestratorResult(
-                    explanation=msg,
+                    explanation=format_execution(str(exc)),
                     sql=generated.sql,
                     interpretation=generated.interpretation,
                     reasoning=generated.reasoning,
                     assumptions=generated.assumptions,
                     error=str(exc),
+                    error_kind="execution",
                 )
                 return rows, execution_skipped, error
             self._trace(f"execução no banco concluída: {len(rows)} linha(s)", execution_start)

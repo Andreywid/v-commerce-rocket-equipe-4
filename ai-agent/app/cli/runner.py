@@ -161,7 +161,9 @@ async def run_orchestrator_text_to_sql(
     print(f"\nCONVERSATION_ID: {result.conversation_id}")
 
     if not result.response.error:
-        print("\nOrquestrador executado com sucesso")
+        print("\nResposta gerada com sucesso.")
+    else:
+        print("\nNenhuma consulta foi executada (bloqueio de política ou erro no fluxo).")
     show_mock_rows = _should_show_mock_rows(
         response=result.response,
         exec_on_mock=exec_on_mock,

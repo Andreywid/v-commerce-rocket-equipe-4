@@ -161,14 +161,14 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--allow-sensitive-pii",
         action="store_true",
-        help="Permite colunas de PII sensível neste teste local",
+        help="Reservado (legado); nomes e contatos são permitidos; CPF é mascarado na resposta",
     )
     parser.add_argument(
         "--allow-all-schema-access",
         action="store_true",
         help=(
             "Ignora --allowed-table/--allowed-column e permite qualquer tabela "
-            "do schema Gold e qualquer coluna não bloqueada por PII"
+            "do schema Gold (CPF continua mascarado na saída)"
         ),
     )
     parser.add_argument(

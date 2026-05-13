@@ -6,10 +6,8 @@ from pydantic_ai import Agent
 
 from app.agents.model_config import configure_provider_api_keys, get_model_name
 from app.models.responses import Success
-from app.prompts.explainer_prompt_builder import (
-    EXPLAINER_SYSTEM,
-    ExplainerPromptBuilder,
-)
+from app.prompts.explainer_prompt_builder import ExplainerPromptBuilder
+from app.prompts.explainer_prompts import EXPLAINER_SYSTEM
 
 
 class ResultExplainer:

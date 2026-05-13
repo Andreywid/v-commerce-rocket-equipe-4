@@ -18,5 +18,5 @@ class Deps:
     allowed_tables: frozenset[str] | None = None
     allowed_columns: dict[str, frozenset[str]] | None = None
     allow_all_schema_access: bool = False
-    allow_sensitive_pii: bool = False
+    allow_sensitive_pii: bool = False  # legado; CPF é mascarado na saída do executor
     require_tenant: bool = False

@@ -8,6 +8,9 @@ from uuid import uuid4
 
 from app.models.conversation import ConversationKey, ConversationTurn
 from app.models.responses import OrchestratorResult
+from app.prompts.conversational_memory_prompt import (
+    format_question_with_conversational_memory,
+)
 
 
 def build_question_with_memory(
@@ -47,24 +50,9 @@ def build_question_with_memory(
         context_blocks.append("\n".join(lines))
 
     context = "\n\n".join(context_blocks)
-    return (
-        "# CONTEXTO CONVERSACIONAL SEGURO\n"
-        "Use o contexto abaixo apenas para resolver referências do usuário, "
-        "como 'e no mês anterior?' ou 'faça o mesmo para outro período'. "
-        "Não copie SQL sem revalidar e não assuma dados que não estejam no schema.\n\n"
-        "# REGRAS PARA FOLLOW-UP ANALÍTICO\n"
-        "- Se a pergunta atual pedir maior, menor, top, ranking ou comparação sobre "
-        "um resultado agregado anterior, preserve a mesma definição de métrica e "
-        "a mesma granularidade analítica do turno anterior.\n"
-        "- Não ordene linhas brutas quando o turno anterior calculou totais com "
-        "SUM, COUNT, AVG, MIN ou MAX. Recalcule a agregação com GROUP BY e só então "
-        "ordene pelo agregado.\n"
-        "- Reutilize aliases e definições aprovadas quando fizer sentido. Exemplo: "
-        "se valor_total foi SUM(receita_bruta), então 'maior valor total' deve "
-        "ordenar por SUM(receita_bruta), não por receita_bruta de uma linha isolada.\n\n"
-        f"{context}\n\n"
-        "# PERGUNTA ATUAL\n"
-        f"{question}"
+    return format_question_with_conversational_memory(
+        context=context,
+        question=question,
     )
 
 

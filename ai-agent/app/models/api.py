@@ -26,7 +26,10 @@ class AskRequest(BaseModel):
     allowed_tables: list[str] | None = None
     allowed_columns: dict[str, list[str]] | None = None
     allow_all_schema_access: bool = False
-    allow_sensitive_pii: bool = False
+    allow_sensitive_pii: bool = Field(
+        default=False,
+        description="Legado; ignorado na política. CPF é mascarado na resposta.",
+    )
     require_tenant: bool = False
     execute: bool = False
 
@@ -42,6 +45,7 @@ class AskResponse(BaseModel):
     reasoning: list[str] = Field(default_factory=list)
     assumptions: list[str] = Field(default_factory=list)
     error: str | None = None
+    error_kind: str | None = None
 
     @classmethod
     def from_orchestrator(
@@ -61,4 +65,5 @@ class AskResponse(BaseModel):
             reasoning=result.reasoning,
             assumptions=result.assumptions,
             error=result.error,
+            error_kind=result.error_kind,
         )
