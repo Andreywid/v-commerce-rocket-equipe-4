@@ -32,6 +32,7 @@ class ResultExplainer:
         max_rows_in_prompt: int = 80,
     ) -> None:
         self._max_rows = max_rows_in_prompt
+
         self._agent = Agent(
             model=f"groq:{model_name}",
             output_type=_ExplanationOut,
@@ -39,6 +40,8 @@ class ResultExplainer:
             system_prompt=_EXPLAINER_SYSTEM,
         )
 
+    # Antes era def explain(...)
+    # Agora é async def explain(...), permitindo chamada com await no orchestrator.
     async def explain(
         self,
         *,
@@ -47,7 +50,9 @@ class ResultExplainer:
         rows: list[dict[str, Any]],
         execution_skipped: bool,
     ) -> str:
+
         truncated, total = self._truncate_rows(rows)
+
         payload = {
             "pergunta_original": question,
             "interpretacao": sql_result.interpretation,
@@ -60,13 +65,18 @@ class ResultExplainer:
             "linhas_na_amostra": len(truncated),
             "amostra_linhas_json": truncated,
         }
+
         prompt = (
             "# CONTEXTO (JSON)\n\n"
             f"{json.dumps(payload, ensure_ascii=False, default=str)}\n\n"
             "# TAREFA\n\n"
             "Escreva a resposta final ao usuário com base apenas no contexto acima."
         )
+
+        # Antes usava self._agent.run_sync(prompt)
+        # Agora usa await self._agent.run(prompt), evitando bloqueio.
         result = await self._agent.run(prompt)
+
         return result.output.text
 
     def _truncate_rows(

@@ -3,12 +3,14 @@ Fluxo: pergunta → SQL (AgentTextToSQLClient) → validate_sql → execução �
 """
 
 from __future__ import annotations
+
 from app.agents.explainer import ResultExplainer
 from app.agents.sql_generator import AgentTextToSQLClient
 from app.database.executor import QueryExecutor
 from app.models.deps import Deps
 from app.models.responses import InvalidRequest, OrchestratorResult
 from app.security.sql_validator import validate_sql
+
 
 class AgentOrchestrator:
     def __init__(
@@ -22,6 +24,8 @@ class AgentOrchestrator:
         self._explainer = explainer or ResultExplainer()
 
     async def ask(self, question: str, deps: Deps) -> OrchestratorResult:
+        # Antes era chamada síncrona.
+        # Agora usa await porque generate_sql virou assíncrono.
         generated = await self._sql.generate_sql(question, deps)
 
         if isinstance(generated, InvalidRequest):
@@ -46,6 +50,8 @@ class AgentOrchestrator:
         rows: list[dict] = []
         execution_skipped = deps.conn is None
 
+        # Antes era: if deps.conn is not None:
+        # Agora usa a variável execution_skipped.
         if not execution_skipped:
             try:
                 rows = await self._executor.execute(deps.conn, generated.sql)
@@ -60,6 +66,8 @@ class AgentOrchestrator:
                     error=str(exc),
                 )
 
+        # Antes era chamada síncrona.
+        # Agora usa await porque explain virou assíncrono.
         explanation = await self._explainer.explain(
             question=question,
             sql_result=generated,

@@ -13,6 +13,9 @@ SQL_EXAMPLES = [
     WHERE ano_mes = '2026-04';
     """,
 
+    # Antes o filtro era ILIKE '%gmail.com'.
+    # Foi ajustado para ILIKE '%@gmail.com' para garantir domínio real de e-mail
+    # e evitar falsos positivos como "cliente@naogmail.com".
     """
     Pergunta:
     Clientes cadastrados com e-mail do Gmail
@@ -66,6 +69,9 @@ SQL_EXAMPLES = [
     ORDER BY data_abertura;
     """,
 
+    # NOVO:
+    # Exemplo para ensinar que taxa agregada deve ser recalculada com numerador/denominador.
+    # Evita erros como SUM(taxa_aprovacao) ou AVG(taxa_aprovacao).
     """
     Pergunta:
     Qual foi a taxa de aprovação agregada no primeiro trimestre de 2026?
@@ -77,6 +83,8 @@ SQL_EXAMPLES = [
     WHERE ano_mes BETWEEN '2026-01' AND '2026-03';
     """,
 
+    # NOVO:
+    # Exemplo para taxa de recusa agregada.
     """
     Pergunta:
     Qual foi a taxa de recusa agregada entre janeiro e março de 2026?
@@ -88,6 +96,8 @@ SQL_EXAMPLES = [
     WHERE ano_mes BETWEEN '2026-01' AND '2026-03';
     """,
 
+    # NOVO:
+    # Exemplo para taxa de reembolso agregada.
     """
     Pergunta:
     Qual foi a taxa de reembolso agregada em 2026?
@@ -99,6 +109,8 @@ SQL_EXAMPLES = [
     WHERE ano = 2026;
     """,
 
+    # NOVO:
+    # Exemplo de faturamento agregado usando receita_bruta na tabela mensal.
     """
     Pergunta:
     Qual foi o faturamento total de 2026?
@@ -109,6 +121,8 @@ SQL_EXAMPLES = [
     WHERE ano = 2026;
     """,
 
+    # NOVO:
+    # Exemplo de análise mensal usando ano_mes.
     """
     Pergunta:
     Quantos pedidos aprovados tivemos por mês em 2026?
@@ -120,6 +134,8 @@ SQL_EXAMPLES = [
     ORDER BY ano_mes;
     """,
 
+    # NOVO:
+    # Exemplo de filtro por status e estado usando sigla UF.
     """
     Pergunta:
     Liste os pedidos reembolsados do estado de PE
@@ -132,6 +148,9 @@ SQL_EXAMPLES = [
     LIMIT 100;
     """,
 
+    # NOVO:
+    # Exemplo de receita detalhada por categoria.
+    # Como usa gold_pedidos_enriquecidos para receita, filtra status = 'Aprovado'.
     """
     Pergunta:
     Qual categoria gerou mais receita em abril de 2026?
@@ -147,6 +166,8 @@ SQL_EXAMPLES = [
     LIMIT 1;
     """,
 
+    # NOVO:
+    # Exemplo de segmentação de clientes por LTV e UF.
     """
     Pergunta:
     Quais são os clientes de alto valor em Pernambuco?
@@ -159,6 +180,8 @@ SQL_EXAMPLES = [
     LIMIT 100;
     """,
 
+    # NOVO:
+    # Exemplo de uso de booleano.
     """
     Pergunta:
     Quais clientes estão em risco?
@@ -171,6 +194,8 @@ SQL_EXAMPLES = [
     LIMIT 100;
     """,
 
+    # NOVO:
+    # Exemplo de enum de classificação de produto.
     """
     Pergunta:
     Quais produtos são problemáticos?
@@ -183,6 +208,8 @@ SQL_EXAMPLES = [
     LIMIT 100;
     """,
 
+    # NOVO:
+    # Exemplo de ranking por taxa de conversão.
     """
     Pergunta:
     Quais produtos tiveram maior conversão?
@@ -195,6 +222,8 @@ SQL_EXAMPLES = [
     LIMIT 100;
     """,
 
+    # NOVO:
+    # Exemplo de média usando AVG.
     """
     Pergunta:
     Qual a nota média dos produtos por categoria?
@@ -206,6 +235,8 @@ SQL_EXAMPLES = [
     ORDER BY nota_media_categoria DESC;
     """,
 
+    # NOVO:
+    # Exemplo com intervalo fechado-aberto em data.
     """
     Pergunta:
     Qual o NPS médio dos produtos avaliados em 2026?
@@ -217,6 +248,8 @@ SQL_EXAMPLES = [
       AND data_avaliacao < DATE '2027-01-01';
     """,
 
+    # NOVO:
+    # Exemplo de enum de sentimento.
     """
     Pergunta:
     Quais avaliações negativas foram feitas sobre produtos?
@@ -229,6 +262,8 @@ SQL_EXAMPLES = [
     LIMIT 100;
     """,
 
+    # NOVO:
+    # Exemplo de SLA estourado usando booleano e status de ticket.
     """
     Pergunta:
     Quais tickets estão com SLA estourado?
@@ -242,6 +277,8 @@ SQL_EXAMPLES = [
     LIMIT 100;
     """,
 
+    # NOVO:
+    # Exemplo de tempo médio de resolução por tipo de problema.
     """
     Pergunta:
     Qual o tempo médio de resolução dos tickets resolvidos por tipo de problema?
@@ -254,6 +291,8 @@ SQL_EXAMPLES = [
     ORDER BY tempo_medio_resolucao_horas DESC;
     """,
 
+    # NOVO:
+    # Exemplo de comportamento digital por canal.
     """
     Pergunta:
     Quantos abandonos de carrinho tivemos por canal em abril de 2026?
@@ -267,6 +306,8 @@ SQL_EXAMPLES = [
     ORDER BY total_abandonos DESC;
     """,
 
+    # NOVO:
+    # Exemplo com período relativo.
     """
     Pergunta:
     Qual cliente teve mais eventos digitais nos últimos 30 dias?
@@ -280,6 +321,8 @@ SQL_EXAMPLES = [
     LIMIT 1;
     """,
 
+    # NOVO:
+    # Exemplo de filtro booleano + enum de canal.
     """
     Pergunta:
     Quais clientes ativos nos últimos 90 dias compraram pelo App?
@@ -292,6 +335,8 @@ SQL_EXAMPLES = [
     LIMIT 100;
     """,
 
+    # NOVO:
+    # Exemplo de agrupamento por método de pagamento.
     """
     Pergunta:
     Qual método de pagamento teve mais pedidos aprovados?
@@ -305,7 +350,9 @@ SQL_EXAMPLES = [
     """,
 ]
 
+# ============================================
 # VALUE EXAMPLES (enums / textos válidos no Gold)
+# ============================================
 
 VALUE_EXAMPLES = [
     "Aprovado",
@@ -320,6 +367,9 @@ VALUE_EXAMPLES = [
     "Web",
     "Mobile",
     "App",
+
+    # NOVO:
+    # Valores adicionados para cobrir enums do Schema Gold e reduzir alucinação.
     "Desktop",
     "Tablet",
     "Indicacao",
@@ -341,6 +391,7 @@ VALUE_EXAMPLES = [
     "positivo",
     "neutro",
     "negativo",
+
     "Eletronicos",
     "Alimentos",
     "Moveis",
