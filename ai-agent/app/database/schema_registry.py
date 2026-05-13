@@ -758,3 +758,6 @@ SCHEMA GOLD DISPONÍVEL:
             prompt += "\n"
 
     return prompt
+
+# No final do arquivo schema_registry.py
+DB_SCHEMA = GOLD_SCHEMA

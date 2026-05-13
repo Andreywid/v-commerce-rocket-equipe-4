@@ -40,6 +40,14 @@ def build_prompt(
 
 {current_date}
 
+# OUTPUT FORMAT
+
+Retorne apenas a query SQL final.
+Não inclua explicações.
+Não inclua markdown.
+Não inclua ```sql.
+Não inclua comentários fora do SQL.
+
 # EXECUTION STRATEGY
 
 Antes de gerar SQL:
@@ -58,6 +66,9 @@ Antes de gerar SQL:
    - se colunas existem
    - se joins fazem sentido
    - se SQL é PostgreSQL válido
+   - se filtros enum usam valores válidos
+   - se métricas de média, taxa e percentual não foram somadas incorretamente
+   - se a granularidade da tabela escolhida responde corretamente à pergunta
 
 4. Gere SQL final seguro
 """

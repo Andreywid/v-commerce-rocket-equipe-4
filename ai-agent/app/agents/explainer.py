@@ -39,7 +39,7 @@ class ResultExplainer:
             system_prompt=_EXPLAINER_SYSTEM,
         )
 
-    def explain(
+    async def explain(
         self,
         *,
         question: str,
@@ -66,7 +66,7 @@ class ResultExplainer:
             "# TAREFA\n\n"
             "Escreva a resposta final ao usuário com base apenas no contexto acima."
         )
-        result = self._agent.run_sync(prompt)
+        result = await self._agent.run(prompt)
         return result.output.text
 
     def _truncate_rows(
