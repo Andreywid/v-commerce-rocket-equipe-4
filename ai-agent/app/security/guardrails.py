@@ -31,16 +31,100 @@ PROMPT_ATTACK_PATTERNS = (
     r"\bsenha\b",
 )
 
-OUT_OF_DOMAIN_PATTERNS = (
-    r"\bprevisao do tempo\b",
-    r"\bclima\b",
-    r"\bfutebol\b",
-    r"\bfilme\b",
-    r"\bmusica\b",
-    r"\bpiada\b",
-    r"\bpoema\b",
-    r"\bcurriculo\b",
-    r"\bnoticia\b",
+OUT_OF_DOMAIN_RULES = (
+    (
+        "clima e previsão do tempo",
+        (
+            r"\bprevisao do tempo\b",
+            r"\bprevisao\b.*\btempo\b",
+            r"\bclima\b",
+            r"\btemperatura\b",
+            r"\bchuva\b",
+        ),
+    ),
+    (
+        "notícias, esportes e entretenimento",
+        (
+            r"\bfutebol\b",
+            r"\bplacar\b",
+            r"\bjogo de hoje\b",
+            r"\bfilme\b",
+            r"\bserie\b",
+            r"\bmusica\b",
+            r"\bnoticia\b",
+        ),
+    ),
+    (
+        "conhecimento geral",
+        (
+            r"\bcapital da\b",
+            r"\bcapital de\b",
+            r"\bhistoria do\b",
+            r"\bhoroscopo\b",
+        ),
+    ),
+    (
+        "mercado financeiro externo aos dados do CRM",
+        (
+            r"\bcotacao\b",
+            r"\bdolar\b",
+            r"\beuro\b",
+            r"\bbolsa de valores\b",
+            r"\bibovespa\b",
+            r"\bbitcoin\b",
+            r"\bcriptomoeda\b",
+            r"\btaxa de cambio\b",
+        ),
+    ),
+    (
+        "geração ou edição de conteúdo fora dos dados",
+        (
+            r"\btraduza\b",
+            r"\btraduzir\b",
+            r"\bresuma\b",
+            r"\bresumir\b",
+            r"\bescreva\b",
+            r"\bcrie um texto\b",
+            r"\bpiada\b",
+            r"\bpoema\b",
+            r"\bcurriculo\b",
+            r"\bcodigo\b",
+            r"\bprograma em\b",
+        ),
+    ),
+    (
+        "pedidos operacionais fora da consulta analítica",
+        (
+            r"\benvie\b.*\bemail\b",
+            r"\bmande\b.*\bemail\b",
+            r"\bagende\b",
+            r"\bmarque\b.*\breuniao\b",
+            r"\babra um chamado\b",
+            r"\bcrie uma imagem\b",
+        ),
+    ),
+    (
+        "assuntos não analíticos",
+        (
+            r"\bquanto e\b.*\d",
+            r"\breceita de bolo\b",
+            r"\bcomida\b",
+            r"\bviagem\b",
+            r"\bhospedagem\b",
+        ),
+    ),
+    (
+        "informações de identificação pessoal (PII)",
+        (
+            r"\bemail\b",
+            r"\btelefone\b",
+            r"\bcpf\b",
+            r"\bdocumento\b",
+            r"\brg\b",
+            r"\bendereco\b",
+            r"\bcep\b",
+        ),
+    ),
 )
 
 
@@ -72,11 +156,7 @@ class QueryPolicy:
             PROMPT_ATTACK_PATTERNS,
             "Pedido incompatível com o uso do assistente: tentativa de alterar ou expor instruções internas, chaves ou segredos.",
         )
-        self._reject_patterns(
-            normalized_question,
-            OUT_OF_DOMAIN_PATTERNS,
-            "Assunto fora do escopo: o assistente só responde perguntas analíticas sobre dados de comércio e vendas da V-Commerce.",
-        )
+        self._reject_out_of_domain(normalized_question)
 
     def validate_sql(self, sql: str, deps: Deps) -> SQLAccess:
         """Extrai acessos do SQL e aplica as políticas do usuário."""
@@ -97,6 +177,17 @@ class QueryPolicy:
         if any(re.search(pattern, text) for pattern in patterns):
             raise PolicyViolation(message)
 
+    @staticmethod
+    def _reject_out_of_domain(text: str) -> None:
+        for category, patterns in OUT_OF_DOMAIN_RULES:
+            if any(re.search(pattern, text) for pattern in patterns):
+                raise PolicyViolation(
+                    "Assunto fora do escopo dos dados disponíveis: "
+                    f"{category}. O assistente responde apenas perguntas analíticas "
+                    "sobre vendas, clientes, pedidos, produtos, suporte, avaliações "
+                    "e comportamento digital da V-Commerce."
+                )
+
     def _extract_access(self, sql: str) -> SQLAccess:
         """Usa AST do sqlglot para mapear tabelas e colunas referenciadas."""
 
@@ -107,9 +198,14 @@ class QueryPolicy:
 
         alias_to_table: dict[str, str] = {}
         tables: list[str] = []
+        cte_names = self._cte_names(tree)
 
         for table in tree.find_all(exp.Table):
             table_name = self._normalize_identifier(table.name)
+
+            if table_name in cte_names:
+                continue
+
             tables.append(table_name)
 
             alias = table.alias_or_name
@@ -122,6 +218,10 @@ class QueryPolicy:
         for column in tree.find_all(exp.Column):
             column_name = self._normalize_identifier(column.name)
             table_ref = self._normalize_identifier(column.table) if column.table else None
+
+            if table_ref in cte_names:
+                continue
+
             table_name = alias_to_table.get(table_ref or "")
 
             if table_name is None and table_ref in unique_tables:
@@ -140,6 +240,16 @@ class QueryPolicy:
                 for table, columns in columns_by_table.items()
             },
             has_star=self._has_projection_star(tree),
+        )
+
+    @classmethod
+    def _cte_names(cls, tree: exp.Expression) -> frozenset[str]:
+        """Retorna aliases de CTEs para política validar só tabelas físicas."""
+
+        return frozenset(
+            cls._normalize_identifier(cte.alias)
+            for cte in tree.find_all(exp.CTE)
+            if cte.alias
         )
 
     @staticmethod
@@ -185,7 +295,30 @@ class QueryPolicy:
 
     @staticmethod
     def _validate_columns(access: SQLAccess, deps: Deps) -> None:
-        """Aplica allowlist de colunas quando o request informar restrições."""
+        """Aplica allowlist e denylist de colunas."""
+
+        if access.has_star and not deps.allow_all_schema_access:
+            if deps.allowed_columns:
+                raise PolicyViolation(
+                    "SELECT * não permitido quando há política de colunas"
+                )
+
+        denied_columns = {
+            "email",
+            "telefone",
+            "cpf",
+            "rg",
+            "documento",
+            "endereco",
+            "cep",
+        }
+        for table, columns in access.columns_by_table.items():
+            found_denied = sorted(columns.intersection(denied_columns))
+            if found_denied:
+                raise PolicyViolation(
+                    f"Acesso negado à coluna sensível em {table}: "
+                    + ", ".join(found_denied)
+                )
 
         if deps.allow_all_schema_access or not deps.allowed_columns:
             return

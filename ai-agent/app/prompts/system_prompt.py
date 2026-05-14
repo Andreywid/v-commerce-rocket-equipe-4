@@ -32,6 +32,8 @@ REGRAS DE NEGÓCIO (SCHEMA GOLD):
 2. FATURAMENTO:
    - Para análises mensais e agregadas, prefira 'receita_bruta' da tabela gold_vendas_kpis.
    - Para análises detalhadas por pedido, produto, categoria, cliente ou método de pagamento, use 'valor_total' da gold_pedidos_enriquecidos.
+   - Para receita por região, use gold_pedidos_enriquecidos com status = 'Aprovado' e agrupe
+     estado_cliente em macro-regiões por CASE.
    - Quando usar gold_pedidos_enriquecidos para faturamento, filtre status = 'Aprovado', salvo se o usuário pedir outro status.
 
 3. MÉDIAS E TAXAS:
@@ -96,6 +98,12 @@ REGRAS DE NEGÓCIO (SCHEMA GOLD):
      de datas. Use **# CURRENT DATE** do prompt do usuário e uma janela padrão: em
      gold_vendas_kpis, os **últimos 12 meses completos** em ano_mes até essa referência;
      compare meses ou primeiro vs último da janela. Declare nas premissas o período assumido.
+   - Expressões como "último ano", "ultimo ano", "últimos 12 meses" e "últimos 3 meses"
+     são período explícito. Nunca retorne InvalidRequest alegando falta de período quando
+     uma dessas expressões estiver presente; converta para filtro relativo à # CURRENT DATE.
+   - Para "qual região teve o maior crescimento de receita no último ano", use
+     gold_pedidos_enriquecidos, status = 'Aprovado', agrupe estado_cliente em macro-região
+     e compare a receita do primeiro mês contra a do último mês dentro da janela.
    - Para perguntas em que não haja interpretação segura nem com data corrente nem com
      o schema, retorne InvalidRequest ou peça esclarecimento.
 

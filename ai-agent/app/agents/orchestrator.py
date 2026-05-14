@@ -1,8 +1,8 @@
 """
 Fluxo: pergunta → SQL (AgentTextToSQLClient) → validate_sql → execução → explainer → OrchestratorResult.
 
-Se a execução no banco falhar, o orquestrador pode chamar o gerador de novo com o erro e o SQL
-falho (até max_regenerations_on_exec_error tentativas adicionais).
+Se a validação ou execução falhar, o orquestrador pode chamar o gerador de novo com o erro e
+o SQL falho (até max_regenerations_on_exec_error tentativas adicionais).
 """
 
 from __future__ import annotations
@@ -11,7 +11,10 @@ import time
 from typing import TYPE_CHECKING
 
 from app.database.executor import QueryExecutor
-from app.prompts.orchestrator_prompts import format_sql_recovery_after_exec_error
+from app.prompts.orchestrator_prompts import (
+    format_sql_recovery_after_exec_error,
+    format_sql_recovery_after_validation_error,
+)
 from app.messages.rejection_copy import (
     format_execution,
     format_invalid_request,
@@ -97,6 +100,20 @@ class AgentOrchestrator:
             db_error=db_error,
         )
 
+    @staticmethod
+    def _recovery_prompt_after_validation_error(
+        original_question: str,
+        failed_sql: str,
+        validation_error: str,
+    ) -> str:
+        """Reformula o pedido para corrigir consulta rejeitada pelo validador."""
+
+        return format_sql_recovery_after_validation_error(
+            original_question=original_question,
+            failed_sql=failed_sql,
+            validation_error=validation_error,
+        )
+
     async def ask(self, question: str, deps: Deps) -> OrchestratorResult:
         """Executa o fluxo completo de Text-to-SQL para uma pergunta do usuário."""
 
@@ -108,18 +125,29 @@ class AgentOrchestrator:
             return policy_result
 
         prompt = question
-        prev_exec_error: OrchestratorResult | None = None
+        prev_retry_error: OrchestratorResult | None = None
         generated: Success | None = None
         rows: list[dict] = []
         execution_skipped = False
 
         for attempt_index in range(self._max_regenerations_on_exec_error + 1):
-            if attempt_index > 0 and prev_exec_error is not None:
-                err = prev_exec_error.error or ""
-                sql_failed = prev_exec_error.sql or ""
-                prompt = self._recovery_prompt_after_exec_error(question, sql_failed, err)
+            if attempt_index > 0 and prev_retry_error is not None:
+                err = prev_retry_error.error or ""
+                sql_failed = prev_retry_error.sql or ""
+                if prev_retry_error.error_kind == "sql_validation":
+                    prompt = self._recovery_prompt_after_validation_error(
+                        question,
+                        sql_failed,
+                        err,
+                    )
+                else:
+                    prompt = self._recovery_prompt_after_exec_error(
+                        question,
+                        sql_failed,
+                        err,
+                    )
                 self._trace(
-                    f"nova geração SQL após erro de execução "
+                    f"nova geração SQL após erro {prev_retry_error.error_kind} "
                     f"({attempt_index}/{self._max_regenerations_on_exec_error})",
                     flow_start,
                 )
@@ -133,7 +161,10 @@ class AgentOrchestrator:
 
             validated = self._validate_generated_sql(generated)
             if isinstance(validated, OrchestratorResult):
-                return validated
+                prev_retry_error = validated
+                if attempt_index >= self._max_regenerations_on_exec_error:
+                    return validated
+                continue
             generated = validated
 
             policy_result = self._validate_execution_policy(generated, deps)
@@ -147,7 +178,7 @@ class AgentOrchestrator:
             if execution_error is None:
                 break
 
-            prev_exec_error = execution_error
+            prev_retry_error = execution_error
             if attempt_index >= self._max_regenerations_on_exec_error:
                 return execution_error
 

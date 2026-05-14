@@ -7,6 +7,55 @@
 SQL_EXAMPLES = [
     """
     Pergunta:
+    Qual região teve o maior crescimento de receita no último ano?
+
+    SQL:
+    WITH receita_mensal AS (
+        SELECT
+            CASE
+                WHEN estado_cliente IN ('AL','BA','CE','MA','PB','PE','PI','RN','SE') THEN 'Nordeste'
+                WHEN estado_cliente IN ('AC','AP','AM','PA','RO','RR','TO') THEN 'Norte'
+                WHEN estado_cliente IN ('DF','GO','MT','MS') THEN 'Centro-Oeste'
+                WHEN estado_cliente IN ('ES','MG','RJ','SP') THEN 'Sudeste'
+                WHEN estado_cliente IN ('PR','RS','SC') THEN 'Sul'
+                ELSE 'Indefinida'
+            END AS regiao,
+            DATE_TRUNC('month', data_pedido)::date AS mes,
+            SUM(valor_total) AS receita
+        FROM gold_pedidos_enriquecidos
+        WHERE status = 'Aprovado'
+          AND data_pedido >= DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '12 months'
+          AND data_pedido < DATE_TRUNC('month', CURRENT_DATE)
+        GROUP BY regiao, mes
+    ),
+    extremos AS (
+        SELECT
+            regiao,
+            MIN(mes) AS primeiro_mes,
+            MAX(mes) AS ultimo_mes
+        FROM receita_mensal
+        GROUP BY regiao
+    ),
+    comparacao AS (
+        SELECT
+            e.regiao,
+            r_inicial.receita AS receita_inicial,
+            r_final.receita AS receita_final,
+            r_final.receita - r_inicial.receita AS crescimento_receita
+        FROM extremos e
+        JOIN receita_mensal r_inicial
+          ON r_inicial.regiao = e.regiao AND r_inicial.mes = e.primeiro_mes
+        JOIN receita_mensal r_final
+          ON r_final.regiao = e.regiao AND r_final.mes = e.ultimo_mes
+    )
+    SELECT regiao, receita_inicial, receita_final, crescimento_receita
+    FROM comparacao
+    ORDER BY crescimento_receita DESC
+    LIMIT 1;
+    """,
+
+    """
+    Pergunta:
     Qual foi a receita bruta em abril de 2026?
 
     SQL:

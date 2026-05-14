@@ -158,6 +158,30 @@ class AgentOrchestratorTest(unittest.IsolatedAsyncioTestCase):
         self.assertIn("validador", result.explanation.casefold())
         self.assertIsNone(executor.executed_sql)
 
+    async def test_regenerates_sql_after_validation_error_then_succeeds(self) -> None:
+        bad_sql = _success("SELECT * FROM silver_pedidos")
+        ok_sql = _success("SELECT ano_mes FROM gold_vendas_kpis LIMIT 100")
+        sql_client = FakeSQLClientSequence([bad_sql, ok_sql])
+        executor = FakeExecutor()
+        explainer = FakeExplainer()
+        orchestrator = AgentOrchestrator(
+            sql_client=sql_client,
+            executor=executor,
+            explainer=explainer,
+            debug=False,
+            max_regenerations_on_exec_error=2,
+        )
+
+        result = await orchestrator.ask("pergunta", Deps(conn=object()))
+
+        self.assertIsNone(result.error)
+        self.assertEqual(sql_client.call_count, 2)
+        self.assertIn("# CORREÇÃO NECESSÁRIA", sql_client.questions_seen[1])
+        self.assertIn("Erro do validador", sql_client.questions_seen[1])
+        self.assertIn("Tabela não permitida: silver_pedidos", sql_client.questions_seen[1])
+        self.assertIn("SELECT * FROM silver_pedidos", sql_client.questions_seen[1])
+        self.assertEqual(result.sql, executor.executed_sql)
+
     async def test_policy_rejects_question_before_llm_call(self) -> None:
         sql_client = FakeSQLClient(_success("SELECT ano_mes FROM gold_vendas_kpis"))
         executor = FakeExecutor()

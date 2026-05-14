@@ -12,7 +12,6 @@ from app.models.responses import InvalidRequest, Response, Success
 from app.prompts.examples import SQL_EXAMPLES, VALUE_EXAMPLES
 from app.prompts.sql_prompt_builder import SqlDialect, build_prompt
 from app.prompts.system_prompt import SYSTEM_PROMPT
-from app.security.sql_validator import validate_sql
 
 
 class AgentTextToSQLClient:
@@ -46,30 +45,29 @@ class AgentTextToSQLClient:
     def _build_prompt(self, question: str, deps: Deps) -> str:
         """Monta o prompt com schema, exemplos e data atual."""
 
+        dialect = self._sql_dialect(deps)
         return build_prompt(
             question=question,
             schema=get_schema_prompt(),
-            examples=self._select_examples(),
+            examples=self._select_examples(dialect),
             values=VALUE_EXAMPLES,
             current_date=datetime.now(),
-            dialect=self._sql_dialect(deps),
+            dialect=dialect,
         )
 
     @staticmethod
-    def _select_examples() -> list[str]:
+    def _select_examples(dialect: SqlDialect = "postgresql") -> list[str]:
         """Seleciona poucos exemplos para manter o prompt compacto."""
 
+        if dialect == "sqlite":
+            blocked_tokens = ("DATE_TRUNC", "INTERVAL", "ILIKE", "::")
+            return [
+                example
+                for example in SQL_EXAMPLES
+                if not any(token in example.upper() for token in blocked_tokens)
+            ][:2]
+
         return SQL_EXAMPLES[:2]
-
-    @staticmethod
-    def _validate_output(output: Success | InvalidRequest) -> Success | InvalidRequest:
-        """Garante que respostas de sucesso passem novamente pelo validador SQL."""
-
-        if isinstance(output, Success):
-            validated_sql = validate_sql(output.sql)
-            return output.model_copy(update={"sql": validated_sql})
-
-        return output
 
     def generate_sql(
         self,
@@ -83,7 +81,7 @@ class AgentTextToSQLClient:
             deps=deps,
         )
 
-        return self._validate_output(result.output)
+        return result.output
 
     async def generate_sql_async(
         self,
@@ -97,4 +95,4 @@ class AgentTextToSQLClient:
             deps=deps,
         )
 
-        return self._validate_output(result.output)
+        return result.output

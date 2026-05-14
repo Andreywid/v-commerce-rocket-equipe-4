@@ -57,7 +57,6 @@ class SQLValidator:
 
             self._validate_statement(tree)
             self._validate_ctes(tree)
-            self._block_set_operations(tree)
             self._block_dangerous_expressions(tree)
             self._validate_tables(tree)
             self._validate_functions(tree)
@@ -132,33 +131,36 @@ class SQLValidator:
 
     @staticmethod
     def _validate_statement(tree: exp.Expression) -> None:
-        """Permite apenas SELECT de topo."""
+        """
+        Permite apenas consultas SELECT,
+        inclusive SELECT com WITH (CTEs).
+        """
 
-        if not isinstance(tree, exp.Select):
-            raise SQLValidationError(
-                "Apenas SELECT é permitido"
-            )
+        if isinstance(tree, exp.Select):
+            return
+
+        if isinstance(tree, exp.With):
+            if isinstance(tree.this, exp.Select):
+                return
+
+        raise SQLValidationError(
+            "Apenas SELECT é permitido"
+        )
 
     @staticmethod
     def _validate_ctes(tree: exp.Expression) -> None:
-        """Bloqueia CTEs para reduzir complexidade e caminhos de bypass."""
+        """
+        Permite CTEs analíticas, mas limita profundidade
+        para evitar explosões de complexidade.
+        """
 
-        if tree.find(exp.With):
+        ctes = list(tree.find_all(exp.CTE))
+
+        MAX_CTES = 3
+
+        if len(ctes) > MAX_CTES:
             raise SQLValidationError(
-                "CTEs não permitidas"
-            )
-
-    def _block_set_operations(self, tree: exp.Expression) -> None:
-        """Impede UNION/EXCEPT/INTERSECT para manter a consulta auditável."""
-
-        blocked_expression = self._find_expression_by_name(
-            tree,
-            BLOCKED_SET_OPERATION_NAMES
-        )
-
-        if blocked_expression:
-            raise SQLValidationError(
-                "Operações de conjunto não permitidas"
+                f"Máximo de {MAX_CTES} CTEs permitido"
             )
 
     def _block_dangerous_expressions(self, tree: exp.Expression) -> None:
@@ -194,10 +196,14 @@ class SQLValidator:
             table.lower()
             for table in ALLOWED_TABLES
         }
+        cte_names = self._cte_names(tree)
         referenced_tables = set()
 
         for table in tree.find_all(exp.Table):
             normalized_table_name = self._normalize_table_name(table)
+
+            if normalized_table_name in cte_names:
+                continue
 
             if normalized_table_name not in allowed_tables:
                 raise SQLValidationError(
@@ -210,6 +216,20 @@ class SQLValidator:
             raise SQLValidationError(
                 "Consultas sem tabela não são permitidas"
             )
+
+    @staticmethod
+    def _cte_names(tree: exp.Expression) -> set[str]:
+        """Retorna aliases de CTEs para não tratá-los como tabelas físicas."""
+
+        cte_names = set()
+
+        for cte in tree.find_all(exp.CTE):
+            alias = cte.alias
+
+            if alias:
+                cte_names.add(alias.lower())
+
+        return cte_names
 
     @staticmethod
     def _normalize_table_name(table: exp.Table) -> str:

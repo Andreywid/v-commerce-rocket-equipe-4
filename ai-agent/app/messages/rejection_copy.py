@@ -7,7 +7,7 @@ def format_question_policy(detail: str) -> str:
     """Pergunta barrada por política (escopo, injeção, vazio, tenant)."""
 
     lines = [
-        "Não foi possível processar esta pergunta por regras de segurança ou de escopo.",
+        "Não consigo responder essa pergunta com os dados disponíveis no CRM.",
         "",
         f"Motivo: {detail}",
         "",
@@ -26,10 +26,7 @@ def format_question_policy(detail: str) -> str:
             "Não é possível alterar instruções internas, expor chaves ou conteúdo do sistema."
         )
     elif "domínio" in lowered or "analítico" in lowered or "fora do escopo" in lowered:
-        lines.append(
-            "Este assistente analisa dados de vendas e operação da V-Commerce. "
-            "Pergunte, por exemplo, sobre receita, pedidos, KPIs, evolução no tempo ou comparações entre períodos."
-        )
+        lines.extend(_scope_guidance())
     else:
         lines.append(
             "Reformule em termos de análise de dados (métricas, períodos, cortes) alinhados ao seu catálogo de dados."
@@ -42,16 +39,29 @@ def format_invalid_request(detail: str) -> str:
 
     return "\n".join(
         [
-            "Esta pergunta não pôde ser atendida como uma consulta aos dados disponíveis.",
+            "Não consegui transformar essa pergunta em uma consulta segura aos dados disponíveis.",
             "",
             f"Motivo informado pelo agente: {detail}",
             "",
-            "Como tentar de novo:",
-            "- Seja específico sobre a métrica (ex.: receita bruta, taxa de aprovação, quantidade de pedidos).",
-            "- Indique período ou granularidade quando fizer sentido (ex.: últimos 12 meses, por mês, trimestre).",
-            "- Use apenas temas cobertos pelas tabelas do schema (vendas, clientes, pedidos, etc.).",
+            *_scope_guidance(),
         ]
     )
+
+
+def _scope_guidance() -> list[str]:
+    return [
+        "Posso responder perguntas analíticas sobre:",
+        "- vendas, receita, pedidos e formas de pagamento;",
+        "- clientes, segmentos, estados/regiões e atividade;",
+        "- produtos, categorias, avaliações e tickets de suporte;",
+        "- evolução por período, rankings, totais, médias e taxas.",
+        "",
+        "Exemplos que funcionam:",
+        "- Qual foi a receita bruta nos últimos 12 meses?",
+        "- Quais regiões tiveram maior crescimento de receita?",
+        "- Quantos tickets críticos estão abertos por tipo de problema?",
+        "- Quais clientes de alto valor compraram pelo App?",
+    ]
 
 
 def format_sql_validation(detail: str) -> str:

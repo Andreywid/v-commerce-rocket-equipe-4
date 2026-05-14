@@ -31,6 +31,32 @@ class QueryPolicyTest(unittest.TestCase):
                 Deps(conn=None),
             )
 
+    def test_rejects_common_general_knowledge_or_market_questions(self) -> None:
+        examples = [
+            "Qual é a capital da França?",
+            "Qual a cotação do bitcoin hoje?",
+            "Traduza este texto para inglês",
+            "Escreva um poema sobre atendimento ao cliente",
+            "Agende uma reunião com o time de suporte",
+            "Me passe uma receita de bolo de cenoura",
+        ]
+
+        for question in examples:
+            with self.subTest(question=question):
+                with self.assertRaises(PolicyViolation):
+                    self.policy.validate_question(question, Deps(conn=None))
+
+    def test_allows_analytical_questions_that_share_generic_words(self) -> None:
+        examples = [
+            "Quem é o cliente com maior valor total gasto?",
+            "Calcule a taxa de aprovação dos pedidos no último trimestre",
+            "Qual região teve maior receita?",
+        ]
+
+        for question in examples:
+            with self.subTest(question=question):
+                self.policy.validate_question(question, Deps(conn=None))
+
     def test_requires_tenant_when_configured(self) -> None:
         with self.assertRaises(PolicyViolation):
             self.policy.validate_question(
@@ -64,6 +90,24 @@ class QueryPolicyTest(unittest.TestCase):
                     allowed_tables=frozenset({"gold_vendas_kpis"}),
                 ),
             )
+
+    def test_cte_name_does_not_count_as_table_outside_user_scope(self) -> None:
+        self.policy.validate_sql(
+            """
+            WITH ReceitaComVariacao AS (
+                SELECT ano_mes, SUM(receita_bruta) AS receita
+                FROM gold_vendas_kpis
+                GROUP BY ano_mes
+            )
+            SELECT ano_mes, receita
+            FROM ReceitaComVariacao
+            LIMIT 1
+            """,
+            Deps(
+                conn=None,
+                allowed_tables=frozenset({"gold_vendas_kpis"}),
+            ),
+        )
 
     def test_blocks_column_outside_user_scope(self) -> None:
         with self.assertRaises(PolicyViolation):
