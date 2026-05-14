@@ -743,3 +743,6 @@ def get_schema_prompt():
             prompt += "\n"
 
     return prompt
+
+# No final do arquivo schema_registry.py
+DB_SCHEMA = GOLD_SCHEMA
