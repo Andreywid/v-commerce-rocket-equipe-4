@@ -186,6 +186,28 @@ class InMemoryConversationStoreTest(unittest.TestCase):
         self.assertIn("COUNT", prompt)
         self.assertIn("is_em_risco", prompt)
 
+    def test_build_question_with_memory_temporal_pipeline_after_error_turn(self) -> None:
+        store = InMemoryConversationStore()
+        store.append_result(
+            conversation_id="conv-1",
+            tenant_id="tenant-1",
+            user_id="user-1",
+            question="qual região teve o maior crescimento de receita",
+            result=OrchestratorResult(
+                explanation="x",
+                error="ambígua",
+                error_kind="invalid_request",
+            ),
+        )
+        turns = store.list_turns(
+            conversation_id="conv-1",
+            tenant_id="tenant-1",
+            user_id="user-1",
+        )
+        prompt = build_question_with_memory("ultimos 3 meses", turns)
+        self.assertIn("RESOLUÇÃO OBRIGATÓRIA (PERÍODO)", prompt)
+        self.assertIn("maior crescimento", prompt)
+
 
 if __name__ == "__main__":
     unittest.main()

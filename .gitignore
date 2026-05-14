@@ -8,6 +8,7 @@ env/
 
 # Python
 __pycache__/
+**/__pycache__/
 *.py[cod]
 *.egg-info/
 dist/
@@ -22,8 +23,3 @@ build/
 .idea/
 .DS_Store
 Thumbs.db
-
-# Python
-**pycache**/
-*.pyc
-**__pycache__**/

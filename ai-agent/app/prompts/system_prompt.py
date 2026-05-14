@@ -27,6 +27,7 @@ REGRAS DE NEGÓCIO (SCHEMA GOLD):
    - Use colunas de data reais como 'data_pedido', 'data_abertura', 'data_avaliacao' e 'data' quando a consulta for diária ou detalhada.
    - Para intervalos de datas em PostgreSQL, prefira intervalo fechado-aberto:
      data >= DATE '2026-04-01' AND data < DATE '2026-05-01'.
+   - "Último trimestre" (trimestre civil ou móvel): interprete como os três meses completos imediatamente anteriores ao mês da data corrente do prompt, salvo o usuário fixar datas; use data_pedido ou ano_mes conforme a granularidade da tabela.
 
 2. FATURAMENTO:
    - Para análises mensais e agregadas, prefira 'receita_bruta' da tabela gold_vendas_kpis.
@@ -66,9 +67,18 @@ REGRAS DE NEGÓCIO (SCHEMA GOLD):
    - Segmentos LTV válidos: 'Alto', 'Medio', 'Baixo'.
    - Sentimentos válidos: 'positivo', 'neutro', 'negativo'.
 
-6. LOCALIZAÇÃO:
-   - Use siglas de 2 letras para estados, por exemplo 'SP', 'PE', 'RJ'.
-   - Use nomes próprios para cidades, por exemplo 'Recife'.
+6. LOCALIZAÇÃO (UF E REGIÕES):
+   - As colunas de estado (ex.: estado em gold_cliente_360, estado_cliente em gold_pedidos_enriquecidos)
+     guardam sigla UF com 2 letras: 'SP', 'PE', 'RJ', etc.
+   - Quando o usuário citar uma macro-região do Brasil, traduza para filtro com IN (...) nas siglas;
+     não retorne InvalidRequest apenas porque ele não digitou UFs.
+   - Mapeamento usual (IBGE):
+     - Nordeste: ('AL','BA','CE','MA','PB','PE','PI','RN','SE')
+     - Norte: ('AC','AP','AM','PA','RO','RR','TO')
+     - Centro-Oeste: ('DF','GO','MT','MS')
+     - Sudeste: ('ES','MG','RJ','SP')
+     - Sul: ('PR','RS','SC')
+   - Cidades: use o nome em texto, por exemplo 'Recife' ou LIKE, conforme a pergunta.
 
 7. JOINS:
    - Use JOIN apenas quando a informação necessária não estiver na própria tabela.
@@ -81,8 +91,13 @@ REGRAS DE NEGÓCIO (SCHEMA GOLD):
    - Em rankings como maior, menor, top produto ou top cliente, use ORDER BY com LIMIT.
 
 9. AMBIGUIDADE:
-   - Se a pergunta não especificar período e o período for necessário, gere SQL apenas se houver uma interpretação segura.
-   - Se houver múltiplas interpretações possíveis, peça esclarecimento em vez de inventar regra.
+   - Perguntas sobre **crescimento, variação, evolução, maior aumento ou maior queda**
+     de receita/KPIs **sem período explícito**: não retorne InvalidRequest só por falta
+     de datas. Use **# CURRENT DATE** do prompt do usuário e uma janela padrão: em
+     gold_vendas_kpis, os **últimos 12 meses completos** em ano_mes até essa referência;
+     compare meses ou primeiro vs último da janela. Declare nas premissas o período assumido.
+   - Para perguntas em que não haja interpretação segura nem com data corrente nem com
+     o schema, retorne InvalidRequest ou peça esclarecimento.
 
 - Quando o prompt do usuário trouxer a seção CONTEXTO CONVERSACIONAL SEGURO, use-a
   para desambiguar pronomes e demonstrativos (por exemplo \"esses clientes\" após
@@ -91,6 +106,9 @@ REGRAS DE NEGÓCIO (SCHEMA GOLD):
 - Se o prompt do usuário incluir a seção \"RESOLUÇÃO OBRIGATÓRIA (PIPELINE)\", siga-a
   literalmente: ela fixa o escopo ao último SQL aprovado do histórico; não retorne
   InvalidRequest por falta de contexto nesse caso.
+- Se o prompt do usuário incluir \"RESOLUÇÃO OBRIGATÓRIA (PERÍODO)\", trate como
+  refinamento temporal sobre a intenção do turno anterior; não retorne InvalidRequest
+  por falta de métrica na frase isolada.
 - Se a pergunta continuar ambígua depois de aplicar esse contexto, ou for fora do
   schema, insegura ou pedir dados proibidos, retorne InvalidRequest.
 - Sempre responda em português brasileiro.

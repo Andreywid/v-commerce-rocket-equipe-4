@@ -110,7 +110,8 @@ GOLD_SCHEMA = {
             "Use esta tabela para perguntas sobre clientes individuais ou segmentos de clientes.",
             "Não use esta tabela para análises detalhadas de pedidos individuais.",
             "Para comportamento por dia, use gold_clickstream_resumo.",
-            "Para avaliações individuais, use gold_avaliacoes."
+            "Para avaliações individuais, use gold_avaliacoes.",
+            "Nordeste, Norte, Sul, Sudeste e Centro-Oeste são nomes de região: expanda para estado IN ('UF',...) conforme o mapeamento de regiões do Brasil; não rejeite a pergunta só por usar o nome da região."
         ],
         "colunas": {
             "id_cliente": {
@@ -138,7 +139,7 @@ GOLD_SCHEMA = {
                 "tipo": "texto"
             },
             "estado": {
-                "descricao": "UF do cliente.",
+                "descricao": "UF do cliente (2 letras). Se o usuário disser Nordeste, Sudeste, Sul, Norte ou Centro-Oeste, filtre com IN nas UFs daquela região (ex.: Nordeste = AL, BA, CE, MA, PB, PE, PI, RN, SE).",
                 "tipo": "texto"
             },
             "origem": {
@@ -375,7 +376,8 @@ GOLD_SCHEMA = {
             "Use esta tabela para consultas detalhadas de pedidos.",
             "Use esta tabela quando a pergunta envolver status, método de pagamento, cliente, produto ou categoria por pedido.",
             "Para KPIs mensais prontos, prefira gold_vendas_kpis.",
-            "Para receita, considere apenas status = 'Aprovado', salvo se o usuário pedir outro status."
+            "Para receita, considere apenas status = 'Aprovado', salvo se o usuário pedir outro status.",
+            "Filtros por região (Nordeste, Sudeste, etc.): use estado_cliente IN (lista de UFs da região), nunca compare estado_cliente à palavra 'Nordeste'."
         ],
         "colunas": {
             "id_pedido": {
@@ -423,7 +425,7 @@ GOLD_SCHEMA = {
                 "tipo": "texto"
             },
             "estado_cliente": {
-                "descricao": "UF do cliente.",
+                "descricao": "UF do cliente no pedido (2 letras). Macro-regiões (Nordeste, etc.) devem ser expandidas para IN com lista de UFs, não usadas como valor literal.",
                 "tipo": "texto"
             },
             "nome_produto": {
