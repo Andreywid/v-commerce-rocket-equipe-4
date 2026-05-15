@@ -1,19 +1,49 @@
-# Endpoints: Agente de IA (Text-to-SQL)
-#
-# INTEGRAÇÃO EXTERNA — este arquivo é de responsabilidade do time de Backend.
-# O módulo do agente (app/agent/) será desenvolvido pelo time de IA e integrado aqui.
-#
-# Contrato de integração esperado:
-#   O time de IA deve expor uma função em app/agent/agent.py com a assinatura:
-#     async def chat(message: str, session_id: str | None) -> AgentResponse
-#   onde AgentResponse contém: answer (str), sql_used (str), data (list)
-#
-# POST /api/v1/agent/chat
-#   Body:    { "message": str, "session_id": str (opcional) }
-#   Retorna: { "answer": str, "sql_used": str, "data": list }
-#
-# GET /api/v1/agent/suggestions
-#   Retorna perguntas sugeridas para onboarding do usuário (diferencial)
-#
-# DELETE /api/v1/agent/session/{session_id}
-#   Limpa histórico de conversa da sessão (diferencial — memória)
+from fastapi import APIRouter
+from pydantic import BaseModel
+from typing import Any
+
+router = APIRouter(prefix="/agent", tags=["agent"])
+
+SUGGESTED_QUESTIONS = [
+    "Quais foram os 5 produtos mais vendidos no último mês?",
+    "Qual a receita total por categoria em 2026?",
+    "Quais clientes do estado de SP gastaram mais de R$3.000?",
+    "Qual o ticket médio por método de pagamento?",
+    "Quantos tickets estão abertos com SLA estourado?",
+    "Qual produto tem a maior taxa de problemas de suporte?",
+]
+
+
+class ChatRequest(BaseModel):
+    message: str
+    session_id: str | None = None
+
+
+class ChatResponse(BaseModel):
+    answer: str
+    sql_used: str | None = None
+    data: list[Any] = []
+    session_id: str | None = None
+
+
+@router.post("/chat", response_model=ChatResponse)
+async def chat(body: ChatRequest):
+    # Integration point: the AI team implements app/agent/agent.py and exposes:
+    #   async def chat(message: str, session_id: str | None) -> AgentResponse
+    # Uncomment below and remove the placeholder when the agent module is ready:
+    #
+    # from app.agent.agent import chat as agent_chat
+    # result = await agent_chat(body.message, body.session_id)
+    # return ChatResponse(**result)
+
+    return ChatResponse(
+        answer="Agente de IA ainda não integrado. O time de IA está desenvolvendo este módulo.",
+        sql_used=None,
+        data=[],
+        session_id=body.session_id,
+    )
+
+
+@router.get("/suggestions", response_model=list[str])
+def get_suggestions():
+    return SUGGESTED_QUESTIONS
