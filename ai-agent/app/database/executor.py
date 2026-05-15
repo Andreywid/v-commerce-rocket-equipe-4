@@ -2,14 +2,13 @@
 
 from __future__ import annotations
 
-import sqlite3
 from typing import Any
 
 import pandas as pd
 
 from app.database.connection import DB_TYPE
 from app.database.translator import translate_to_sqlite
-from app.security.pii_mask import mask_cpf_in_rows
+from app.security.pii_mask import mask_sensitive_fields_in_rows
 
 
 class QueryExecutor:
@@ -23,19 +22,34 @@ class QueryExecutor:
 
         if self.db_type == "sqlite":
             sql_traduzido = translate_to_sqlite(sql)
+
             try:
                 df = pd.read_sql_query(sql_traduzido, conn)
-                return mask_cpf_in_rows(df.to_dict(orient="records"))
+                return mask_sensitive_fields_in_rows(
+                    df.to_dict(orient="records")
+                )
+
             except Exception as exc:
                 print(f"Erro ao executar no SQLite: {exc}")
                 raise
 
         if hasattr(conn, "fetch"):
             rows = await conn.fetch(sql)
-            return mask_cpf_in_rows([dict(row) for row in rows])
+            return mask_sensitive_fields_in_rows(
+                [dict(row) for row in rows]
+            )
 
         cursor = conn.cursor()
         cursor.execute(sql.strip().rstrip(";"))
-        colnames = [description[0] for description in (cursor.description or [])]
-        raw = [dict(zip(colnames, row)) for row in cursor.fetchall()]
-        return mask_cpf_in_rows(raw)
+
+        colnames = [
+            description[0]
+            for description in (cursor.description or [])
+        ]
+
+        raw = [
+            dict(zip(colnames, row))
+            for row in cursor.fetchall()
+        ]
+
+        return mask_sensitive_fields_in_rows(raw)
