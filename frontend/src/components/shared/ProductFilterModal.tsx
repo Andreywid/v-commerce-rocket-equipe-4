@@ -26,7 +26,7 @@ export const DEFAULT_PRODUCT_FILTER: ProductFilterState = {
 const PRICE_MAX = 100_000
 
 const CATEGORY_TAG_CLASS: Record<ProductCategory, string> = {
-  Perfumaria: "bg-violet-50 text-violet-600 border-violet-200",
+  Perfumaria: "bg-indigo-50 text-indigo-600 border-indigo-200",
   Artes: "bg-sky-50 text-sky-600 border-sky-200",
   Esporte: "bg-emerald-50 text-emerald-600 border-emerald-200",
   Lazer: "bg-amber-50 text-amber-600 border-amber-200",

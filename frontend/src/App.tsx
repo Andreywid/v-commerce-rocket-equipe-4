@@ -15,16 +15,23 @@ function App() {
   const [sessionEmail, setSessionEmail] = useState<string>(
     () => localStorage.getItem("userEmail") ?? "",
   )
+  const [sessionName, setSessionName] = useState<string>(
+    () => localStorage.getItem("userName") ?? "",
+  )
 
-  function handleLogin(email: string) {
+  function handleLogin(email: string, name: string = "") {
     localStorage.setItem("userEmail", email)
+    localStorage.setItem("userName", name)
     setSessionEmail(email)
+    setSessionName(name)
   }
 
   function handleLogout() {
     localStorage.removeItem("token")
     localStorage.removeItem("userEmail")
+    localStorage.removeItem("userName")
     setSessionEmail("")
+    setSessionName("")
   }
 
   return (
@@ -48,7 +55,7 @@ function App() {
           element={
             sessionEmail ? (
               <AppProvider>
-                <AppLayout email={sessionEmail} onLogout={handleLogout} />
+                <AppLayout email={sessionEmail} name={sessionName} onLogout={handleLogout} />
               </AppProvider>
             ) : (
               <Navigate replace to="/login" />

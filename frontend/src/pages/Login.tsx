@@ -21,7 +21,7 @@ export function LoginPage({
   onLogin,
 }: {
   mode?: "login" | "register"
-  onLogin: (email: string) => void
+  onLogin: (email: string, name?: string) => void
 }) {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
@@ -65,8 +65,9 @@ export function LoginPage({
       const data = await api.post<LoginResponse>("/auth/login", { email, password })
       localStorage.setItem("token", data.access_token)
       localStorage.setItem("userEmail", data.user.email)
+      localStorage.setItem("userName", data.user.name)
       toast.success(`Bem-vindo, ${data.user.name}!`)
-      onLogin(data.user.email)
+      onLogin(data.user.email, data.user.name)
     } catch (err) {
       if (err instanceof HttpError) {
         if (err.status === 0) {

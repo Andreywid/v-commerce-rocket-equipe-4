@@ -1,180 +1,207 @@
 import { useState } from "react"
-import { Calendar, Trash2, Upload } from "lucide-react"
+import { Check, ImageIcon, SquarePen, Trash2, Upload, X } from "lucide-react"
 
 import type { ClientFormValues, ClientStatus } from "@/types"
 import { clientStatusOptions, emptyClientForm } from "@/mocks/clients"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { FormInput, FormSelect, ModalActions, ModalFrame } from "@/components/shared/FormPrimitives"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
-function getInitials(name: string): string {
-  const parts = name.trim().split(" ")
-  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase()
-  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+const LOCATION_OPTIONS = [
+  "Jaguaribara, CE",
+  "Rio de Janeiro, RJ",
+  "Cuiabá, MT",
+  "Rio Branco, AC",
+  "Salvador, BA",
+  "Blumenau, SC",
+]
+
+const inputCls =
+  "w-full rounded-md border border-slate-200 px-3 py-2.5 text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="grid gap-1.5">
+      <label className="text-sm font-medium text-slate-700">{label}</label>
+      {children}
+    </div>
+  )
 }
 
 export function ClientFormModal({
   initialValues = emptyClientForm,
   onClose,
+  onDelete,
   onSubmit,
   title,
 }: {
   initialValues?: ClientFormValues
   onClose: () => void
+  onDelete?: () => void
   onSubmit: (values: ClientFormValues) => void
   title: string
 }) {
   const [form, setForm] = useState<ClientFormValues>(initialValues)
-  const isEditing = title === "Editar cliente"
+  const isEditing = !!onDelete
+  const email = `${form.name.toLowerCase().replace(/\s+/g, ".") || "cliente"}@hotmail.com`
 
-  if (isEditing) {
-    const email = `${form.name.toLowerCase().replace(/\s+/g, ".") || "cliente"}@hotmail.com`
+  return (
+    <Dialog open onOpenChange={(open) => { if (!open) onClose() }}>
+      <DialogContent className="sm:max-w-200 h-131.25 rounded-lg flex flex-col px-6 py-4 gap-0 overflow-hidden">
+        <DialogHeader className="shrink-0 pb-4 border-b border-slate-100">
+          <DialogTitle className="flex items-center gap-2 text-[#4F46E5] text-[18px] font-medium leading-6.75 tracking-normal">
+            <SquarePen className="size-4" />
+            {title}
+          </DialogTitle>
+        </DialogHeader>
 
-    return (
-      <Dialog open onOpenChange={(open) => { if (!open) onClose() }}>
-        <DialogContent className="sm:max-w-[720px]">
-          <DialogHeader>
-            <DialogTitle className="text-indigo-600">{title}</DialogTitle>
-          </DialogHeader>
-
-          <form
-            className="grid gap-5"
-            onSubmit={(event) => {
-              event.preventDefault()
-              onSubmit(form)
-            }}
-          >
+        <form
+          className="flex flex-1 flex-col overflow-hidden"
+          onSubmit={(e) => { e.preventDefault(); onSubmit(form) }}
+        >
+          <div className="flex-1 overflow-y-auto flex flex-col gap-5 py-5 pl-0.5 pr-1">
+            {/* Imagem */}
             <section className="grid gap-2">
-              <Label className="text-xs font-semibold text-slate-700">Imagem</Label>
-              <div className="flex items-center justify-between gap-4 rounded-lg border border-slate-200 bg-white p-3">
-                <div className="flex min-w-0 items-center gap-3">
-                  <span className="grid size-10 shrink-0 place-items-center rounded-full bg-rose-100 text-xs font-bold text-rose-600">
-                    {getInitials(form.name)}
-                  </span>
-                  <span className="truncate text-sm font-medium text-slate-600">
-                    IMG9282_26.jpg
-                  </span>
+              <label className="text-sm font-medium text-slate-700">Imagem</label>
+              <div className="flex items-center justify-between gap-4 rounded-lg border border-slate-200 bg-white px-4 py-3">
+                <div className="flex items-center gap-3 text-slate-400">
+                  <ImageIcon className="size-6 shrink-0 text-[#525252]" />
+                  <span className="text-sm text-slate-500">Imagem do cliente</span>
                 </div>
-                <Button variant="outline" size="sm" type="button">
-                  <Upload className="size-4" />
-                  Substituir imagem
+                <Button variant="outline" size="sm" type="button" className="shrink-0 gap-1.5">
+                  <Upload className="size-3.5" />
+                  Enviar imagem
                 </Button>
               </div>
             </section>
 
-            <div className="grid gap-4 border-t border-slate-200 pt-4 sm:grid-cols-2">
-              <FormInput label="Nome do cliente" onChange={(value) => setForm({ ...form, name: value })} value={form.name} />
-              <div className="grid gap-1.5">
-                <Label className="text-sm font-semibold text-slate-700">E-mail</Label>
-                <Input readOnly value={email} />
-              </div>
+            <div className="border-t border-slate-100" />
+
+            {/* Nome + E-mail */}
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field label="Nome do cliente">
+                <input
+                  className={inputCls}
+                  placeholder="Insira o nome do cliente"
+                  required
+                  value={form.name}
+                  onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+                />
+              </Field>
+              <Field label="E-mail">
+                <input
+                  className={inputCls + " cursor-default bg-slate-50 text-slate-400"}
+                  readOnly
+                  value={email}
+                />
+              </Field>
             </div>
 
-            <div className="grid gap-4 border-t border-slate-200 pt-4 sm:grid-cols-2">
-              <FormSelect
-                label="Localização"
-                onChange={(value) => setForm({ ...form, location: value })}
-                options={["Jaguaribara, CE", "Rio de Janeiro, RJ", "Cuiabá, MT", "Rio Branco, AC", "Salvador, BA", "Blumenau, SC"]}
-                value={form.location}
-              />
-              <div className="grid gap-1.5">
-                <Label className="text-sm font-semibold text-slate-700">Último pedido</Label>
-                <div className="relative">
-                  <Calendar className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
-                  <Input
-                    className="pl-9"
-                    onChange={(event) => setForm({ ...form, lastOrder: event.target.value })}
-                    value={form.lastOrder}
-                  />
+            <div className="border-t border-slate-100" />
+
+            {/* Localização + Status */}
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field label="Localização">
+                <Select
+                  value={form.location}
+                  onValueChange={(v) => setForm((f) => ({ ...f, location: v ?? f.location }))}
+                >
+                  <SelectTrigger className="w-full border-slate-200 text-sm">
+                    <SelectValue placeholder="Selecione a localização" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {LOCATION_OPTIONS.map((opt) => (
+                      <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </Field>
+              <Field label="Status">
+                <Select
+                  value={form.status}
+                  onValueChange={(v) => setForm((f) => ({ ...f, status: v as ClientStatus }))}
+                >
+                  <SelectTrigger className="w-full border-slate-200 text-sm">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {clientStatusOptions.map((opt) => (
+                      <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </Field>
+            </div>
+
+            {isEditing && (
+              <>
+                <div className="border-t border-slate-100" />
+                <div className="grid gap-4 sm:grid-cols-3">
+                  <Field label="Último pedido">
+                    <input
+                      className={inputCls}
+                      placeholder="dd/mm/aaaa"
+                      value={form.lastOrder}
+                      onChange={(e) => setForm((f) => ({ ...f, lastOrder: e.target.value }))}
+                    />
+                  </Field>
+                  <Field label="Qtd. de pedidos">
+                    <input
+                      type="number"
+                      className={inputCls}
+                      placeholder="1"
+                      min={0}
+                      value={form.orderCount === 0 ? "" : form.orderCount}
+                      onChange={(e) => setForm((f) => ({ ...f, orderCount: Number(e.target.value) || 0 }))}
+                    />
+                  </Field>
+                  <Field label="Total">
+                    <input
+                      className={inputCls}
+                      placeholder="R$ 1.500,00"
+                      value={form.total}
+                      onChange={(e) => setForm((f) => ({ ...f, total: e.target.value }))}
+                    />
+                  </Field>
                 </div>
-              </div>
-            </div>
+              </>
+            )}
+          </div>
 
-            <div className="grid gap-4 sm:grid-cols-3">
-              <FormSelect
-                label="Status"
-                onChange={(value) => setForm({ ...form, status: value as ClientStatus })}
-                options={clientStatusOptions}
-                value={form.status}
-              />
-              <FormInput
-                label="Qtd. de pedidos"
-                onChange={(value) => setForm({ ...form, orderCount: Number(value) })}
-                placeholder="1"
-                value={String(form.orderCount)}
-              />
-              <FormInput
-                label="Total"
-                onChange={(value) => setForm({ ...form, total: value })}
-                placeholder="R$ 1.500,00"
-                value={form.total}
-              />
-            </div>
-
-            <div className="flex flex-col-reverse gap-3 border-t border-slate-200 pt-4 sm:flex-row sm:items-center sm:justify-between">
-              <Button variant="outline" className="border-rose-200 text-rose-500 hover:bg-rose-50 hover:text-rose-600" type="button">
-                <Trash2 className="size-4" />
+          {/* Footer */}
+          <div className="shrink-0 flex items-center justify-between border-t border-slate-100 pt-4">
+            {onDelete ? (
+              <Button
+                variant="outline"
+                className="h-10 gap-1.5 rounded-full border-[#F43F5E] px-5 text-[#F43F5E] hover:bg-rose-50 hover:text-[#F43F5E]"
+                onClick={onDelete}
+                type="button"
+              >
+                <Trash2 className="size-3.5" />
                 Excluir
               </Button>
-              <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-                <Button variant="outline" onClick={onClose} type="button">
-                  Cancelar
-                </Button>
-                <Button type="submit">Salvar alterações</Button>
-              </div>
+            ) : (
+              <div />
+            )}
+            <div className="flex gap-3">
+              <Button
+                variant="outline"
+                className="h-10 gap-1.5 rounded-full px-5"
+                onClick={onClose}
+                type="button"
+              >
+                <X className="size-3.5" /> Cancelar
+              </Button>
+              <Button
+                type="submit"
+                className="h-10 gap-1.5 rounded-full bg-[#0F172A] px-5 text-white hover:bg-[#0F172A]/90"
+              >
+                <Check className="size-3.5" /> Confirmar
+              </Button>
             </div>
-          </form>
-        </DialogContent>
-      </Dialog>
-    )
-  }
-
-  return (
-    <ModalFrame title={title} onClose={onClose}>
-      <form
-        className="grid gap-4"
-        onSubmit={(event) => {
-          event.preventDefault()
-          onSubmit(form)
-        }}
-      >
-        <FormInput label="Nome" onChange={(value) => setForm({ ...form, name: value })} value={form.name} />
-        <FormInput
-          label="Localização"
-          onChange={(value) => setForm({ ...form, location: value })}
-          placeholder="Cidade, UF"
-          value={form.location}
-        />
-        <FormSelect
-          label="Status"
-          onChange={(value) => setForm({ ...form, status: value as ClientStatus })}
-          options={clientStatusOptions}
-          value={form.status}
-        />
-        <div className="grid gap-4 sm:grid-cols-2">
-          <FormInput
-            label="Último pedido"
-            onChange={(value) => setForm({ ...form, lastOrder: value })}
-            placeholder="dd/mm/aaaa"
-            value={form.lastOrder}
-          />
-          <FormInput
-            label="Qtd. de pedidos"
-            onChange={(value) => setForm({ ...form, orderCount: Number(value) })}
-            placeholder="1"
-            value={String(form.orderCount)}
-          />
-        </div>
-        <FormInput
-          label="Total"
-          onChange={(value) => setForm({ ...form, total: value })}
-          placeholder="R$ 1.500,00"
-          value={form.total}
-        />
-        <ModalActions onClose={onClose} submitLabel={title === "Editar cliente" ? "Salvar alterações" : "Adicionar cliente"} />
-      </form>
-    </ModalFrame>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
   )
 }
