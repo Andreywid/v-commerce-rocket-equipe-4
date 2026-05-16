@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react"
 import { ClipboardList } from "lucide-react"
 
-import type { FilterValue, RatingLabel, SupportFormValues, SupportRow, SupportType } from "@/types"
+import type { FilterValue, SupportFormValues, SupportRow, SupportType } from "@/types"
 import { supportTypeOptions } from "@/mocks/tickets"
 import { useAppContext } from "@/context/AppContext"
 import { getSupportMetrics } from "@/helpers/metrics"
@@ -9,7 +9,7 @@ import { rowIncludes } from "@/helpers/storage"
 import { DataPanel } from "@/components/shared/DataPanel"
 import { MetricGrid } from "@/components/shared/MetricCard"
 import { PageShell } from "@/components/shared/PageShell"
-import { StatusBadge } from "@/components/shared/StatusBadge"
+import { RatingBadge, StatusBadge } from "@/components/shared/StatusBadge"
 import { SupportFormModal } from "@/components/shared/SupportFormModal"
 import { EmptyTableState, TableHead, TableBody, TableHeader, TableRow, TableCell, TablePagination } from "@/components/shared/Table"
 import { TableToolbar } from "@/components/shared/TableToolbar"
@@ -17,17 +17,11 @@ import { TableToolbar } from "@/components/shared/TableToolbar"
 const PAGE_SIZE = 5
 
 const supportTypeClasses: Record<SupportType, string> = {
-  Pagamento: "bg-indigo-50 text-indigo-500 ring-indigo-200",
-  Atraso: "bg-amber-50 text-amber-500 ring-amber-200",
-  Reembolso: "bg-rose-50 text-rose-500 ring-rose-200",
+  Pagamento: "bg-indigo-50 text-indigo-500 border-indigo-200",
+  Atraso:    "bg-amber-50 text-amber-500 border-amber-200",
+  Reembolso: "bg-rose-50 text-rose-500 border-rose-200",
 }
 
-const ratingClasses: Record<RatingLabel, string> = {
-  Ótimo: "bg-amber-50 text-amber-500 ring-amber-200",
-  Bom: "bg-indigo-50 text-indigo-500 ring-indigo-200",
-  Excelente: "bg-emerald-50 text-emerald-500 ring-emerald-200",
-  Crítico: "bg-rose-50 text-rose-500 ring-rose-200",
-}
 
 type FilteredTicket = { ticket: SupportRow; index: number }
 
@@ -50,23 +44,23 @@ function SupportTable({
 }) {
   return (
     <div className="overflow-x-auto">
-      <table className="min-w-[900px] w-full table-fixed text-left">
+      <table className="min-w-225 w-full table-fixed text-left">
         <TableHeader>
           <TableRow className="h-12 border-slate-200 text-sm text-slate-950 hover:bg-transparent">
-            <TableHead sortable className="w-[170px] pl-5">Ticket</TableHead>
-            <TableHead className="w-[160px]">Cliente</TableHead>
-            <TableHead className="w-[130px]">Tipo</TableHead>
-            <TableHead sortable className="w-[170px]">Data de criação</TableHead>
-            <TableHead className="w-[150px]">Data de resolução</TableHead>
-            <TableHead sortable className="w-[140px]">Avaliação</TableHead>
-            <TableHead className="w-[90px]" />
+            <TableHead sortable className="w-42.5 pl-5">Ticket</TableHead>
+            <TableHead className="w-40">Cliente</TableHead>
+            <TableHead className="w-32.5">Tipo</TableHead>
+            <TableHead sortable className="w-42.5">Data de criação</TableHead>
+            <TableHead className="w-37.5">Data de resolução</TableHead>
+            <TableHead sortable className="w-35">Avaliação</TableHead>
+            <TableHead className="w-22.5" />
           </TableRow>
         </TableHeader>
         <TableBody>
           {rows.map(({ ticket: row, index }) => (
             <TableRow
               key={`${row.ticket}-${index}`}
-              className="h-[58px] border-slate-100 text-sm text-slate-700"
+              className="h-14.5 border-slate-100 text-sm text-slate-700"
             >
               <TableCell className="pl-5 font-semibold text-slate-800">{row.ticket}</TableCell>
               <TableCell>{row.customer}</TableCell>
@@ -76,9 +70,7 @@ function SupportTable({
               <TableCell className="font-medium">{row.createdAt}</TableCell>
               <TableCell>{row.resolvedIn}</TableCell>
               <TableCell>
-                <StatusBadge className={ratingClasses[row.ratingLabel]}>
-                  {row.rating} {row.ratingLabel}
-                </StatusBadge>
+                <RatingBadge rating={row.rating} label={row.ratingLabel} />
               </TableCell>
               <TableCell>
                 <button
