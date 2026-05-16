@@ -50,7 +50,7 @@ export function TableToolbar({
           <div className="relative">
             <Search className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
             <Input
-              className="h-9 rounded-full pl-10 pr-4 sm:w-77.5"
+              className="h-9 rounded-full pl-10 pr-4 sm:w-[310px]"
               onChange={(e) => onSearchChange(e.target.value)}
               placeholder={placeholder}
               type="search"
@@ -66,7 +66,13 @@ export function TableToolbar({
                 ? "border-indigo-200 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 hover:text-indigo-700"
                 : "",
             ].join(" ")}
-            onClick={onAdvancedFilter ? onAdvancedFilter : () => setIsFilterOpen((c) => !c)}
+            onClick={() => {
+              if (onAdvancedFilter) {
+                onAdvancedFilter()
+                return
+              }
+              setIsFilterOpen((c) => !c)
+            }}
             type="button"
           >
             <SlidersHorizontal className="size-4" />

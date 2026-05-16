@@ -1,4 +1,5 @@
 import type { ProductCategory, ProductFormValues, ProductRow, RatingLabel } from "@/types"
+import { productImagesById } from "@/mocks/productImages"
 
 export const productsStorageKey = "v-commerce-products"
 
@@ -18,6 +19,7 @@ export const ratingLabelOptions: RatingLabel[] = ["Ótimo", "Bom", "Excelente", 
 export const initialProducts: ProductRow[] = [
   {
     id: "PROD-0001",
+    imageUrl: productImagesById["PROD-0001"],
     name: "Perfume Premium",
     categories: ["Perfumaria"],
     price: "R$ 32.309,95",
@@ -28,6 +30,7 @@ export const initialProducts: ProductRow[] = [
   },
   {
     id: "PROD-0002",
+    imageUrl: productImagesById["PROD-0002"],
     name: "Conjunto de Pincéis",
     categories: ["Artes"],
     price: "R$ 47.346,82",
@@ -38,6 +41,7 @@ export const initialProducts: ProductRow[] = [
   },
   {
     id: "PROD-0003",
+    imageUrl: productImagesById["PROD-0003"],
     name: "Barraca de Camping",
     categories: ["Esporte", "Lazer"],
     price: "R$ 189,90",
@@ -48,6 +52,7 @@ export const initialProducts: ProductRow[] = [
   },
   {
     id: "PROD-0004",
+    imageUrl: productImagesById["PROD-0004"],
     name: "Chupeta Premium",
     categories: ["Bebês"],
     price: "R$ 28.506,95",
@@ -58,6 +63,7 @@ export const initialProducts: ProductRow[] = [
   },
   {
     id: "PROD-0005",
+    imageUrl: productImagesById["PROD-0005"],
     name: "Vassoura Mágica",
     categories: ["Utilidades domésticas"],
     price: "R$ 19.165,58",
@@ -68,6 +74,7 @@ export const initialProducts: ProductRow[] = [
   },
   {
     id: "PROD-0006",
+    imageUrl: productImagesById["PROD-0006"],
     name: "Violão Acústico",
     categories: ["Instrumentos Musicais"],
     price: "R$ 2.215,40",
@@ -78,6 +85,7 @@ export const initialProducts: ProductRow[] = [
   },
   {
     id: "PROD-0007",
+    imageUrl: productImagesById["PROD-0007"],
     name: "IPhone 16 128GB",
     categories: ["Tecnologia"],
     price: "R$ 7.499,00",
@@ -88,6 +96,7 @@ export const initialProducts: ProductRow[] = [
   },
   {
     id: "PROD-0008",
+    imageUrl: productImagesById["PROD-0008"],
     name: "Samsung S25",
     categories: ["Tecnologia"],
     price: "R$ 5.299,00",
@@ -98,6 +107,7 @@ export const initialProducts: ProductRow[] = [
   },
   {
     id: "PROD-0009",
+    imageUrl: productImagesById["PROD-0009"],
     name: "Motorola Edge 60",
     categories: ["Tecnologia"],
     price: "R$ 3.199,00",

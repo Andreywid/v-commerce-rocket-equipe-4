@@ -1,20 +1,25 @@
 import { useState } from "react"
-import { BrowserRouter, Route, Routes } from "react-router-dom"
+import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom"
 
 import { Toaster } from "@/components/ui/sonner"
 import { AppProvider } from "@/context/AppContext"
 import { AppLayout } from "@/components/layout/AppLayout"
 import { ClientsPage } from "@/pages/Clients"
 import { Dashboard } from "@/pages/Dashboard"
+import { LoginPage } from "@/pages/Login"
 import { OrdersPage } from "@/pages/Orders"
 import { ProductsPage } from "@/pages/Products"
 import { SupportPage } from "@/pages/Support"
-import { LoginPage } from "@/pages/Login"
 
 function App() {
   const [sessionEmail, setSessionEmail] = useState<string>(
     () => localStorage.getItem("userEmail") ?? "",
   )
+
+  function handleLogin(email: string) {
+    localStorage.setItem("userEmail", email)
+    setSessionEmail(email)
+  }
 
   function handleLogout() {
     localStorage.removeItem("token")
@@ -23,26 +28,41 @@ function App() {
   }
 
   return (
-    <>
+    <BrowserRouter>
       <Toaster position="top-right" />
-      {!sessionEmail ? (
-        <LoginPage onLogin={setSessionEmail} />
-      ) : (
-        <AppProvider>
-          <BrowserRouter>
-            <Routes>
-              <Route element={<AppLayout email={sessionEmail} onLogout={handleLogout} />}>
-                <Route index element={<Dashboard />} />
-                <Route path="produtos" element={<ProductsPage />} />
-                <Route path="clientes" element={<ClientsPage />} />
-                <Route path="pedidos" element={<OrdersPage />} />
-                <Route path="suporte" element={<SupportPage />} />
-              </Route>
-            </Routes>
-          </BrowserRouter>
-        </AppProvider>
-      )}
-    </>
+      <Routes>
+        <Route
+          path="login"
+          element={
+            sessionEmail ? <Navigate replace to="/" /> : <LoginPage mode="login" onLogin={handleLogin} />
+          }
+        />
+        <Route
+          path="cadastro"
+          element={
+            sessionEmail ? <Navigate replace to="/" /> : <LoginPage mode="register" onLogin={handleLogin} />
+          }
+        />
+
+        <Route
+          element={
+            sessionEmail ? (
+              <AppProvider>
+                <AppLayout email={sessionEmail} onLogout={handleLogout} />
+              </AppProvider>
+            ) : (
+              <Navigate replace to="/login" />
+            )
+          }
+        >
+          <Route index element={<Dashboard />} />
+          <Route path="produtos" element={<ProductsPage />} />
+          <Route path="clientes" element={<ClientsPage />} />
+          <Route path="pedidos" element={<OrdersPage />} />
+          <Route path="suporte" element={<SupportPage />} />
+        </Route>
+      </Routes>
+    </BrowserRouter>
   )
 }
 

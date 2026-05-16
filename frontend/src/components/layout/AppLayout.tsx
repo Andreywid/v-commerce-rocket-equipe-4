@@ -34,7 +34,9 @@ export function AppLayout({ email, onLogout }: { email: string; onLogout: () => 
         </div>
       </div>
 
-      <FloatingAssistant onClick={() => setIsAssistantOpen(true)} />
+      {!isAssistantOpen && (
+        <FloatingAssistant onClick={() => setIsAssistantOpen(true)} />
+      )}
       {isAssistantOpen && (
         <AssistantPanel
           currentPage={deriveCurrentPage(pathname)}

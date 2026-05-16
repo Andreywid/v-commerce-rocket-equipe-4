@@ -18,6 +18,7 @@ type AppContextValue = {
   products: ProductRow[]
   addProduct: (values: ProductFormValues) => void
   updateProduct: (index: number, values: ProductFormValues) => void
+  deleteProduct: (index: number) => void
   clients: ClientRow[]
   addClient: (values: ClientFormValues) => void
   updateClient: (index: number, values: ClientFormValues) => void
@@ -75,6 +76,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     )
   }
 
+  function deleteProduct(index: number) {
+    setProducts((current) => current.filter((_, i) => i !== index))
+  }
+
   function addClient(values: ClientFormValues) {
     setClients((current) => [{ id: createClientId(current), ...values }, ...current])
   }
@@ -86,7 +91,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <AppContext.Provider value={{ orders, addOrder, tickets, addTicket, updateTicket, products, addProduct, updateProduct, clients, addClient, updateClient, showNotice }}>
+    <AppContext.Provider value={{ orders, addOrder, tickets, addTicket, updateTicket, products, addProduct, updateProduct, deleteProduct, clients, addClient, updateClient, showNotice }}>
       {children}
     </AppContext.Provider>
   )

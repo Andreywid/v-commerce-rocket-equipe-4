@@ -1,7 +1,8 @@
 import { useMemo, useState } from "react"
-import { Eye, Package, Pencil } from "lucide-react"
+import { Eye, Package, Pencil, Trash2 } from "lucide-react"
 
-import type { ProductFormValues, ProductRow, RatingLabel } from "@/types"
+import type { ProductCategory, ProductFormValues, ProductRow, RatingLabel } from "@/types"
+import { getProductImage } from "@/mocks/productImages"
 import { useAppContext } from "@/context/AppContext"
 import { rowIncludes } from "@/helpers/storage"
 import { Button } from "@/components/ui/button"
@@ -32,6 +33,31 @@ const ratingClasses: Record<RatingLabel, string> = {
   Bom: "bg-indigo-50 text-indigo-500 ring-indigo-200",
   Excelente: "bg-emerald-50 text-emerald-500 ring-emerald-200",
   Crítico: "bg-rose-50 text-rose-500 ring-rose-200",
+}
+
+function parsePrice(price: string): number {
+  return parseFloat(price.replace(/[R$\s.]/g, "").replace(",", ".")) || 0
+}
+
+function isFilterActive(filter: ProductFilterState): boolean {
+  return filter.search !== "" || filter.categories.length > 0 || filter.ratings.length > 0 || filter.minPrice > 0 || filter.maxPrice < 100_000
+}
+
+function getProductImagePosition(product: ProductRow) {
+  if (product.id === "PROD-0002") return "object-[center_28%]"
+  return "object-center"
+}
+
+function getProductImageFit() {
+  return "object-cover"
+}
+
+function getProductDescription(product: ProductRow) {
+  if (product.name.toLowerCase().includes("perfume")) {
+    return "Uma fragrÃ¢ncia sofisticada que traduz elegÃ¢ncia e presenÃ§a em cada detalhe. Com notas de saÃ­da frescas e envolventes, evolui para um coraÃ§Ã£o floral marcante, finalizando com acordes amadeirados que permanecem na pele por horas. Desenvolvido para quem busca mais do que um perfume, mas uma assinatura Ãºnica, capaz de transformar momentos em experiÃªncias memorÃ¡veis."
+  }
+
+  return "Produto cadastrado no catÃ¡logo V-Commerce com acompanhamento de estoque, preÃ§o, vendas e avaliaÃ§Ã£o para apoiar decisÃµes comerciais."
 }
 
 function ProductHighlightCard({
@@ -79,45 +105,69 @@ function ProductDetailDialog({
   onEdit: () => void
   product: ProductRow
 }) {
+  const imageSrc = getProductImage(product)
+
   return (
     <Dialog open onOpenChange={(open) => { if (!open) onClose() }}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="max-h-[82dvh] overflow-hidden sm:max-w-[560px]">
         <DialogHeader>
-          <DialogTitle>{product.name}</DialogTitle>
+          <DialogTitle className="text-indigo-600">Detalhes do produto</DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4">
+        <div className="space-y-3">
+          <div className="relative h-36 overflow-hidden rounded-lg bg-slate-50 sm:h-40">
+            {imageSrc ? (
+              <img
+                alt={product.name}
+                className={`h-full w-full ${getProductImageFit()} ${getProductImagePosition(product)}`}
+                src={imageSrc}
+              />
+            ) : (
+              <div className="h-full bg-[linear-gradient(135deg,#f8fafc_0%,#fed7aa_38%,#f97316_39%,#fb923c_56%,#f8fafc_57%)]" />
+            )}
+            <span className="absolute bottom-2 right-2 rounded-full bg-white/90 px-2.5 py-1 text-[11px] font-bold text-orange-600 shadow-sm">
+              {product.categories[0]}
+            </span>
+          </div>
+
           <div className="flex flex-wrap items-center gap-2">
-            <span className="text-xs font-medium text-slate-400">{product.id}</span>
-            {product.categories.map((cat) => (
-              <StatusBadge key={cat} className={categoryClasses[cat]}>{cat}</StatusBadge>
-            ))}
+            <span className="rounded-full bg-emerald-50 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-600 ring-1 ring-emerald-200">
+              {Math.max(12, product.sold % 120)} avaliaÃ§Ãµes positivas
+            </span>
+            <span className="rounded-full bg-rose-50 px-2.5 py-0.5 text-[11px] font-semibold text-rose-500 ring-1 ring-rose-200">
+              {Math.max(4, product.stock % 40)} avaliaÃ§Ãµes negativas
+            </span>
           </div>
 
-          <div className="grid grid-cols-3 gap-3">
-            <div className="rounded-lg border border-slate-200 p-3 text-center">
-              <p className="text-xs font-medium text-slate-500">Preço</p>
-              <p className="mt-1 text-base font-bold text-slate-900">{product.price}</p>
+          <div className="grid gap-3 md:grid-cols-[1fr_160px]">
+            <div>
+              <h2 className="text-lg font-bold text-slate-950">{product.name}</h2>
+              <p className="mt-1 text-xs font-medium text-slate-400">{product.id}</p>
+              <div className="mt-1.5 flex flex-wrap gap-1">
+                {product.categories.map((cat) => (
+                  <StatusBadge key={cat} className={categoryClasses[cat]}>{cat}</StatusBadge>
+                ))}
+              </div>
             </div>
-            <div className="rounded-lg border border-slate-200 p-3 text-center">
-              <p className="text-xs font-medium text-slate-500">Estoque</p>
-              <p className="mt-1 text-base font-bold text-slate-900">{product.stock}</p>
-            </div>
-            <div className="rounded-lg border border-slate-200 p-3 text-center">
-              <p className="text-xs font-medium text-slate-500">Vendidos</p>
-              <p className="mt-1 text-base font-bold text-slate-900">{product.sold.toLocaleString("pt-BR")}</p>
+
+            <div className="text-left md:text-right">
+              <p className="text-lg font-bold text-slate-700">{product.price}</p>
+              <p className="mt-1 text-xs font-semibold text-slate-500">Qt. no estoque: {product.stock}</p>
+              <div className="mt-2 flex md:justify-end">
+                <StatusBadge className={ratingClasses[product.ratingLabel]}>
+                  {product.rating} {product.ratingLabel}
+                </StatusBadge>
+              </div>
             </div>
           </div>
 
-          <div className="flex items-center justify-between rounded-lg border border-slate-200 px-4 py-3">
-            <p className="text-sm font-medium text-slate-600">Avaliação</p>
-            <StatusBadge className={ratingClasses[product.ratingLabel]}>
-              {product.rating} {product.ratingLabel}
-            </StatusBadge>
+          <div>
+            <p className="text-sm font-bold text-slate-900">DescriÃ§Ã£o</p>
+            <p className="mt-1 line-clamp-3 text-xs leading-5 text-slate-600">{getProductDescription(product)}</p>
           </div>
         </div>
 
-        <div className="mt-2 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+        <div className="mt-1 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
           <Button variant="outline" onClick={onClose} type="button">Fechar</Button>
           <Button onClick={onEdit} type="button">Editar</Button>
         </div>
@@ -131,6 +181,7 @@ type FilteredProduct = { product: ProductRow; index: number }
 function ProductsTable({
   currentPage,
   filteredCount,
+  onDeleteProduct,
   onEditProduct,
   onPageChange,
   onViewProduct,
@@ -140,6 +191,7 @@ function ProductsTable({
 }: {
   currentPage: number
   filteredCount: number
+  onDeleteProduct: (index: number) => void
   onEditProduct: (index: number) => void
   onPageChange: (page: number) => void
   onViewProduct: (index: number) => void
@@ -153,18 +205,31 @@ function ProductsTable({
         <TableHeader>
           <TableRow className="h-12 border-slate-200 text-sm text-slate-950 hover:bg-transparent">
             <TableHead className="w-[200px] pl-5">Produto</TableHead>
-            <TableHead className="w-[120px]">Código</TableHead>
+            <TableHead className="w-[120px]">CÃ³digo</TableHead>
             <TableHead className="w-[220px]">Categoria</TableHead>
-            <TableHead sortable className="w-[140px]">Preço</TableHead>
+            <TableHead sortable className="w-[140px]">PreÃ§o</TableHead>
             <TableHead className="w-[100px]">Estoque</TableHead>
-            <TableHead sortable className="w-[150px]">Avaliação</TableHead>
-            <TableHead className="w-[90px]" />
+            <TableHead sortable className="w-[150px]">AvaliaÃ§Ã£o</TableHead>
+            <TableHead className="w-[120px]" />
           </TableRow>
         </TableHeader>
         <TableBody>
           {rows.map(({ product: row, index }) => (
             <TableRow key={row.id} className="h-[58px] border-slate-100 text-sm text-slate-700">
-              <TableCell className="pl-5 font-semibold text-slate-800">{row.name}</TableCell>
+              <TableCell className="pl-5 font-semibold text-slate-800">
+                <div className="flex items-center gap-3">
+                  {getProductImage(row) ? (
+                    <img
+                      alt={row.name}
+                      className="size-10 rounded-md border border-slate-200 object-cover"
+                      src={getProductImage(row)}
+                    />
+                  ) : (
+                    <div className="size-10 rounded-md border border-slate-200 bg-slate-100" />
+                  )}
+                  <span>{row.name}</span>
+                </div>
+              </TableCell>
               <TableCell className="font-medium text-slate-400">{row.id}</TableCell>
               <TableCell>
                 <div className="flex flex-wrap gap-1">
@@ -202,6 +267,15 @@ function ProductsTable({
                   >
                     <Pencil className="size-4" />
                   </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    className="text-slate-400 hover:text-rose-600"
+                    onClick={() => onDeleteProduct(index)}
+                    type="button"
+                  >
+                    <Trash2 className="size-4" />
+                  </Button>
                 </div>
               </TableCell>
             </TableRow>
@@ -218,14 +292,6 @@ function ProductsTable({
       />
     </div>
   )
-}
-
-function parsePrice(price: string): number {
-  return parseFloat(price.replace(/[R$\s.]/g, "").replace(",", ".")) || 0
-}
-
-function isFilterActive(f: ProductFilterState): boolean {
-  return f.search !== "" || f.categories.length > 0 || f.ratings.length > 0 || f.minPrice > 0 || f.maxPrice < 100_000
 }
 
 function useFilteredProducts(toolbarSearch: string, filter: ProductFilterState) {
@@ -245,7 +311,7 @@ function useFilteredProducts(toolbarSearch: string, filter: ProductFilterState) 
           }
           if (toolbarSearch && !rowIncludes(searchTarget, toolbarSearch)) return false
           if (filter.search && !rowIncludes(searchTarget, filter.search)) return false
-          if (filter.categories.length > 0 && !product.categories.some((c) => filter.categories.includes(c))) return false
+          if (filter.categories.length > 0 && !product.categories.some((category) => filter.categories.includes(category))) return false
           if (filter.ratings.length > 0 && !(filter.ratings as RatingLabel[]).includes(product.ratingLabel)) return false
           const price = parsePrice(product.price)
           if (price < filter.minPrice || price > filter.maxPrice) return false
@@ -256,7 +322,7 @@ function useFilteredProducts(toolbarSearch: string, filter: ProductFilterState) 
 }
 
 export function ProductsPage() {
-  const { products, addProduct, updateProduct, showNotice } = useAppContext()
+  const { products, addProduct, updateProduct, deleteProduct, showNotice } = useAppContext()
   const [search, setSearch] = useState("")
   const [advancedFilter, setAdvancedFilter] = useState<ProductFilterState>(DEFAULT_PRODUCT_FILTER)
   const [filterOpen, setFilterOpen] = useState(false)
@@ -296,14 +362,17 @@ export function ProductsPage() {
     showNotice("Produto atualizado")
   }
 
+  function handleDelete(index: number) {
+    const product = products[index]
+    if (!product) return
+    if (!window.confirm(`Apagar ${product.name}?`)) return
+    deleteProduct(index)
+    if (editingIndex === index) setEditingIndex(null)
+    if (viewingIndex === index) setViewingIndex(null)
+    showNotice("Produto apagado")
+  }
+
   return (
-    <>
-      <ProductFilterModal
-        open={filterOpen}
-        onClose={() => setFilterOpen(false)}
-        onSave={handleSaveFilter}
-        initial={advancedFilter}
-      />
     <PageShell title="Produtos">
       {highlights && (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -343,12 +412,13 @@ export function ProductsPage() {
           onAction={() => setIsAddModalOpen(true)}
           onAdvancedFilter={() => setFilterOpen(true)}
           onSearchChange={handleSearchChange}
-          placeholder="Busque por um produto, código ou categoria"
+          placeholder="Busque por um produto, cÃ³digo ou categoria"
           searchValue={search}
         />
         <ProductsTable
           currentPage={safePage}
           filteredCount={filteredProducts.length}
+          onDeleteProduct={handleDelete}
           onEditProduct={setEditingIndex}
           onPageChange={setCurrentPage}
           onViewProduct={setViewingIndex}
@@ -357,6 +427,13 @@ export function ProductsPage() {
           totalCount={products.length}
         />
       </DataPanel>
+
+      <ProductFilterModal
+        open={filterOpen}
+        initial={advancedFilter}
+        onClose={() => setFilterOpen(false)}
+        onSave={handleSaveFilter}
+      />
 
       {isAddModalOpen && (
         <ProductFormModal onClose={() => setIsAddModalOpen(false)} onSubmit={handleAdd} title="Adicionar produto" />
@@ -380,6 +457,5 @@ export function ProductsPage() {
         />
       )}
     </PageShell>
-    </>
   )
 }

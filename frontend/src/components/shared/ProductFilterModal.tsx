@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components, react-hooks/set-state-in-effect */
 import { useState, useRef, useEffect } from "react"
 import { SlidersHorizontal, X, Check, ChevronDown } from "lucide-react"
 

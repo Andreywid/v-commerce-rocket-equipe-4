@@ -55,6 +55,7 @@ export type ProductRow = {
   id: string
   name: string
   categories: ProductCategory[]
+  imageUrl?: string
   price: string
   stock: number
   rating: string

@@ -1,11 +1,13 @@
 const BASE_URL = (import.meta.env.VITE_API_URL as string | undefined) ?? "/api/v1"
 
 export class HttpError extends Error {
-  constructor(
-    public status: number,
-    public detail: string,
-  ) {
+  status: number
+  detail: string
+
+  constructor(status: number, detail: string) {
     super(detail)
+    this.status = status
+    this.detail = detail
   }
 }
 

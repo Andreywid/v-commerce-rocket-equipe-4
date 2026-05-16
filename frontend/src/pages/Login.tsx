@@ -1,5 +1,6 @@
 import { useState } from "react"
 import { Eye, EyeOff, LogIn } from "lucide-react"
+import { Link } from "react-router-dom"
 import { toast } from "sonner"
 
 import loginHero from "@/assets/login-hero.png"
@@ -15,11 +16,18 @@ function isValidEmail(email: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
 }
 
-export function LoginPage({ onLogin }: { onLogin: (email: string) => void }) {
+export function LoginPage({
+  mode = "login",
+  onLogin,
+}: {
+  mode?: "login" | "register"
+  onLogin: (email: string) => void
+}) {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
+  const isRegistering = mode === "register"
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault()
@@ -35,6 +43,13 @@ export function LoginPage({ onLogin }: { onLogin: (email: string) => void }) {
       toast.error("E-mail inválido", {
         description: "Insira um e-mail no formato correto (ex: nome@dominio.com).",
       })
+      return
+    }
+
+    if (isRegistering) {
+      localStorage.setItem("userEmail", email)
+      toast.success("Conta criada com sucesso!")
+      onLogin(email)
       return
     }
 
@@ -103,9 +118,13 @@ export function LoginPage({ onLogin }: { onLogin: (email: string) => void }) {
 
           <form className="space-y-5" onSubmit={handleSubmit} noValidate>
             <div className="text-center">
-              <h1 className="text-xl font-bold text-slate-950">Entrar na sua conta</h1>
+              <h1 className="text-xl font-bold text-slate-950">
+                {isRegistering ? "Crie uma conta" : "Entrar na sua conta"}
+              </h1>
               <p className="mt-2 text-xs text-slate-500">
-                Insira seu e-mail e senha para acessar o painel
+                {isRegistering
+                  ? "Insira seu e-mail abaixo para criar uma conta"
+                  : "Insira seu e-mail e senha para acessar o painel"}
               </p>
             </div>
 
@@ -123,28 +142,30 @@ export function LoginPage({ onLogin }: { onLogin: (email: string) => void }) {
                 />
               </label>
 
-              <label className="block">
-                <span className="mb-1.5 block text-sm font-medium text-slate-700">Senha</span>
-                <div className="relative">
-                  <input
-                    autoComplete="current-password"
-                    className="h-10 w-full rounded-md border border-slate-200 px-4 pr-10 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-indigo-300 focus:ring-4 focus:ring-indigo-100 disabled:opacity-50"
-                    disabled={loading}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="••••••••"
-                    type={showPassword ? "text" : "password"}
-                    value={password}
-                  />
-                  <button
-                    aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 transition hover:text-slate-600"
-                    onClick={() => setShowPassword((v) => !v)}
-                    type="button"
-                  >
-                    {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
-                  </button>
-                </div>
-              </label>
+              {!isRegistering && (
+                <label className="block">
+                  <span className="mb-1.5 block text-sm font-medium text-slate-700">Senha</span>
+                  <div className="relative">
+                    <input
+                      autoComplete="current-password"
+                      className="h-10 w-full rounded-md border border-slate-200 px-4 pr-10 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-indigo-300 focus:ring-4 focus:ring-indigo-100 disabled:opacity-50"
+                      disabled={loading}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="••••••••"
+                      type={showPassword ? "text" : "password"}
+                      value={password}
+                    />
+                    <button
+                      aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 transition hover:text-slate-600"
+                      onClick={() => setShowPassword((v) => !v)}
+                      type="button"
+                    >
+                      {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                    </button>
+                  </div>
+                </label>
+              )}
             </div>
 
             <button
@@ -155,14 +176,27 @@ export function LoginPage({ onLogin }: { onLogin: (email: string) => void }) {
               {loading ? (
                 <span className="size-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
               ) : (
-                <LogIn className="size-4" />
+                !isRegistering && <LogIn className="size-4" />
               )}
-              {loading ? "Entrando..." : "Entrar"}
+              {loading ? "Entrando..." : isRegistering ? "Criar conta" : "Entrar"}
             </button>
 
-            <p className="text-center text-xs leading-5 text-slate-400">
-              Acesso restrito a usuários autorizados do sistema V-Commerce.
+            <p className="mx-auto max-w-[290px] text-center text-xs leading-5 text-slate-500">
+              {isRegistering
+                ? "Ao clicar em criar conta, você concorda com nossos Termos de serviço e nossa Política de privacidade."
+                : "Acesso restrito a usuários autorizados do sistema V-Commerce."}
             </p>
+
+            <div className="flex items-center justify-center gap-5 pt-8 text-xs">
+              {!isRegistering && <span className="text-slate-500">Não tem uma conta?</span>}
+              <Link
+                className="inline-flex items-center gap-2 font-semibold text-slate-900 transition hover:text-indigo-600"
+                to={isRegistering ? "/login" : "/cadastro"}
+              >
+                {isRegistering && <LogIn className="size-3.5" />}
+                {isRegistering ? "Entrar em conta existente" : "Criar uma conta"}
+              </Link>
+            </div>
           </form>
         </div>
       </section>
