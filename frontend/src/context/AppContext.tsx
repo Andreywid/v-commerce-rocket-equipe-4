@@ -22,13 +22,16 @@ type AppContextValue = {
   clients: ClientRow[]
   addClient: (values: ClientFormValues) => void
   updateClient: (index: number, values: ClientFormValues) => void
+  removeClient: (index: number) => void
   showNotice: (message: string) => void
 }
 
 const AppContext = createContext<AppContextValue | null>(null)
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
-  const [orders, setOrders] = useState<OrderRow[]>(() => readStoredRows(ordersStorageKey, initialOrders))
+  const [orders, setOrders] = useState<OrderRow[]>(() =>
+    readStoredRows(ordersStorageKey, initialOrders).map((o) => ({ ...o, prazo: o.prazo ?? "No prazo" })),
+  )
   const [tickets, setTickets] = useState<SupportRow[]>(() => readStoredRows(supportStorageKey, initialSupportTickets))
   const [products, setProducts] = useState<ProductRow[]>(() => readStoredRows(productsStorageKey, initialProducts))
   const [clients, setClients] = useState<ClientRow[]>(() => readStoredRows(clientsStorageKey, initialClients))
@@ -90,8 +93,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     )
   }
 
+  function removeClient(index: number) {
+    setClients((current) => current.filter((_, i) => i !== index))
+  }
+
   return (
-    <AppContext.Provider value={{ orders, addOrder, tickets, addTicket, updateTicket, products, addProduct, updateProduct, deleteProduct, clients, addClient, updateClient, showNotice }}>
+    <AppContext.Provider value={{ orders, addOrder, tickets, addTicket, updateTicket, products, addProduct, updateProduct, deleteProduct, clients, addClient, updateClient, removeClient, showNotice }}>
       {children}
     </AppContext.Provider>
   )

@@ -154,3 +154,35 @@
 .cn-toast[data-type="info"]    { border-top-color: var(--color-indigo-400) !important; }
 
 .cn-toast-desc { color: var(--color-slate-400) !important; }
+
+/* Dual range slider */
+.range-thumb {
+  pointer-events: none;
+  height: 6px;
+}
+.range-thumb::-webkit-slider-runnable-track {
+  background: transparent;
+  height: 6px;
+}
+.range-thumb::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #0F172A;
+  border: 2px solid white;
+  box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.2);
+  cursor: pointer;
+  pointer-events: all;
+}
+.range-thumb::-moz-range-thumb {
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #0F172A;
+  border: 2px solid white;
+  box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.2);
+  cursor: pointer;
+}

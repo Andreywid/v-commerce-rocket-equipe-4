@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { Plus, Search, SlidersHorizontal, type LucideIcon } from "lucide-react"
+import { Download, Plus, Search, SlidersHorizontal, type LucideIcon } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -15,6 +15,7 @@ export function TableToolbar({
   onAction,
   onAdvancedFilter,
   advancedFilterActive,
+  onExport,
   onFilterChange,
   onSearchChange,
   placeholder,
@@ -29,6 +30,7 @@ export function TableToolbar({
   onAction: () => void
   onAdvancedFilter?: () => void
   advancedFilterActive?: boolean
+  onExport?: () => void
   onFilterChange?: (value: string) => void
   onSearchChange: (value: string) => void
   placeholder: string
@@ -79,8 +81,20 @@ export function TableToolbar({
             Filtro
           </Button>
 
+          {onExport && (
+            <Button
+              variant="outline"
+              className="h-10 min-h-10 gap-2 rounded-full px-5 border-slate-200 text-slate-600 hover:bg-slate-50"
+              onClick={onExport}
+              type="button"
+            >
+              <Download className="size-4" />
+              Exportar lista (.csv)
+            </Button>
+          )}
+
           <Button
-            className="h-9 rounded-full px-5"
+            className="h-10 min-h-10 gap-2 rounded-full px-6 bg-[#0F172A] hover:bg-[#0F172A]/90 text-white"
             onClick={onAction}
             type="button"
           >

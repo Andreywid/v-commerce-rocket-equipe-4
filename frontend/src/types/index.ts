@@ -30,6 +30,8 @@ export type Metric = {
   icon: LucideIcon
 }
 
+export type OrderPrazo = "No prazo" | "Fora do prazo"
+
 export type OrderRow = {
   id: string
   product: string
@@ -39,6 +41,7 @@ export type OrderRow = {
   date: string
   status: OrderStatus
   quantity: string
+  prazo: OrderPrazo
 }
 
 export type SupportRow = {
