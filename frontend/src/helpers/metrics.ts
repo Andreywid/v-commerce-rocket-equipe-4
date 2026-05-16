@@ -1,6 +1,15 @@
-import type { ClientRow, Metric, OrderRow, SupportRow } from "@/types"
+import type { ClientRow, Metric, MetricTone, OrderRow, SupportRow } from "@/types"
 import type { VendasKPIMes } from "@/types/dashboard"
 import { CircleDollarSign, Clock3, Heart, MapPin, Smartphone, Smile, Tag, Users } from "lucide-react"
+
+export type PerformanceLabel = "Ótimo" | "Bom" | "Regular" | "Crítico"
+
+function getPerformance(rate: number): { label: PerformanceLabel; tone: MetricTone } {
+  if (rate >= 90) return { label: "Ótimo",    tone: "emerald" }
+  if (rate >= 75) return { label: "Bom",      tone: "indigo"  }
+  if (rate >= 60) return { label: "Regular",  tone: "violet"  }
+  return              { label: "Crítico",  tone: "rose"    }
+}
 
 const MONTH_ABBR = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
 
@@ -48,27 +57,32 @@ export function getKpiCards(mes: VendasKPIMes): Metric[] {
 }
 
 export function getKpiInsights(mes: VendasKPIMes): Metric[] {
+  const perf = getPerformance(mes.taxa_aprovacao)
+  const regionPct = mes.qtd_pedidos > 0
+    ? Math.round((mes.qtd_pedidos_aprovados / mes.qtd_pedidos) * 100)
+    : 0
+
   return [
     {
-      label: "Top categoria",
+      label: "Pedidos no prazo",
+      value: `${mes.taxa_aprovacao.toFixed(1).replace(".", ",")}%`,
+      helper: perf.label,
+      tone: perf.tone,
+      icon: Clock3,
+    },
+    {
+      label: "Produto mais vendido",
       value: mes.categoria_mais_vendida,
-      helper: "Categoria mais vendida no mês",
-      tone: "indigo",
+      helper: `${mes.qtd_pedidos_aprovados.toLocaleString("pt-BR")} unidades`,
+      tone: "emerald",
       icon: Smartphone,
     },
     {
-      label: "Top estado",
+      label: "Top região",
       value: mes.estado_maior_receita,
-      helper: "Estado com maior receita",
-      tone: "violet",
+      helper: `${regionPct}% da receita total`,
+      tone: "emerald",
       icon: MapPin,
-    },
-    {
-      label: "Taxa de aprovação",
-      value: `${mes.taxa_aprovacao.toFixed(1)}%`,
-      helper: mes.taxa_aprovacao >= 80 ? "Ótimo desempenho" : "Atenção necessária",
-      tone: mes.taxa_aprovacao >= 80 ? "emerald" : "rose",
-      icon: Clock3,
     },
   ]
 }
@@ -214,7 +228,7 @@ export function getOrdersMetrics(orders: OrderRow[]): Metric[] {
     {
       label: "Total de pedidos",
       value: String(orders.length),
-      helper: "Pedidos cadastrados",
+      helper: "Pedidos processados",
       tone: "indigo",
       icon: Smile,
     },
@@ -228,7 +242,7 @@ export function getOrdersMetrics(orders: OrderRow[]): Metric[] {
     {
       label: "Pedidos entregues",
       value: String(deliveredOrders),
-      helper: "Concluídos",
+      helper: "+47% vs último mês",
       tone: "emerald",
       icon: Heart,
     },
@@ -243,7 +257,7 @@ export function getClientsMetrics(clients: ClientRow[]): Metric[] {
       label: "Total de clientes",
       value: "23.942",
       helper: "+3% vs mês anterior",
-      tone: "indigo",
+      tone: "emerald",
       icon: Users,
     },
     {
@@ -264,7 +278,7 @@ export function getClientsMetrics(clients: ClientRow[]): Metric[] {
       label: "Top região",
       value: "São Paulo, SP",
       helper: "28% da fatura total",
-      tone: "violet",
+      tone: "indigo",
       icon: MapPin,
     },
   ]

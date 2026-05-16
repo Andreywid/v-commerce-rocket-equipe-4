@@ -7,9 +7,19 @@ import {
   XAxis,
   YAxis,
 } from "recharts"
-import { BarChart3, Download, SlidersHorizontal } from "lucide-react"
+import { BarChart3, SlidersHorizontal } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
+
+function PdfIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" />
+      <polyline points="14 2 14 8 20 8" />
+      <text x="5.5" y="18.5" fontSize="5.5" fill="currentColor" stroke="none" fontWeight="700" fontFamily="system-ui,sans-serif" letterSpacing="0.3">PDF</text>
+    </svg>
+  )
+}
 
 export type RevenueChartPoint = {
   mes: string
@@ -66,7 +76,7 @@ export function RevenueChart({
     : null
 
   return (
-    <article className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
+    <article className="h-94.25 rounded-lg border border-slate-200 bg-white p-6 shadow-sm overflow-hidden flex flex-col">
       <div className="mb-6 flex items-start justify-between gap-3">
         <div className="flex items-start gap-4">
           <span className="grid size-10 place-items-center rounded-full bg-indigo-50 text-indigo-600">
@@ -95,7 +105,7 @@ export function RevenueChart({
         </div>
       </div>
 
-      <ResponsiveContainer width="100%" height={240}>
+      <ResponsiveContainer width="100%" height={200} className="flex-1">
         <AreaChart data={data} margin={{ top: 10, right: 0, left: -24, bottom: 0 }}>
           <defs>
             <linearGradient id="gradReceita" x1="0" y1="0" x2="0" y2="1">
@@ -144,9 +154,13 @@ export function RevenueChart({
             "Nenhum dado para o período selecionado"
           )}
         </p>
-        <Button className="h-9 gap-2 rounded-full px-6 text-sm" onClick={onExport} type="button">
+        <Button
+          className="h-10 min-h-10 gap-2 rounded-full px-6 text-sm bg-[#0F172A] hover:bg-[#0F172A]/90 text-white"
+          onClick={onExport}
+          type="button"
+        >
           Exportar relatório
-          <Download className="size-3.5" />
+          <PdfIcon className="size-4" />
         </Button>
       </div>
     </article>

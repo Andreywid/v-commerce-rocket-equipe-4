@@ -1,25 +1,38 @@
-import type { Metric, MetricTone } from "@/types"
-import { Card } from "@/components/ui/card"
+import { TrendingDown, TrendingUp } from "lucide-react"
 
-const toneClasses: Record<MetricTone, string> = {
-  rose: "text-rose-500",
-  emerald: "text-emerald-500",
-  indigo: "text-indigo-600",
-  violet: "text-violet-600",
-}
+import type { Metric } from "@/types"
+import { Card } from "@/components/ui/card"
+import { cn } from "@/lib/utils"
 
 export function MetricCard({ metric }: { metric: Metric }) {
   const Icon = metric.icon
+  const isPositiveTrend = metric.helper.startsWith("+")
+  const isDownward = isPositiveTrend && metric.tone === "rose"
+  const words = metric.helper.split(" ")
+  const accentPart = isPositiveTrend ? words[0] : null
+  const labelPart = isPositiveTrend ? words.slice(1).join(" ") : metric.helper
 
   return (
-    <Card className="min-h-[78px] flex-row items-center justify-between gap-0 px-5 py-0">
-      <div>
-        <p className="text-xs font-semibold text-indigo-600">{metric.label}</p>
-        <p className="mt-1 text-lg font-bold leading-tight text-slate-900">{metric.value}</p>
-        <p className={`mt-2 text-xs font-medium ${toneClasses[metric.tone]}`}>{metric.helper}</p>
+    <Card className="h-23.75 flex-row items-center justify-between gap-0 rounded-lg border border-slate-200 px-6 py-3 shadow-sm ring-0">
+      <div className="flex flex-col justify-between h-full py-0.5">
+        <p className="text-sm font-medium leading-5 tracking-normal text-[#4F46E5]">
+          {metric.label}
+        </p>
+        <p className="text-[18px] font-semibold leading-6.75 tracking-normal text-slate-900">
+          {metric.value}
+        </p>
+        <p className="flex items-center gap-1 text-sm font-normal leading-5 tracking-normal text-[#475569]">
+          {isPositiveTrend && (
+            <span className={cn("flex items-center gap-0.5", isDownward ? "text-rose-500" : "text-[#22C55E]")}>
+              {isDownward ? <TrendingDown className="size-3" /> : <TrendingUp className="size-3" />}
+              {accentPart}
+            </span>
+          )}
+          {labelPart}
+        </p>
       </div>
 
-      <div className="grid size-8 place-items-center rounded-full bg-indigo-100 text-indigo-600">
+      <div className="grid size-9 shrink-0 place-items-center rounded-full bg-indigo-50 text-[#4F46E5]">
         <Icon className="size-4" />
       </div>
     </Card>

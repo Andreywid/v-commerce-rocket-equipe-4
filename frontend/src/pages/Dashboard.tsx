@@ -5,7 +5,7 @@ import { useAppContext } from "@/context/AppContext"
 import { fetchKpis } from "@/services/dashboardService"
 import { getKpiCards, getKpiInsights, formatMesLabel } from "@/helpers/metrics"
 import { PageShell } from "@/components/shared/PageShell"
-import { DataCard, DataGrid } from "@/components/shared/MetricCards"
+import { DataCard, DataGrid, InsightCard } from "@/components/shared/MetricCards"
 import { RevenueChart, type RevenueChartPoint } from "@/components/shared/RevenueChart"
 import { OrderSummary } from "@/components/shared/OrderSummary"
 import { FilterModal, type FilterState, MONTHS } from "@/components/shared/FilterModal"
@@ -28,10 +28,13 @@ function applyFilters(meses: VendasKPIMes[], f: FilterState): VendasKPIMes[] {
 
 function CardSkeleton() {
   return (
-    <div className="min-h-[105px] rounded-xl border border-slate-200 bg-white px-6 py-4 shadow-sm animate-pulse">
-      <div className="h-3 w-24 rounded bg-slate-100 mb-4" />
-      <div className="h-7 w-32 rounded bg-slate-100 mb-3" />
-      <div className="h-3 w-20 rounded bg-slate-100" />
+    <div className="h-23.75 rounded-lg border border-slate-200 bg-white px-6 py-3 shadow-sm animate-pulse flex items-center justify-between">
+      <div className="flex flex-col justify-between h-full py-0.5">
+        <div className="h-3 w-24 rounded bg-slate-100" />
+        <div className="h-5 w-32 rounded bg-slate-100" />
+        <div className="h-3 w-20 rounded bg-slate-100" />
+      </div>
+      <div className="size-9 rounded-full bg-slate-100 shrink-0" />
     </div>
   )
 }
@@ -119,7 +122,7 @@ export function Dashboard() {
               ))}
         </DataGrid>
 
-        <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_377px]">
+        <div className="mt-6 grid gap-4 lg:grid-cols-[1fr_272px]">
           <RevenueChart
             data={chartData}
             onExport={handleExport}
@@ -129,18 +132,16 @@ export function Dashboard() {
           <OrderSummary data={orderSummary} />
         </div>
 
-        <div className="mt-6 grid gap-6 sm:grid-cols-3">
+        <div className="mt-6 grid gap-4 sm:grid-cols-3">
           {loading
             ? Array.from({ length: 3 }).map((_, i) => <CardSkeleton key={i} />)
             : insights.map((insight) => (
-                <DataCard
+                <InsightCard
                   key={insight.label}
                   label={insight.label}
                   value={insight.value}
                   helper={insight.helper}
                   tone={insight.tone}
-                  icon={insight.icon}
-                  className="min-h-[110px]"
                 />
               ))}
         </div>
