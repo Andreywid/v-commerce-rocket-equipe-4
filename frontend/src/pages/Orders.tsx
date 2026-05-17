@@ -1,44 +1,34 @@
-import { useMemo, useState } from "react"
+import { useState } from "react"
 import { ClipboardList, Pencil } from "lucide-react"
 
-import type { OrderFormValues, OrderPrazo, OrderRow, OrderStatus } from "@/types"
+import type { OrderStatus } from "@/types"
+import type { OrderOut } from "@/types/api"
+import { orderStatusClasses } from "@/constants/badgeStyles"
+import type { OrderCreate, OrderUpdate } from "@/types/api"
+import { HttpError } from "@/services/api"
 import { useAppContext } from "@/context/AppContext"
-import { getOrdersMetrics } from "@/helpers/metrics"
-import { rowIncludes } from "@/helpers/storage"
+import { useOrders, useOrderMutations } from "@/hooks/useOrders"
+import { useDebounce } from "@/hooks/useDebounce"
+import { OrderFormModal } from "@/components/shared/OrderFormModal"
 import { DataCard, DataGrid } from "@/components/shared/MetricCards"
 import { DataPanel } from "@/components/shared/DataPanel"
-import { OrderFormModal } from "@/components/shared/OrderFormModal"
 import { OrderFilterModal, emptyOrderFilters } from "@/components/shared/OrderFilterModal"
 import type { OrderFilters } from "@/components/shared/OrderFilterModal"
 import { PageShell } from "@/components/shared/PageShell"
 import { StatusBadge } from "@/components/shared/StatusBadge"
 import { EmptyTableState, TableHead, TableBody, TableHeader, TableRow, TableCell, TablePagination } from "@/components/shared/Table"
 import { TableToolbar } from "@/components/shared/TableToolbar"
+import { CircleDollarSign, Heart, Smile, Tag } from "lucide-react"
 
 const PAGE_SIZE = 5
 
-const statusClasses: Record<OrderStatus, string> = {
-  Processando:   "bg-indigo-50 text-indigo-500 border-indigo-200",
-  Entregue:      "bg-emerald-50 text-emerald-500 border-emerald-200",
-  Cancelado:     "bg-rose-50 text-rose-500 border-rose-200",
-  "Em trânsito": "bg-amber-50 text-amber-500 border-amber-200",
+function formatBRL(value: number | null | undefined): string {
+  if (value == null) return "—"
+  return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
 }
 
-const PRAZO_STYLE: Record<OrderPrazo, { bg: string; border: string; color: string }> = {
-  "No prazo":      { bg: "#C7D2FE", border: "#A5B4FC", color: "#4338CA" },
-  "Fora do prazo": { bg: "#FECDD3", border: "#FDA4AF", color: "#E11D48" },
-}
-
-function PrazoBadge({ prazo }: { prazo: OrderPrazo }) {
-  const s = PRAZO_STYLE[prazo] ?? PRAZO_STYLE["No prazo"]
-  return (
-    <span
-      className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium whitespace-nowrap"
-      style={{ backgroundColor: s.bg, borderColor: s.border, color: s.color }}
-    >
-      {prazo}
-    </span>
-  )
+function formatDate(iso: string): string {
+  return new Date(iso).toLocaleDateString("pt-BR")
 }
 
 function OrdersTable({
@@ -52,10 +42,10 @@ function OrdersTable({
 }: {
   currentPage: number
   filteredCount: number
-  onEditOrder: (index: number) => void
+  onEditOrder: (id: string) => void
   onPageChange: (page: number) => void
   pageCount: number
-  rows: { order: OrderRow; index: number }[]
+  rows: OrderOut[]
   totalCount: number
 }) {
   return (
@@ -63,41 +53,39 @@ function OrdersTable({
       <table className="min-w-280 w-full table-fixed text-left">
         <TableHeader>
           <TableRow className="h-12 border-slate-200 text-sm text-slate-950 hover:bg-transparent">
-            <TableHead className="w-32.5 pl-5">Prazo</TableHead>
-            <TableHead className="w-27.5">Pedido</TableHead>
+            <TableHead className="w-27.5 pl-5">Pedido</TableHead>
             <TableHead sortable className="w-40">Produto</TableHead>
             <TableHead className="w-25">Quantidade</TableHead>
             <TableHead className="w-40">Cliente</TableHead>
             <TableHead sortable className="w-32.5">Valor</TableHead>
-            <TableHead className="w-22.5">Estoque</TableHead>
             <TableHead sortable className="w-30">Data</TableHead>
             <TableHead className="w-32.5">Status</TableHead>
             <TableHead className="w-14" />
           </TableRow>
         </TableHeader>
         <TableBody>
-          {rows.map(({ order: row, index }) => (
-            <TableRow key={row.id} className="h-14.5 border-slate-100 text-sm text-slate-700">
-              <TableCell className="pl-5">
-                <PrazoBadge prazo={row.prazo} />
+          {rows.map((row) => (
+            <TableRow key={row.id_pedido} className="h-14.5 border-slate-100 text-sm text-slate-700">
+              <TableCell className="pl-5 font-medium text-slate-400">
+                <span className="block truncate" title={row.id_pedido}>
+                  #{row.id_pedido.slice(0, 8)}...
+                </span>
               </TableCell>
-              <TableCell className="font-medium text-slate-400">{row.id}</TableCell>
-              <TableCell className="font-semibold text-slate-800">{row.product}</TableCell>
-              <TableCell>{row.quantity}</TableCell>
-              <TableCell className="max-w-0"><span className="block truncate">{row.customer}</span></TableCell>
-              <TableCell className="font-medium">{row.value}</TableCell>
-              <TableCell>{row.stock}</TableCell>
-              <TableCell>{row.date}</TableCell>
+              <TableCell className="font-semibold text-slate-800">{row.nome_produto}</TableCell>
+              <TableCell>{row.quantidade}</TableCell>
+              <TableCell className="max-w-0"><span className="block truncate">{row.nome_cliente}</span></TableCell>
+              <TableCell className="font-medium">{formatBRL(row.valor_total)}</TableCell>
+              <TableCell>{formatDate(row.data_pedido)}</TableCell>
               <TableCell>
-                <StatusBadge className={statusClasses[row.status]}>{row.status}</StatusBadge>
+                <StatusBadge className={orderStatusClasses[row.status as OrderStatus]}>{row.status}</StatusBadge>
               </TableCell>
               <TableCell>
                 <button
+                  className="grid place-items-center rounded-md p-1 transition hover:bg-slate-100"
+                  onClick={() => onEditOrder(row.id_pedido)}
                   type="button"
-                  onClick={() => onEditOrder(index)}
-                  className="grid place-items-center rounded-md p-1 transition hover:bg-indigo-50"
                 >
-                  <Pencil className="size-4 text-[#4F46E5]" />
+                  <Pencil className="size-4 text-[#0A0A0A]" />
                 </button>
               </TableCell>
             </TableRow>
@@ -116,55 +104,50 @@ function OrdersTable({
   )
 }
 
-function parseOrderPrice(value: string): number {
-  return parseFloat(value.replace("R$ ", "").replace(/\./g, "").replace(",", ".")) || 0
-}
-
-function useFilteredOrders(search: string, filters: OrderFilters) {
-  const { orders } = useAppContext()
-  return useMemo(
-    () =>
-      orders.filter((order) => {
-        const matchesSearch = !search || rowIncludes(order, search)
-        const filterDate = filters.date ? filters.date.split("-").reverse().join("/") : ""
-        const matchesDate = !filterDate || order.date === filterDate
-        const matchesStatus = filters.statuses.length === 0 || filters.statuses.includes(order.status)
-        const price = parseOrderPrice(order.value)
-        const matchesPrice = price >= filters.priceMin && price <= filters.priceMax
-        const matchesPrazo = filters.prazo.length === 0 || filters.prazo.includes(order.prazo)
-        return matchesSearch && matchesDate && matchesStatus && matchesPrice && matchesPrazo
-      }),
-    [orders, search, filters],
-  )
-}
-
 export function OrdersPage() {
-  const { orders, addOrder, updateOrder, deleteOrder, showNotice } = useAppContext()
-  const [orderSearch, setOrderSearch] = useState("")
+  const { showNotice } = useAppContext()
+  const [search, setSearch] = useState("")
   const [orderFilters, setOrderFilters] = useState<OrderFilters>(emptyOrderFilters)
   const [currentPage, setCurrentPage] = useState(1)
-  const [isOrderModalOpen, setIsOrderModalOpen] = useState(false)
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false)
-  const [editingOrderIndex, setEditingOrderIndex] = useState<number | null>(null)
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false)
+  const [editingId, setEditingId] = useState<string | null>(null)
 
-  const filteredOrders = useFilteredOrders(orderSearch, orderFilters)
-  const metrics = getOrdersMetrics(orders)
+  const { create, update, remove } = useOrderMutations()
+
+  const debouncedSearch = useDebounce(search, 400)
+  const status = orderFilters.statuses[0]
+  const { data, isPending } = useOrders(
+    {
+      status,
+      data_inicio: orderFilters.date || undefined,
+      data_fim: orderFilters.date || undefined,
+      nome: debouncedSearch || undefined,
+    },
+    currentPage,
+    PAGE_SIZE,
+  )
+
+  const items = data?.items ?? []
+  const editingOrder = items.find((o) => o.id_pedido === editingId) ?? null
+  const total = data?.total ?? 0
+  const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE))
+  const filteredItems = items
+
+  const aprovados = items.filter((o) => o.status === "Aprovado").length
+  const processando = items.filter((o) => o.status === "Processando").length
+  const receitaTotal = items.reduce((sum, o) => sum + o.valor_total, 0)
 
   const isFilterActive =
     !!orderFilters.date ||
     orderFilters.statuses.length > 0 ||
     orderFilters.priceMin > 0 ||
     orderFilters.priceMax < 100000 ||
-    orderFilters.prazo.length > 0
-
-  const pageCount = Math.max(1, Math.ceil(filteredOrders.length / PAGE_SIZE))
-  const safePage = Math.min(currentPage, pageCount)
-  const paginatedOrders = filteredOrders
-    .map((order, index) => ({ order, index }))
-    .slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE)
+    orderFilters.dentroDoPrazo ||
+    orderFilters.foraDoPrazo
 
   function handleSearchChange(value: string) {
-    setOrderSearch(value)
+    setSearch(value)
     setCurrentPage(1)
   }
 
@@ -174,39 +157,50 @@ export function OrdersPage() {
     setCurrentPage(1)
   }
 
-  function handleAddOrder(values: OrderFormValues) {
-    addOrder(values)
-    setIsOrderModalOpen(false)
-    showNotice("Pedido adicionado")
+  function notifyError(err: unknown, fallback: string) {
+    const msg = err instanceof HttpError ? `Erro ${err.status}: ${err.detail}` : fallback
+    showNotice(msg)
   }
 
-  function handleUpdateOrder(values: OrderFormValues) {
-    if (editingOrderIndex === null) return
-    updateOrder(editingOrderIndex, values)
-    setEditingOrderIndex(null)
-    showNotice("Pedido atualizado")
+  async function handleAdd(values: OrderCreate) {
+    try {
+      await create.mutateAsync(values)
+      setIsAddModalOpen(false)
+      showNotice("Pedido adicionado")
+    } catch (err) {
+      notifyError(err, "Erro ao adicionar pedido")
+    }
   }
 
-  function handleDeleteOrder() {
-    if (editingOrderIndex === null) return
-    deleteOrder(editingOrderIndex)
-    setEditingOrderIndex(null)
-    showNotice("Pedido excluído")
+  async function handleUpdate(values: OrderUpdate) {
+    if (!editingId) return
+    try {
+      await update.mutateAsync({ id: editingId, data: values })
+      setEditingId(null)
+      showNotice("Pedido atualizado")
+    } catch (err) {
+      notifyError(err, "Erro ao atualizar pedido")
+    }
+  }
+
+  async function handleDelete() {
+    if (!editingId) return
+    try {
+      await remove.mutateAsync(editingId)
+      setEditingId(null)
+      showNotice("Pedido excluído")
+    } catch (err) {
+      notifyError(err, "Erro ao excluir pedido")
+    }
   }
 
   return (
     <PageShell title="Pedidos">
       <DataGrid>
-        {metrics.map((metric) => (
-          <DataCard
-            key={metric.label}
-            label={metric.label}
-            value={metric.value}
-            helper={metric.helper}
-            tone={metric.tone}
-            icon={metric.icon}
-          />
-        ))}
+        <DataCard label="Pedidos pendentes"  value={String(processando)} helper="Em processamento"    tone="indigo" icon={Tag} />
+        <DataCard label="Total de pedidos"   value={total.toLocaleString("pt-BR")} helper="Pedidos processados" tone="indigo" icon={Smile} />
+        <DataCard label="Receita (página)"   value={formatBRL(receitaTotal)} helper="+20% vs mês anterior" tone="rose" icon={CircleDollarSign} />
+        <DataCard label="Pedidos aprovados"  value={String(aprovados)} helper="+47% vs último mês"   tone="emerald" icon={Heart} />
       </DataGrid>
 
       <DataPanel>
@@ -215,42 +209,59 @@ export function OrdersPage() {
           advancedFilterActive={isFilterActive}
           icon={ClipboardList}
           label="Pedidos solicitados"
-          onAction={() => setIsOrderModalOpen(true)}
+          onAction={() => setIsAddModalOpen(true)}
           onAdvancedFilter={() => setIsFilterModalOpen(true)}
           onExport={() => showNotice("Lista exportada!")}
           onSearchChange={handleSearchChange}
-          placeholder="Busque por um produto, data ou status"
-          searchValue={orderSearch}
+          placeholder="Busque por produto, cliente ou número"
+          searchValue={search}
         />
-        <OrdersTable
-          currentPage={safePage}
-          filteredCount={filteredOrders.length}
-          onEditOrder={setEditingOrderIndex}
-          onPageChange={setCurrentPage}
-          pageCount={pageCount}
-          rows={paginatedOrders}
-          totalCount={orders.length}
-        />
+        {isPending ? (
+          <div className="flex h-40 items-center justify-center text-sm text-slate-400">Carregando...</div>
+        ) : (
+          <OrdersTable
+            currentPage={currentPage}
+            filteredCount={filteredItems.length}
+            onEditOrder={setEditingId}
+            onPageChange={setCurrentPage}
+            pageCount={pageCount}
+            rows={filteredItems}
+            totalCount={total}
+          />
+        )}
       </DataPanel>
 
-      {isOrderModalOpen && (
-        <OrderFormModal onClose={() => setIsOrderModalOpen(false)} onSubmit={handleAddOrder} />
-      )}
-      {editingOrderIndex !== null && (
-        <OrderFormModal
-          initialValues={orders[editingOrderIndex]}
-          onClose={() => setEditingOrderIndex(null)}
-          onDelete={handleDeleteOrder}
-          onSubmit={handleUpdateOrder}
-          orderId={orders[editingOrderIndex].id}
-          title="Editar pedido"
-        />
-      )}
       {isFilterModalOpen && (
         <OrderFilterModal
           filters={orderFilters}
           onApply={handleApplyFilters}
           onClose={() => setIsFilterModalOpen(false)}
+        />
+      )}
+
+      {isAddModalOpen && (
+        <OrderFormModal
+          mode="add"
+          isSubmitting={create.isPending}
+          onClose={() => setIsAddModalOpen(false)}
+          onSubmit={handleAdd}
+        />
+      )}
+
+      {editingId !== null && editingOrder && (
+        <OrderFormModal
+          mode="edit"
+          orderId={editingId}
+          initialValues={{
+            id_produto: editingOrder.id_produto,
+            data_pedido: editingOrder.data_pedido,
+            status: editingOrder.status as OrderCreate["status"],
+            quantidade: editingOrder.quantidade,
+          }}
+          isSubmitting={update.isPending}
+          onClose={() => setEditingId(null)}
+          onSubmit={handleUpdate}
+          onDelete={handleDelete}
         />
       )}
     </PageShell>
