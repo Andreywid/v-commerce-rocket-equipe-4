@@ -1,47 +1,66 @@
 import { useRef, useState } from "react"
 import { Check, Pencil, Trash2, Upload, X } from "lucide-react"
 
-import type { ProductCategory, ProductFormValues } from "@/types"
-import { emptyProductForm, productCategoryOptions } from "@/mocks/products"
+import type { ProductCategory } from "@/types"
+import type { ProductCreate } from "@/types/api"
+import { formatCategoryLabel } from "@/helpers/dictionary"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
-function deriveImageName(imageUrl?: string): string {
-  if (!imageUrl) return ""
-  const parts = imageUrl.split("/")
+const CATEGORIES: ProductCategory[] = ["Eletronicos", "Vestuario", "Casa", "Esportes", "Beleza", "Automotivo", "Brinquedos", "Moveis", "Sem categoria"]
+
+const EMPTY: ProductCreate = {
+  nome_produto: "",
+  categoria: "Eletronicos",
+  preco_atual: 0,
+  ativo: true,
+  estoque: 0,
+  descricao: "",
+  imagem_url: null,
+}
+
+function deriveImageName(url?: string | null): string {
+  if (!url) return ""
+  const parts = url.split("/")
   const last = parts[parts.length - 1]
   return last.includes(".") ? last : "imagem.jpg"
 }
 
 export function ProductFormModal({
-  initialValues = emptyProductForm,
+  initialValues = EMPTY,
+  isSubmitting = false,
   onClose,
   onDelete,
   onSubmit,
   productId,
   title = "Adicionar produto",
 }: {
-  initialValues?: ProductFormValues
+  initialValues?: ProductCreate
+  isSubmitting?: boolean
   onClose: () => void
   onDelete?: () => void
-  onSubmit: (values: ProductFormValues) => void
+  onSubmit: (values: ProductCreate) => void
   productId?: string
   title?: string
 }) {
-  const [form, setForm] = useState<ProductFormValues>(initialValues)
-  const [imageName, setImageName] = useState(() => deriveImageName(initialValues.imageUrl))
+  const [form, setForm] = useState<ProductCreate>(initialValues)
+  const [imageName, setImageName] = useState(() => deriveImageName(initialValues.imagem_url))
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const isEditing = !!productId
+  const isEditing = productId !== undefined
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
     setImageName(file.name)
-    const url = URL.createObjectURL(file)
-    setForm((prev) => ({ ...prev, imageUrl: url }))
+    const reader = new FileReader()
+    reader.onload = (ev) => {
+      const dataUrl = ev.target?.result as string | undefined
+      setForm((prev) => ({ ...prev, imagem_url: dataUrl ?? null }))
+    }
+    reader.readAsDataURL(file)
   }
 
   return (
@@ -54,37 +73,32 @@ export function ProductFormModal({
           </DialogTitle>
         </DialogHeader>
 
-        <form
-          className="grid gap-4 pt-4"
-          onSubmit={(e) => {
-            e.preventDefault()
-            onSubmit(form)
-          }}
-        >
+        <form className="grid gap-4 pt-4" onSubmit={(e) => e.preventDefault()}>
           {/* Row 1: Nome | Código */}
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="grid gap-1.5">
               <Label className="text-sm font-semibold text-slate-700">Nome do produto</Label>
               <Input
                 placeholder="ex: Perfume Premium"
-                value={form.name}
-                onChange={(e) => setForm({ ...form, name: e.target.value })}
+                value={form.nome_produto}
+                onChange={(e) => setForm({ ...form, nome_produto: e.target.value })}
+                required
               />
             </div>
             <div className="grid gap-1.5">
               <Label className="text-sm font-semibold text-slate-700">Código do produto</Label>
               <Input
-                className={isEditing ? "bg-slate-50 text-slate-400" : ""}
-                disabled={isEditing}
-                placeholder="ex: PROD-0001"
-                value={isEditing ? productId : ""}
-                readOnly={isEditing}
+                className="bg-slate-50 text-slate-400"
+                disabled
+                placeholder="Gerado automaticamente"
+                value={isEditing ? `#${productId}` : ""}
+                readOnly
                 onChange={() => {}}
               />
             </div>
           </div>
 
-          {/* Row 2: Preço | Categoria | Quantidade no estoque */}
+          {/* Row 2: Preço | Categoria | Estoque */}
           <div className="grid gap-4 sm:grid-cols-3">
             <div className="grid gap-1.5">
               <Label className="text-sm font-semibold text-slate-700">Preço</Label>
@@ -93,23 +107,23 @@ export function ProductFormModal({
                 <input
                   className="min-w-0 flex-1 bg-transparent text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none"
                   placeholder="199,90"
-                  value={form.price}
-                  onChange={(e) => setForm({ ...form, price: e.target.value })}
+                  value={form.preco_atual === 0 ? "" : String(form.preco_atual).replace(".", ",")}
+                  onChange={(e) => setForm({ ...form, preco_atual: parseFloat(e.target.value.replace(",", ".")) || 0 })}
                 />
               </div>
             </div>
             <div className="grid gap-1.5">
               <Label className="text-sm font-semibold text-slate-700">Categoria</Label>
               <Select
-                value={form.categories[0]}
-                onValueChange={(v) => setForm({ ...form, categories: [v as ProductCategory] })}
+                value={form.categoria}
+                onValueChange={(v) => setForm({ ...form, categoria: v as ProductCategory })}
               >
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder="Selecione" />
                 </SelectTrigger>
                 <SelectContent>
-                  {productCategoryOptions.map((opt) => (
-                    <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                  {CATEGORIES.map((opt) => (
+                    <SelectItem key={opt} value={opt}>{formatCategoryLabel(opt)}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -118,8 +132,8 @@ export function ProductFormModal({
               <Label className="text-sm font-semibold text-slate-700">Quantidade no estoque</Label>
               <Input
                 placeholder="ex: 24"
-                value={form.stock === 0 ? "" : String(form.stock)}
-                onChange={(e) => setForm({ ...form, stock: Number(e.target.value) || 0 })}
+                value={form.estoque === 0 || form.estoque == null ? "" : String(form.estoque)}
+                onChange={(e) => setForm({ ...form, estoque: Number(e.target.value) || 0 })}
               />
             </div>
           </div>
@@ -130,8 +144,8 @@ export function ProductFormModal({
             <textarea
               className="min-h-24 resize-none rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
               placeholder="Descreva o produto..."
-              value={form.description ?? ""}
-              onChange={(e) => setForm({ ...form, description: e.target.value })}
+              value={form.descricao ?? ""}
+              onChange={(e) => setForm({ ...form, descricao: e.target.value })}
             />
           </div>
 
@@ -140,8 +154,8 @@ export function ProductFormModal({
             <Label className="text-sm font-semibold text-slate-700">Imagem</Label>
             <div className="flex items-center justify-between rounded-lg border border-slate-200 px-4 py-3">
               <div className="flex items-center gap-3">
-                {form.imageUrl && (
-                  <img src={form.imageUrl} alt="" className="size-10 rounded-md object-cover" />
+                {form.imagem_url && (
+                  <img src={form.imagem_url} alt="" className="size-10 rounded-md object-cover" />
                 )}
                 <span className="text-sm font-medium text-indigo-600">
                   {imageName || "Nenhuma imagem selecionada"}
@@ -192,10 +206,19 @@ export function ProductFormModal({
                 Cancelar
               </Button>
               <Button
-                className="h-10 gap-2 rounded-full px-6 bg-[#1E293B] hover:bg-[#1E293B]/90 text-white"
-                type="submit"
+                className="h-10 gap-2 rounded-full px-6 bg-[#1E293B] hover:bg-[#1E293B]/90 text-white disabled:opacity-60"
+                disabled={isSubmitting}
+                type="button"
+                onClick={() => {
+                  if (!form.nome_produto.trim()) return
+                  onSubmit(form)
+                }}
               >
-                <Check className="size-4" />
+                {isSubmitting ? (
+                  <span className="size-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                ) : (
+                  <Check className="size-4" />
+                )}
                 {isEditing ? "Salvar alterações" : "Adicionar produto"}
               </Button>
             </div>
