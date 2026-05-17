@@ -21,13 +21,13 @@ export function TableToolbar({
   placeholder,
   searchValue,
 }: {
-  actionLabel: string
+  actionLabel?: string
   filterLabel?: string
   filterOptions?: string[]
   filterValue?: string
   icon: LucideIcon
   label: string
-  onAction: () => void
+  onAction?: () => void
   onAdvancedFilter?: () => void
   advancedFilterActive?: boolean
   onExport?: () => void
@@ -93,14 +93,16 @@ export function TableToolbar({
             </Button>
           )}
 
-          <Button
-            className="h-10 min-h-10 gap-2 rounded-full px-6 bg-[#0F172A] hover:bg-[#0F172A]/90 text-white"
-            onClick={onAction}
-            type="button"
-          >
-            <Plus className="size-4" />
-            {actionLabel}
-          </Button>
+          {actionLabel && onAction && (
+            <Button
+              className="h-10 min-h-10 w-[217px] gap-2 rounded-full px-6 bg-[#0F172A] hover:bg-[#0F172A]/90 text-white"
+              onClick={onAction}
+              type="button"
+            >
+              <Plus className="size-4" />
+              {actionLabel}
+            </Button>
+          )}
         </div>
       </div>
 
