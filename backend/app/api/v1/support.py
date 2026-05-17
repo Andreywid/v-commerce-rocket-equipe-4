@@ -8,7 +8,7 @@ router = APIRouter(prefix="/support", tags=["support"])
 
 @router.get("", response_model=TicketListResponse)
 def list_tickets(
-    id_cliente: int | None = Query(None),
+    id_cliente: str | None = Query(None),
     tipo: str | None = Query(None, description="Entrega | Reembolso | Produto | Pagamento"),
     status: str | None = Query(None, description="Aberto | Resolvido"),
     sla_estourado: bool | None = Query(None),
@@ -20,5 +20,5 @@ def list_tickets(
 
 
 @router.get("/{id_ticket}", response_model=TicketOut)
-def get_ticket(id_ticket: int, current_user=Depends(get_current_user)):
+def get_ticket(id_ticket: str, current_user=Depends(get_current_user)):
     return support_service.get_ticket(id_ticket)

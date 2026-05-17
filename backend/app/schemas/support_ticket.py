@@ -4,10 +4,10 @@ from typing import Optional
 
 
 class TicketOut(BaseModel):
-    id_ticket: int
-    id_cliente: int
-    id_pedido: Optional[int] = None
-    id_produto: Optional[int] = None
+    id_ticket: str
+    id_cliente: str
+    id_pedido: Optional[str] = None
+    id_produto: Optional[str] = None
     tipo_problema: str
     satisfacao_atendimento: str
     data_abertura: date
@@ -20,6 +20,8 @@ class TicketOut(BaseModel):
     nome_cliente: str
     nome_produto: Optional[str] = None
     data_referencia_calculo: Optional[date] = None
+
+    model_config = {"from_attributes": True}
 
 
 class TicketListResponse(BaseModel):

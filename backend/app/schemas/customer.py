@@ -4,7 +4,7 @@ from typing import Optional
 
 
 class CustomerOut(BaseModel):
-    id_cliente: int
+    id_cliente: str
     nome: str
     email: str
     telefone: Optional[str] = None
@@ -20,6 +20,8 @@ class CustomerOut(BaseModel):
     segmento_ltv: Optional[str] = None
     is_ativo_90d: bool = True
     is_em_risco: bool = False
+
+    model_config = {"from_attributes": True}
 
 
 class Customer360(CustomerOut):

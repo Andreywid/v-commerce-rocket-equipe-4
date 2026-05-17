@@ -4,7 +4,7 @@ from app.schemas.support_ticket import TicketOut, TicketListResponse
 
 
 def get_tickets(
-    id_cliente: int | None,
+    id_cliente: str | None,
     tipo: str | None,
     status: str | None,
     sla_estourado: bool | None,
@@ -14,12 +14,12 @@ def get_tickets(
     items, total = support_repository.get_all(id_cliente, tipo, status, sla_estourado, page, size)
     return TicketListResponse(
         total=total, page=page, size=size,
-        items=[TicketOut(**t) for t in items],
+        items=[TicketOut.model_validate(t) for t in items],
     )
 
 
-def get_ticket(id_ticket: int) -> TicketOut:
+def get_ticket(id_ticket: str) -> TicketOut:
     ticket = support_repository.get_by_id(id_ticket)
     if not ticket:
         raise HTTPException(status_code=404, detail="Ticket não encontrado")
-    return TicketOut(**ticket)
+    return TicketOut.model_validate(ticket)

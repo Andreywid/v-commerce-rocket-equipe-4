@@ -4,10 +4,10 @@ from typing import Optional
 
 
 class ReviewOut(BaseModel):
-    id_avaliacao: int
-    id_cliente: int
-    id_pedido: Optional[int] = None
-    id_produto: int
+    id_avaliacao: str
+    id_cliente: str
+    id_pedido: str
+    id_produto: str
     nota_produto: int
     nota_nps: int
     recomenda: bool
@@ -17,6 +17,9 @@ class ReviewOut(BaseModel):
     nome_produto: str
     categoria_produto: str
     nome_cliente: str
+
+    model_config = {"from_attributes": True}
+
 
 
 class ReviewListResponse(BaseModel):
