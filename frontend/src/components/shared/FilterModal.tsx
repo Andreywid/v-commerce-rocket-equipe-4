@@ -1,9 +1,10 @@
+/* eslint-disable react-refresh/only-export-components, react-hooks/set-state-in-effect */
 import { useState, useRef, useEffect } from "react"
 import { SlidersHorizontal, X, Check, Calendar, ChevronDown } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 
-const MONTHS = [
+export const MONTHS = [
   "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
   "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
 ]
