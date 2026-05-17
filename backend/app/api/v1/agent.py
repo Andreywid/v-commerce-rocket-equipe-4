@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 from typing import Any
 from app.core.deps import get_current_user
+from app.agent.agent import chat as agent_chat
 
 router = APIRouter(prefix="/agent", tags=["agent"])
 
@@ -29,20 +30,8 @@ class ChatResponse(BaseModel):
 
 @router.post("/chat", response_model=ChatResponse)
 async def chat(body: ChatRequest, current_user=Depends(get_current_user)):
-    # Integration point: the AI team implements app/agent/agent.py and exposes:
-    #   async def chat(message: str, session_id: str | None) -> AgentResponse
-    # Uncomment below and remove the placeholder when the agent module is ready:
-    #
-    # from app.agent.agent import chat as agent_chat
-    # result = await agent_chat(body.message, body.session_id)
-    # return ChatResponse(**result)
-
-    return ChatResponse(
-        answer="Agente de IA ainda não integrado. O time de IA está desenvolvendo este módulo.",
-        sql_used=None,
-        data=[],
-        session_id=body.session_id,
-    )
+    result = await agent_chat(body.message, body.session_id)
+    return ChatResponse(**result)
 
 
 @router.get("/suggestions", response_model=list[str])

@@ -10,6 +10,7 @@ class Settings(BaseSettings):
     ADMIN_EMAIL: str
     ADMIN_PASSWORD: str
     ADMIN_NAME: str = "Admin V-Commerce"
+    AI_AGENT_URL: str = "http://localhost:8001"
 
     model_config = {"env_file": ".env", "extra": "ignore"}
 
