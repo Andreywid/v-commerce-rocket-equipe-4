@@ -17,3 +17,10 @@ class ReviewOut(BaseModel):
     nome_produto: str
     categoria_produto: str
     nome_cliente: str
+
+
+class ReviewListResponse(BaseModel):
+    total: int
+    page: int
+    size: int
+    items: list[ReviewOut]

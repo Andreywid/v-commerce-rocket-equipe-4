@@ -1,7 +1,7 @@
 from fastapi import HTTPException
 from app.repositories import product_repository, review_repository
 from app.schemas.product import ProductCreate, ProductUpdate, ProductOut, ProductPerformance, ProductListResponse
-from app.schemas.review import ReviewOut
+from app.schemas.review import ReviewOut, ReviewListResponse
 
 
 def get_products(
@@ -24,10 +24,13 @@ def get_product_performance(id_produto: int) -> ProductPerformance:
     return ProductPerformance(**product)
 
 
-def get_product_reviews(id_produto: int) -> list[ReviewOut]:
+def get_product_reviews(id_produto: int, page: int, size: int) -> ReviewListResponse:
     _require_product(id_produto)
     reviews = review_repository.get_by_product(id_produto)
-    return [ReviewOut(**r) for r in reviews]
+    total = len(reviews)
+    start = (page - 1) * size
+    items = reviews[start:start + size]
+    return ReviewListResponse(total=total, page=page, size=size, items=[ReviewOut(**r) for r in items])
 
 
 def create_product(data: ProductCreate) -> ProductOut:

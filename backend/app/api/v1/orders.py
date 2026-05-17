@@ -1,6 +1,7 @@
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Depends, Query
 from app.services import order_service
 from app.schemas.order import OrderOut, OrderListResponse
+from app.core.deps import get_current_user
 
 router = APIRouter(prefix="/orders", tags=["orders"])
 
@@ -15,10 +16,11 @@ def list_orders(
     data_fim: str | None = Query(None, description="YYYY-MM-DD"),
     page: int = Query(1, ge=1),
     size: int = Query(20, ge=1, le=100),
+    current_user=Depends(get_current_user),
 ):
     return order_service.get_orders(status, categoria, estado, id_cliente, data_inicio, data_fim, page, size)
 
 
 @router.get("/{id_pedido}", response_model=OrderOut)
-def get_order(id_pedido: int):
+def get_order(id_pedido: int, current_user=Depends(get_current_user)):
     return order_service.get_order(id_pedido)
