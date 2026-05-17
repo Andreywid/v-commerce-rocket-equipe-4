@@ -1,53 +1,38 @@
 import { useState } from "react"
 import { Calendar, Check, Filter, X } from "lucide-react"
 
-import type { RatingLabel, SupportStatus, SupportType } from "@/types"
-import { ratingLabelOptions, supportStatusOptions, supportTypeOptions } from "@/mocks/tickets"
+import type { SupportStatus, SupportType } from "@/types"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
+const SUPPORT_TYPE_OPTIONS: SupportType[] = ["Entrega", "Reembolso", "Produto", "Pagamento"]
+const SUPPORT_STATUS_OPTIONS: SupportStatus[] = ["Aberto", "Resolvido"]
+
 export type SupportFilters = {
   date: string
   types: SupportType[]
   statuses: SupportStatus[]
-  ratings: RatingLabel[]
 }
 
 export const emptySupportFilters: SupportFilters = {
   date: "",
   types: [],
   statuses: [],
-  ratings: [],
 }
 
 const TYPE_CHIP: Record<SupportType, { bg: string; text: string; border: string }> = {
   Pagamento: { bg: "#EEF2FF", text: "#6366F1", border: "#C7D2FE" },
-  Atraso:    { bg: "#FFFBEB", text: "#F59E0B", border: "#FDE68A" },
+  Entrega:   { bg: "#ECFDF5", text: "#059669", border: "#A7F3D0" },
   Reembolso: { bg: "#FFF1F2", text: "#F43F5E", border: "#FECDD3" },
+  Produto:   { bg: "#F5F3FF", text: "#7C3AED", border: "#DDD6FE" },
 }
 
 const STATUS_CHIP: Record<SupportStatus, { bg: string; text: string; border: string }> = {
-  Aberto:          { bg: "#EEF2FF", text: "#4338CA", border: "#C7D2FE" },
-  "Em andamento":  { bg: "#FFFBEB", text: "#B45309", border: "#FDE68A" },
-  Resolvido:       { bg: "#DCFCE7", text: "#15803D", border: "#86EFAC" },
-  Fechado:         { bg: "#F1F5F9", text: "#475569", border: "#CBD5E1" },
-}
-
-const RATING_COLOR: Record<RatingLabel, { outer: string; inner: string }> = {
-  Ótimo:     { outer: "bg-indigo-50 text-[#6366F1] border-indigo-200",   inner: "bg-[#6366F1]" },
-  Bom:       { outer: "bg-amber-50 text-[#F59E0B] border-amber-200",     inner: "bg-[#F59E0B]" },
-  Excelente: { outer: "bg-emerald-50 text-[#22C55E] border-emerald-200", inner: "bg-[#22C55E]" },
-  Crítico:   { outer: "bg-rose-50 text-[#F43F5E] border-rose-200",       inner: "bg-[#F43F5E]" },
-}
-
-const RATING_SCORE: Record<RatingLabel, string> = {
-  Ótimo:     "4.5",
-  Bom:       "4.0",
-  Excelente: "4.9",
-  Crítico:   "2.0",
+  Aberto:    { bg: "#FFF1F2", text: "#BE123C", border: "#FECDD3" },
+  Resolvido: { bg: "#DCFCE7", text: "#15803D", border: "#86EFAC" },
 }
 
 export function SupportFilterModal({
@@ -73,13 +58,6 @@ export function SupportFilterModal({
       ? form.statuses.filter((s) => s !== status)
       : [...form.statuses, status]
     setForm({ ...form, statuses: next })
-  }
-
-  function toggleRating(rating: RatingLabel) {
-    const next = form.ratings.includes(rating)
-      ? form.ratings.filter((r) => r !== rating)
-      : [...form.ratings, rating]
-    setForm({ ...form, ratings: next })
   }
 
   return (
@@ -115,7 +93,7 @@ export function SupportFilterModal({
                 <SelectValue placeholder="Selecione o tipo do ticket" />
               </SelectTrigger>
               <SelectContent>
-                {supportTypeOptions
+                {SUPPORT_TYPE_OPTIONS
                   .filter((t) => !form.types.includes(t))
                   .map((opt) => (
                     <SelectItem key={opt} value={opt}>{opt}</SelectItem>
@@ -153,7 +131,7 @@ export function SupportFilterModal({
                 <SelectValue placeholder="Selecione o status" />
               </SelectTrigger>
               <SelectContent>
-                {supportStatusOptions
+                {SUPPORT_STATUS_OPTIONS
                   .filter((s) => !form.statuses.includes(s))
                   .map((opt) => (
                     <SelectItem key={opt} value={opt}>{opt}</SelectItem>
@@ -172,44 +150,6 @@ export function SupportFilterModal({
                     >
                       {s}
                       <button type="button" onClick={() => toggleStatus(s)} className="ml-0.5 rounded-full hover:opacity-70">
-                        <X className="size-3" />
-                      </button>
-                    </span>
-                  )
-                })}
-              </div>
-            )}
-          </div>
-
-          {/* Satisfação do cliente */}
-          <div className="flex flex-col gap-2">
-            <Label className="text-sm font-semibold text-slate-800">Satisfação do cliente</Label>
-            <Select value="" onValueChange={(v) => { if (v) toggleRating(v as RatingLabel) }}>
-              <SelectTrigger className="h-9 rounded-lg">
-                <SelectValue placeholder="Selecione o nível de satisfação" />
-              </SelectTrigger>
-              <SelectContent>
-                {ratingLabelOptions
-                  .filter((r) => !form.ratings.includes(r))
-                  .map((opt) => (
-                    <SelectItem key={opt} value={opt}>{opt}</SelectItem>
-                  ))}
-              </SelectContent>
-            </Select>
-            {form.ratings.length > 0 && (
-              <div className="flex flex-wrap gap-2">
-                {form.ratings.map((r) => {
-                  const { outer, inner } = RATING_COLOR[r]
-                  return (
-                    <span
-                      key={r}
-                      className={`inline-flex h-6 items-center gap-1.5 rounded-full border px-1.5 text-xs font-medium ${outer}`}
-                    >
-                      <span className={`inline-flex h-4 w-6.5 shrink-0 items-center justify-center rounded text-[10px] font-bold text-white ${inner}`}>
-                        {RATING_SCORE[r]}
-                      </span>
-                      {r}
-                      <button type="button" onClick={() => toggleRating(r)} className="hover:opacity-70">
                         <X className="size-3" />
                       </button>
                     </span>
