@@ -1,8 +1,7 @@
 import { useMemo, useState } from "react"
-import { ClipboardList } from "lucide-react"
+import { ClipboardList, Pencil } from "lucide-react"
 
-import type { FilterValue, SupportFormValues, SupportRow, SupportType } from "@/types"
-import { supportTypeOptions } from "@/mocks/tickets"
+import type { SupportFormValues, SupportRow, SupportType } from "@/types"
 import { useAppContext } from "@/context/AppContext"
 import { getSupportMetrics } from "@/helpers/metrics"
 import { rowIncludes } from "@/helpers/storage"
@@ -11,6 +10,8 @@ import { MetricGrid } from "@/components/shared/MetricCard"
 import { PageShell } from "@/components/shared/PageShell"
 import { RatingBadge, StatusBadge } from "@/components/shared/StatusBadge"
 import { SupportFormModal } from "@/components/shared/SupportFormModal"
+import { SupportFilterModal, emptySupportFilters, type SupportFilters } from "@/components/shared/SupportFilterModal"
+import { TicketDetailModal } from "@/components/shared/TicketDetailModal"
 import { EmptyTableState, TableHead, TableBody, TableHeader, TableRow, TableCell, TablePagination } from "@/components/shared/Table"
 import { TableToolbar } from "@/components/shared/TableToolbar"
 
@@ -30,6 +31,7 @@ function SupportTable({
   filteredCount,
   onEditTicket,
   onPageChange,
+  onViewTicket,
   pageCount,
   rows,
   totalCount,
@@ -38,6 +40,7 @@ function SupportTable({
   filteredCount: number
   onEditTicket: (index: number) => void
   onPageChange: (page: number) => void
+  onViewTicket: (index: number) => void
   pageCount: number
   rows: FilteredTicket[]
   totalCount: number
@@ -62,7 +65,15 @@ function SupportTable({
               key={`${row.ticket}-${index}`}
               className="h-14.5 border-slate-100 text-sm text-slate-700"
             >
-              <TableCell className="pl-5 font-semibold text-slate-800">{row.ticket}</TableCell>
+              <TableCell className="pl-5">
+                <button
+                  className="font-semibold text-slate-800 transition hover:text-indigo-600"
+                  onClick={() => onViewTicket(index)}
+                  type="button"
+                >
+                  {row.ticket}
+                </button>
+              </TableCell>
               <TableCell>{row.customer}</TableCell>
               <TableCell>
                 <StatusBadge className={supportTypeClasses[row.type]}>{row.type}</StatusBadge>
@@ -74,11 +85,11 @@ function SupportTable({
               </TableCell>
               <TableCell>
                 <button
-                  className="text-sm font-semibold text-indigo-600 transition hover:text-indigo-500"
+                  className="grid place-items-center rounded-md p-1 transition hover:bg-indigo-50"
                   onClick={() => onEditTicket(index)}
                   type="button"
                 >
-                  Editar
+                  <Pencil className="size-4 text-[#4F46E5]" />
                 </button>
               </TableCell>
             </TableRow>
@@ -97,7 +108,7 @@ function SupportTable({
   )
 }
 
-function useFilteredTickets(search: string, typeFilter: FilterValue<SupportType>) {
+function useFilteredTickets(search: string, filters: SupportFilters) {
   const { tickets } = useAppContext()
   return useMemo(
     () =>
@@ -105,35 +116,47 @@ function useFilteredTickets(search: string, typeFilter: FilterValue<SupportType>
         .map((ticket, index) => ({ ticket, index }))
         .filter(({ ticket }) => {
           const matchesSearch = rowIncludes(ticket, search)
-          const matchesType = typeFilter === "Todos" || ticket.type === typeFilter
-          return matchesSearch && matchesType
+          const matchesDate = !filters.date || ticket.createdAt.includes(filters.date)
+          const matchesType = filters.types.length === 0 || filters.types.includes(ticket.type)
+          const matchesStatus = filters.statuses.length === 0 || filters.statuses.includes(ticket.status)
+          const matchesRating = filters.ratings.length === 0 || filters.ratings.includes(ticket.ratingLabel)
+          return matchesSearch && matchesDate && matchesType && matchesStatus && matchesRating
         }),
-    [tickets, search, typeFilter],
+    [tickets, search, filters],
   )
 }
 
 export function SupportPage() {
-  const { tickets, addTicket, updateTicket, showNotice } = useAppContext()
+  const { tickets, addTicket, updateTicket, clients, showNotice } = useAppContext()
   const [ticketSearch, setTicketSearch] = useState("")
-  const [ticketTypeFilter, setTicketTypeFilter] = useState<FilterValue<SupportType>>("Todos")
+  const [advancedFilters, setAdvancedFilters] = useState<SupportFilters>(emptySupportFilters)
+  const [isFilterModalOpen, setIsFilterModalOpen] = useState(false)
   const [currentPage, setCurrentPage] = useState(1)
   const [isTicketModalOpen, setIsTicketModalOpen] = useState(false)
   const [editingTicketIndex, setEditingTicketIndex] = useState<number | null>(null)
+  const [viewingTicketIndex, setViewingTicketIndex] = useState<number | null>(null)
 
-  const filteredTickets = useFilteredTickets(ticketSearch, ticketTypeFilter)
+  const filteredTickets = useFilteredTickets(ticketSearch, advancedFilters)
   const metrics = getSupportMetrics(tickets)
 
   const pageCount = Math.max(1, Math.ceil(filteredTickets.length / PAGE_SIZE))
   const safePage = Math.min(currentPage, pageCount)
   const paginatedTickets = filteredTickets.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE)
 
+  const isAdvancedFilterActive = !!(
+    advancedFilters.date ||
+    advancedFilters.types.length > 0 ||
+    advancedFilters.statuses.length > 0 ||
+    advancedFilters.ratings.length > 0
+  )
+
   function handleSearchChange(value: string) {
     setTicketSearch(value)
     setCurrentPage(1)
   }
 
-  function handleFilterChange(value: string) {
-    setTicketTypeFilter(value as FilterValue<SupportType>)
+  function handleApplyFilters(filters: SupportFilters) {
+    setAdvancedFilters(filters)
     setCurrentPage(1)
   }
 
@@ -157,13 +180,11 @@ export function SupportPage() {
       <DataPanel>
         <TableToolbar
           actionLabel="Adicionar ticket"
-          filterLabel="Tipo"
-          filterOptions={["Todos", ...supportTypeOptions]}
-          filterValue={ticketTypeFilter}
+          advancedFilterActive={isAdvancedFilterActive}
           icon={ClipboardList}
           label="Tickets de suporte"
           onAction={() => setIsTicketModalOpen(true)}
-          onFilterChange={handleFilterChange}
+          onAdvancedFilter={() => setIsFilterModalOpen(true)}
           onSearchChange={handleSearchChange}
           placeholder="Busque por ticket, cliente, tipo ou avaliação"
           searchValue={ticketSearch}
@@ -173,12 +194,20 @@ export function SupportPage() {
           filteredCount={filteredTickets.length}
           onEditTicket={setEditingTicketIndex}
           onPageChange={setCurrentPage}
+          onViewTicket={setViewingTicketIndex}
           pageCount={pageCount}
           rows={paginatedTickets}
           totalCount={tickets.length}
         />
       </DataPanel>
 
+      {isFilterModalOpen && (
+        <SupportFilterModal
+          filters={advancedFilters}
+          onApply={handleApplyFilters}
+          onClose={() => setIsFilterModalOpen(false)}
+        />
+      )}
       {isTicketModalOpen && (
         <SupportFormModal onClose={() => setIsTicketModalOpen(false)} onSubmit={handleAddTicket} title="Adicionar ticket" />
       )}
@@ -187,7 +216,16 @@ export function SupportPage() {
           initialValues={tickets[editingTicketIndex]}
           onClose={() => setEditingTicketIndex(null)}
           onSubmit={handleUpdateTicket}
+          ticketId={tickets[editingTicketIndex].ticket}
           title="Editar ticket"
+        />
+      )}
+      {viewingTicketIndex !== null && (
+        <TicketDetailModal
+          clients={clients}
+          onClose={() => setViewingTicketIndex(null)}
+          ticket={tickets[viewingTicketIndex]}
+          tickets={tickets}
         />
       )}
     </PageShell>
