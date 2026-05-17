@@ -170,9 +170,9 @@
   width: 18px;
   height: 18px;
   border-radius: 50%;
-  background: #0F172A;
-  border: 2px solid white;
-  box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.2);
+  background: white;
+  border: 2px solid #0F172A;
+  box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.15);
   cursor: pointer;
   pointer-events: all;
 }
@@ -181,8 +181,8 @@
   width: 18px;
   height: 18px;
   border-radius: 50%;
-  background: #0F172A;
-  border: 2px solid white;
-  box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.2);
+  background: white;
+  border: 2px solid #0F172A;
+  box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.15);
   cursor: pointer;
 }
