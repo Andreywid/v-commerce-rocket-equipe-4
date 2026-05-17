@@ -3,10 +3,26 @@ from datetime import date
 from typing import Optional
 
 
+class OrderCreate(BaseModel):
+    id_pedido: str
+    id_produto: str
+    data_pedido: date
+    quantidade: int
+    status: str
+    metodo_pagamento: str = "PIX"
+
+
+class OrderUpdate(BaseModel):
+    data_pedido: Optional[date] = None
+    status: Optional[str] = None
+    id_produto: Optional[str] = None
+    quantidade: Optional[int] = None
+
+
 class OrderOut(BaseModel):
-    id_pedido: int
-    id_cliente: int
-    id_produto: int
+    id_pedido: str
+    id_cliente: str
+    id_produto: str
     data_pedido: date
     quantidade: int
     valor_unitario: float
@@ -20,6 +36,8 @@ class OrderOut(BaseModel):
     ano: int
     mes: int
     trimestre: int
+
+    model_config = {"from_attributes": True}
 
 
 class OrderListResponse(BaseModel):
