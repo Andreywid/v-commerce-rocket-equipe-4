@@ -12,6 +12,8 @@ import { createClientId, createOrderId, createProductId, createTicketId, readSto
 type AppContextValue = {
   orders: OrderRow[]
   addOrder: (values: OrderFormValues) => void
+  updateOrder: (index: number, values: OrderFormValues) => void
+  deleteOrder: (index: number) => void
   tickets: SupportRow[]
   addTicket: (values: SupportFormValues) => void
   updateTicket: (index: number, values: SupportFormValues) => void
@@ -59,6 +61,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setOrders((current) => [{ id: createOrderId(current), ...values }, ...current])
   }
 
+  function updateOrder(index: number, values: OrderFormValues) {
+    setOrders((current) =>
+      current.map((order, i) => (i === index ? { ...order, ...values } : order)),
+    )
+  }
+
+  function deleteOrder(index: number) {
+    setOrders((current) => current.filter((_, i) => i !== index))
+  }
+
   function addTicket(values: SupportFormValues) {
     setTickets((current) => [{ ticket: createTicketId(current), ...values }, ...current])
   }
@@ -98,7 +110,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <AppContext.Provider value={{ orders, addOrder, tickets, addTicket, updateTicket, products, addProduct, updateProduct, deleteProduct, clients, addClient, updateClient, removeClient, showNotice }}>
+    <AppContext.Provider value={{ orders, addOrder, updateOrder, deleteOrder, tickets, addTicket, updateTicket, products, addProduct, updateProduct, deleteProduct, clients, addClient, updateClient, removeClient, showNotice }}>
       {children}
     </AppContext.Provider>
   )
