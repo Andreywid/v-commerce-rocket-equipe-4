@@ -11,21 +11,22 @@ router = APIRouter(prefix="/products", tags=["products"])
 def list_products(
     categoria: str | None = Query(None),
     ativo: bool | None = Query(None),
+    nome: str | None = Query(None),
     page: int = Query(1, ge=1),
     size: int = Query(20, ge=1, le=100),
     current_user=Depends(get_current_user),
 ):
-    return product_service.get_products(categoria, ativo, page, size)
+    return product_service.get_products(categoria, ativo, nome, page, size)
 
 
 @router.get("/{id_produto}/performance", response_model=ProductPerformance)
-def get_product_performance(id_produto: int, current_user=Depends(get_current_user)):
+def get_product_performance(id_produto: str, current_user=Depends(get_current_user)):
     return product_service.get_product_performance(id_produto)
 
 
 @router.get("/{id_produto}/avaliacoes", response_model=ReviewListResponse)
 def get_product_reviews(
-    id_produto: int,
+    id_produto: str,
     page: int = Query(1, ge=1),
     size: int = Query(20, ge=1, le=100),
     current_user=Depends(get_current_user),
@@ -39,10 +40,10 @@ def create_product(body: ProductCreate, current_user=Depends(require_admin)):
 
 
 @router.put("/{id_produto}", response_model=ProductOut)
-def update_product(id_produto: int, body: ProductUpdate, current_user=Depends(require_admin)):
+def update_product(id_produto: str, body: ProductUpdate, current_user=Depends(require_admin)):
     return product_service.update_product(id_produto, body)
 
 
 @router.delete("/{id_produto}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_product(id_produto: int, current_user=Depends(require_admin)):
+def delete_product(id_produto: str, current_user=Depends(require_admin)):
     product_service.delete_product(id_produto)
