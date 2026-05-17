@@ -5,9 +5,9 @@ from app.database import Base
 class Order(Base):
     __tablename__ = "gold_pedidos_enriquecidos"
 
-    id_pedido = Column(Integer, primary_key=True, index=True)
-    id_cliente = Column(Integer, index=True)
-    id_produto = Column(Integer, index=True)
+    id_pedido = Column(String, primary_key=True, index=True)
+    id_cliente = Column(String, index=True)
+    id_produto = Column(String, index=True)
 
     data_pedido = Column(Date)
     quantidade = Column(Integer)

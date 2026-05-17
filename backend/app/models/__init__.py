@@ -5,3 +5,4 @@ from app.models.product import Product
 from app.models.support_ticket import SupportTicket
 from app.models.review import Review
 from app.models.clickstream import ClickstreamResumo
+from app.models.dashboard_kpi import DashboardKPI
