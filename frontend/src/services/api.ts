@@ -33,6 +33,10 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
     throw new HttpError(response.status, body.detail)
   }
 
+  if (response.status === 204 || response.headers.get("content-length") === "0") {
+    return undefined as T
+  }
+
   return response.json() as Promise<T>
 }
 
@@ -40,4 +44,7 @@ export const api = {
   get: <T>(path: string) => request<T>(path),
   post: <T>(path: string, body: unknown) =>
     request<T>(path, { method: "POST", body: JSON.stringify(body) }),
+  put: <T>(path: string, body: unknown) =>
+    request<T>(path, { method: "PUT", body: JSON.stringify(body) }),
+  delete: (path: string) => request<void>(path, { method: "DELETE" }),
 }
