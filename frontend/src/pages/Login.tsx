@@ -1,6 +1,5 @@
 import { useState } from "react"
 import { Eye, EyeOff, LogIn } from "lucide-react"
-import { Link } from "react-router-dom"
 import { toast } from "sonner"
 
 import loginHero from "@/assets/login-hero.png"
@@ -188,16 +187,6 @@ export function LoginPage({
                 : "Acesso restrito a usuários autorizados do sistema V-Commerce."}
             </p>
 
-            <div className="flex items-center justify-center gap-5 pt-8 text-xs">
-              {!isRegistering && <span className="text-slate-500">Não tem uma conta?</span>}
-              <Link
-                className="inline-flex items-center gap-2 font-semibold text-slate-900 transition hover:text-indigo-600"
-                to={isRegistering ? "/login" : "/cadastro"}
-              >
-                {isRegistering && <LogIn className="size-3.5" />}
-                {isRegistering ? "Entrar em conta existente" : "Criar uma conta"}
-              </Link>
-            </div>
           </form>
         </div>
       </section>

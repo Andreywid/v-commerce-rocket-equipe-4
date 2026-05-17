@@ -1,15 +1,16 @@
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import { toast } from "sonner"
 
 import { useAppContext } from "@/context/AppContext"
-import { fetchKpis } from "@/services/dashboardService"
+import { useKpis } from "@/hooks/useKpis"
 import { getKpiCards, getKpiInsights, formatMesLabel } from "@/helpers/metrics"
+import { exportKpiToCSV } from "@/helpers/export"
 import { PageShell } from "@/components/shared/PageShell"
 import { DataCard, DataGrid, InsightCard } from "@/components/shared/MetricCards"
 import { RevenueChart, type RevenueChartPoint } from "@/components/shared/RevenueChart"
 import { OrderSummary } from "@/components/shared/OrderSummary"
 import { FilterModal, type FilterState, MONTHS } from "@/components/shared/FilterModal"
-import type { KPIsResponse, VendasKPIMes } from "@/types/dashboard"
+import type { VendasKPIMes } from "@/types/api"
 
 const DEFAULT_FILTER: FilterState = { comparisonDate: "", months: [], years: [] }
 
@@ -41,21 +42,20 @@ function CardSkeleton() {
 
 export function Dashboard() {
   const { showNotice } = useAppContext()
-  const [kpis, setKpis] = useState<KPIsResponse | null>(null)
-  const [loading, setLoading] = useState(true)
   const [filterOpen, setFilterOpen] = useState(false)
   const [appliedFilters, setAppliedFilters] = useState<FilterState>(DEFAULT_FILTER)
 
-  useEffect(() => {
-    fetchKpis("12m")
-      .then(setKpis)
-      .catch(() => toast.error("Erro ao carregar métricas", {
-        description: "Verifique se o backend está rodando e tente novamente.",
-      }))
-      .finally(() => setLoading(false))
-  }, [])
+  const { data: kpis, isPending } = useKpis("all")
 
-  const handleExport = () => showNotice("Relatório exportado com sucesso!")
+  const handleExport = () => {
+    if (!filteredMeses || filteredMeses.length === 0) {
+      toast.error("Nenhum dado disponível para exportar no momento.")
+      return
+    }
+    exportKpiToCSV(filteredMeses)
+    showNotice("Relatório CSV gerado com sucesso!")
+  }
+
   const handleFilter = () => setFilterOpen(true)
   const handleSaveFilter = (filters: FilterState) => {
     setAppliedFilters(filters)
@@ -68,7 +68,11 @@ export function Dashboard() {
 
   const activeFilters = hasAnyFilter(appliedFilters)
   const allMeses = kpis?.meses ?? []
-  const filteredMeses = activeFilters ? applyFilters(allMeses, appliedFilters) : allMeses
+  // Se não houver filtros, mostramos os últimos 12 meses (comportamento padrão)
+  // Se houver filtros, filtramos sobre a base completa
+  const filteredMeses = activeFilters 
+    ? applyFilters(allMeses, appliedFilters) 
+    : allMeses.slice(-12)
   const ultimoMes: VendasKPIMes | null = filteredMeses.length > 0
     ? filteredMeses[filteredMeses.length - 1]
     : null
@@ -90,7 +94,7 @@ export function Dashboard() {
       }
     : { aprovados: 0, processando: 0, recusados: 0, reembolsados: 0 }
 
-  const emptyFiltered = !loading && activeFilters && filteredMeses.length === 0
+  const emptyFiltered = !isPending && activeFilters && filteredMeses.length === 0
 
   return (
     <>
@@ -102,7 +106,7 @@ export function Dashboard() {
       />
       <PageShell title="Dashboard">
         <DataGrid>
-          {loading
+          {isPending
             ? Array.from({ length: 4 }).map((_, i) => <CardSkeleton key={i} />)
             : emptyFiltered
             ? (
@@ -133,7 +137,7 @@ export function Dashboard() {
         </div>
 
         <div className="mt-6 grid gap-4 sm:grid-cols-3">
-          {loading
+          {isPending
             ? Array.from({ length: 3 }).map((_, i) => <CardSkeleton key={i} />)
             : insights.map((insight) => (
                 <InsightCard

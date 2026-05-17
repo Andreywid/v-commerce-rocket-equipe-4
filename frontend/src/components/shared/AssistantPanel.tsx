@@ -2,10 +2,20 @@ import { useState } from "react"
 import type { PointerEvent } from "react"
 import { Minus, Sparkles, X } from "lucide-react"
 
-import type { ChatMessage, OrderRow, PageKey, SupportRow } from "@/types"
-import { getAssistantAnswer, getAssistantSummary } from "@/helpers/assistant"
+import type { ChatMessage } from "@/types"
+import { useAgentChat, useAgentSuggestions } from "@/hooks/useAgent"
 
-const quickActions = ["Resumo geral", "Pedidos pendentes", "Tickets críticos", "Reembolsos"]
+const FALLBACK_SUGGESTIONS = ["Resumo geral", "Pedidos pendentes", "Tickets críticos", "Reembolsos"]
+
+function cleanAnswer(text: string): string {
+  return text
+    .replace(/```[\s\S]*?```/g, "")
+    .replace(/\bSQL executado:[\s\S]*/i, "")
+    .replace(/\bDados consultados:[\s\S]*/i, "")
+    .replace(/[ \t]+\n/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim()
+}
 
 const panelSize = { height: 620, width: 360 }
 const minimizedSize = 64
@@ -35,42 +45,67 @@ function clampPosition(position: { x: number; y: number }, size = panelSize) {
 }
 
 export function AssistantPanel({
-  currentPage,
   onClose,
-  orders,
-  tickets,
 }: {
-  currentPage: PageKey
   onClose: () => void
-  orders: OrderRow[]
-  tickets: SupportRow[]
 }) {
   const [question, setQuestion] = useState("")
+  const [sessionId, setSessionId] = useState<string | null>(null)
+  const [typingMessageId, setTypingMessageId] = useState<string | null>(null)
   const [isMinimized, setIsMinimized] = useState(false)
   const [position, setPosition] = useState(getInitialPosition)
   const [dragOffset, setDragOffset] = useState<{ x: number; y: number } | null>(null)
-  const [messages, setMessages] = useState<ChatMessage[]>(() => [
+  const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: "welcome",
       role: "assistant" as const,
-      content: getAssistantSummary(currentPage, orders, tickets),
+      content: "Olá! Sou o assistente do V-Commerce. Pergunte-me sobre vendas, pedidos, clientes ou produtos.",
     },
   ])
 
+  const { data: suggestionsData } = useAgentSuggestions()
+  const suggestions = suggestionsData ?? FALLBACK_SUGGESTIONS
+  const mutation = useAgentChat()
+
   function sendMessage(message: string) {
-    const trimmedMessage = message.trim()
-    if (!trimmedMessage) return
+    const trimmed = message.trim()
+    if (!trimmed || mutation.isPending) return
+
+    const msgId = crypto.randomUUID()
+    const pendingId = crypto.randomUUID()
 
     setMessages((current) => [
       ...current,
-      { id: crypto.randomUUID(), role: "user" as const, content: trimmedMessage },
-      {
-        id: crypto.randomUUID(),
-        role: "assistant" as const,
-        content: getAssistantAnswer(trimmedMessage, currentPage, orders, tickets),
-      },
+      { id: msgId, role: "user" as const, content: trimmed },
+      { id: pendingId, role: "assistant" as const, content: "…" },
     ])
+    setTypingMessageId(pendingId)
     setQuestion("")
+
+    mutation.mutate(
+      { message: trimmed, session_id: sessionId },
+      {
+        onSuccess: (response) => {
+          setSessionId(response.session_id)
+          setTypingMessageId(null)
+          setMessages((current) =>
+            current.map((m) =>
+              m.id === pendingId ? { ...m, content: response.answer } : m,
+            ),
+          )
+        },
+        onError: () => {
+          setTypingMessageId(null)
+          setMessages((current) =>
+            current.map((m) =>
+              m.id === pendingId
+                ? { ...m, content: "Desculpe, ocorreu um erro. Tente novamente." }
+                : m,
+            ),
+          )
+        },
+      },
+    )
   }
 
   function handleDragStart(event: PointerEvent<HTMLElement>) {
@@ -183,7 +218,11 @@ export function AssistantPanel({
                     message.role === "user" ? "bg-indigo-600 text-white" : "bg-slate-100 text-slate-700",
                   ].join(" ")}
                 >
-                  {message.content}
+                  {message.id === typingMessageId
+                    ? "Digitando..."
+                    : message.role === "assistant"
+                      ? cleanAnswer(message.content)
+                      : message.content}
                 </p>
               </div>
             ))}
@@ -192,7 +231,7 @@ export function AssistantPanel({
 
         <div className="border-t border-slate-200 px-4 py-3">
           <div className="mb-3 flex gap-2 overflow-x-auto pb-1">
-            {quickActions.map((action) => (
+            {suggestions.map((action) => (
               <button
                 className="h-8 shrink-0 rounded-full border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-600 transition hover:border-indigo-200 hover:bg-indigo-50 hover:text-indigo-600"
                 key={action}
@@ -217,7 +256,8 @@ export function AssistantPanel({
               value={question}
             />
             <button
-              className="h-10 rounded-md bg-slate-950 px-4 text-sm font-semibold text-white transition hover:bg-slate-800"
+              className="h-10 rounded-md bg-slate-950 px-4 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:opacity-60"
+              disabled={mutation.isPending}
               type="submit"
             >
               Enviar
