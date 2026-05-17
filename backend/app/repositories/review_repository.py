@@ -1,33 +1,17 @@
-from datetime import date
+from app.database import SessionLocal
+from app.models.review import Review
 
-# When Gold CSVs arrive: replace MOCK_REVIEWS with SQLAlchemy queries on gold_avaliacoes.
-MOCK_REVIEWS: list[dict] = [
-    {"id_avaliacao": 1,  "id_cliente": 1,  "id_pedido": 1,  "id_produto": 1, "nota_produto": 5, "nota_nps": 9,  "recomenda": True,  "comentario": "Excelente notebook, entrega rápida!", "sentimento": "positivo", "data_avaliacao": date(2026, 4, 22), "nome_produto": "Notebook ProMax 15\"", "categoria_produto": "Eletrônicos", "nome_cliente": "Ana Silva"},
-    {"id_avaliacao": 2,  "id_cliente": 1,  "id_pedido": 2,  "id_produto": 2, "nota_produto": 4, "nota_nps": 8,  "recomenda": True,  "comentario": "Bom fone, mas demorou para chegar.",    "sentimento": "neutro",   "data_avaliacao": date(2026, 2, 18), "nome_produto": "Fone Bluetooth",      "categoria_produto": "Eletrônicos", "nome_cliente": "Ana Silva"},
-    {"id_avaliacao": 3,  "id_cliente": 2,  "id_pedido": 4,  "id_produto": 7, "nota_produto": 5, "nota_nps": 10, "recomenda": True,  "comentario": "TV incrível, imagem perfeita.",         "sentimento": "positivo", "data_avaliacao": date(2026, 3, 20), "nome_produto": "Smart TV 55\"",       "categoria_produto": "Eletrônicos", "nome_cliente": "Bruno Costa"},
-    {"id_avaliacao": 4,  "id_cliente": 2,  "id_pedido": 5,  "id_produto": 3, "nota_produto": 4, "nota_nps": 8,  "recomenda": True,  "comentario": "Confortável e resistente.",             "sentimento": "positivo", "data_avaliacao": date(2026, 1, 25), "nome_produto": "Tênis Running",       "categoria_produto": "Esportes",    "nome_cliente": "Bruno Costa"},
-    {"id_avaliacao": 5,  "id_cliente": 3,  "id_pedido": 7,  "id_produto": 6, "nota_produto": 5, "nota_nps": 9,  "recomenda": True,  "comentario": "Ótimo livro para iniciantes em Python.", "sentimento": "positivo", "data_avaliacao": date(2026, 4, 7),  "nome_produto": "Livro Python 101",    "categoria_produto": "Livros",      "nome_cliente": "Carla Mendes"},
-    {"id_avaliacao": 6,  "id_cliente": 3,  "id_pedido": 8,  "id_produto": 8, "nota_produto": 3, "nota_nps": 6,  "recomenda": False, "comentario": "Acabamento podia ser melhor.",          "sentimento": "neutro",   "data_avaliacao": date(2026, 2, 16), "nome_produto": "Mochila Urbana",      "categoria_produto": "Acessórios",  "nome_cliente": "Carla Mendes"},
-    {"id_avaliacao": 7,  "id_cliente": 4,  "id_pedido": 10, "id_produto": 3, "nota_produto": 2, "nota_nps": 3,  "recomenda": False, "comentario": "Entrega muito atrasada, decepcionei.", "sentimento": "negativo", "data_avaliacao": date(2025, 10, 5), "nome_produto": "Tênis Running",       "categoria_produto": "Esportes",    "nome_cliente": "Diego Santos"},
-    {"id_avaliacao": 8,  "id_cliente": 5,  "id_pedido": 13, "id_produto": 3, "nota_produto": 5, "nota_nps": 10, "recomenda": True,  "comentario": "Perfeito para corrida, amei!",          "sentimento": "positivo", "data_avaliacao": date(2026, 5, 4),  "nome_produto": "Tênis Running",       "categoria_produto": "Esportes",    "nome_cliente": "Elena Rodrigues"},
-    {"id_avaliacao": 9,  "id_cliente": 5,  "id_pedido": 14, "id_produto": 8, "nota_produto": 5, "nota_nps": 10, "recomenda": True,  "comentario": "Mochila de ótima qualidade!",           "sentimento": "positivo", "data_avaliacao": date(2026, 3, 13), "nome_produto": "Mochila Urbana",      "categoria_produto": "Acessórios",  "nome_cliente": "Elena Rodrigues"},
-    {"id_avaliacao": 10, "id_cliente": 6,  "id_pedido": 15, "id_produto": 1, "nota_produto": 5, "nota_nps": 9,  "recomenda": True,  "comentario": "Notebook rápido e elegante.",           "sentimento": "positivo", "data_avaliacao": date(2026, 5, 12), "nome_produto": "Notebook ProMax 15\"", "categoria_produto": "Eletrônicos", "nome_cliente": "Felipe Oliveira"},
-    {"id_avaliacao": 11, "id_cliente": 6,  "id_pedido": 16, "id_produto": 7, "nota_produto": 4, "nota_nps": 9,  "recomenda": True,  "comentario": "Ótima TV, vale o preço.",               "sentimento": "positivo", "data_avaliacao": date(2026, 4, 4),  "nome_produto": "Smart TV 55\"",       "categoria_produto": "Eletrônicos", "nome_cliente": "Felipe Oliveira"},
-    {"id_avaliacao": 12, "id_cliente": 6,  "id_pedido": 17, "id_produto": 5, "nota_produto": 4, "nota_nps": 8,  "recomenda": True,  "comentario": "Café ótimo, máquina bem construída.",   "sentimento": "positivo", "data_avaliacao": date(2026, 1, 17), "nome_produto": "Cafeteira Express",   "categoria_produto": "Cozinha",     "nome_cliente": "Felipe Oliveira"},
-    {"id_avaliacao": 13, "id_cliente": 7,  "id_pedido": 18, "id_produto": 2, "nota_produto": 4, "nota_nps": 7,  "recomenda": True,  "comentario": "Bom fone, bateria dura bastante.",      "sentimento": "positivo", "data_avaliacao": date(2026, 4, 30), "nome_produto": "Fone Bluetooth",      "categoria_produto": "Eletrônicos", "nome_cliente": "Gabriela Lima"},
-    {"id_avaliacao": 14, "id_cliente": 8,  "id_pedido": 20, "id_produto": 2, "nota_produto": 3, "nota_nps": 5,  "recomenda": False, "comentario": "Esperava mais pela qualidade do som.",  "sentimento": "neutro",   "data_avaliacao": date(2025, 7, 14), "nome_produto": "Fone Bluetooth",      "categoria_produto": "Eletrônicos", "nome_cliente": "Henrique Ferreira"},
-    {"id_avaliacao": 15, "id_cliente": 9,  "id_pedido": 22, "id_produto": 1, "nota_produto": 5, "nota_nps": 10, "recomenda": True,  "comentario": "O melhor notebook que já usei!",        "sentimento": "positivo", "data_avaliacao": date(2026, 5, 10), "nome_produto": "Notebook ProMax 15\"", "categoria_produto": "Eletrônicos", "nome_cliente": "Isabela Martins"},
-    {"id_avaliacao": 16, "id_cliente": 9,  "id_pedido": 23, "id_produto": 7, "nota_produto": 5, "nota_nps": 9,  "recomenda": True,  "comentario": "TV linda, resolução impecável.",        "sentimento": "positivo", "data_avaliacao": date(2026, 4, 17), "nome_produto": "Smart TV 55\"",       "categoria_produto": "Eletrônicos", "nome_cliente": "Isabela Martins"},
-    {"id_avaliacao": 17, "id_cliente": 10, "id_pedido": 26, "id_produto": 8, "nota_produto": 4, "nota_nps": 8,  "recomenda": True,  "comentario": "Mochila resistente e bonita.",           "sentimento": "positivo", "data_avaliacao": date(2026, 4, 20), "nome_produto": "Mochila Urbana",      "categoria_produto": "Acessórios",  "nome_cliente": "João Pires"},
-    {"id_avaliacao": 18, "id_cliente": 10, "id_pedido": 27, "id_produto": 6, "nota_produto": 5, "nota_nps": 9,  "recomenda": True,  "comentario": "Didático, recomendo para quem está começando.", "sentimento": "positivo", "data_avaliacao": date(2026, 3, 2), "nome_produto": "Livro Python 101",  "categoria_produto": "Livros",      "nome_cliente": "João Pires"},
-]
+def get_by_product(id_produto: str) -> list[Review]:
+    db = SessionLocal()
+    try:
+        return db.query(Review).filter(Review.id_produto == id_produto).all()
+    finally:
+        db.close()
 
 
-def get_by_product(id_produto: int) -> list[dict]:
-    # When Gold CSVs arrive: replace with db.query(Review).filter_by(id_produto=id_produto).all()
-    return [r for r in MOCK_REVIEWS if r["id_produto"] == id_produto]
-
-
-def get_by_customer(id_cliente: int) -> list[dict]:
-    # When Gold CSVs arrive: replace with db.query(Review).filter_by(id_cliente=id_cliente).all()
-    return [r for r in MOCK_REVIEWS if r["id_cliente"] == id_cliente]
+def get_by_customer(id_cliente: str) -> list[Review]:
+    db = SessionLocal()
+    try:
+        return db.query(Review).filter(Review.id_cliente == id_cliente).all()
+    finally:
+        db.close()
