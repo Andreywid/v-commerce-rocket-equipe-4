@@ -1,40 +1,21 @@
-import { useState, useRef, useEffect, useMemo } from "react"
+import { useState, useRef, useEffect } from "react"
 import { Filter, X, Check, ChevronDown } from "lucide-react"
 
-import type { ClientStatus, RatingLabel } from "@/types"
-import { clientStatusOptions } from "@/mocks/clients"
-import { ratingLabelOptions } from "@/mocks/tickets"
-import { useAppContext } from "@/context/AppContext"
+import type { ClientSegmento } from "@/types"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { cn } from "@/lib/utils"
 
-export type ClientAdvancedFilters = {
-  name: string
-  locations: string[]
-  ratings: RatingLabel[]
-  minTotal: number
-  maxTotal: number
-  statuses: ClientStatus[]
-}
+const SEGMENTO_OPTIONS: ClientSegmento[] = ["Alto", "Medio", "Baixo"]
+const STATE_OPTIONS = ["SP", "RJ", "MG", "BA", "PR", "SC", "GO", "CE", "RS", "PE"]
 
-export const emptyClientAdvancedFilters: ClientAdvancedFilters = {
-  name: "",
-  locations: [],
-  ratings: [],
-  minTotal: 0,
-  maxTotal: 100_000,
-  statuses: [],
+const SEGMENTO_CLASSES: Record<ClientSegmento, string> = {
+  Alto:  "bg-emerald-50 text-emerald-600 border-emerald-200",
+  Medio: "bg-amber-50 text-amber-600 border-amber-200",
+  Baixo: "bg-slate-50 text-slate-500 border-slate-200",
 }
 
 const TOTAL_MAX = 100_000
-
-const RATING_CONFIG: Record<RatingLabel, { score: string; color: string; bg: string; border: string; text: string }> = {
-  Ótimo:     { score: "4.5", color: "#6366F1", bg: "bg-indigo-50",  border: "border-indigo-200",  text: "text-[#6366F1]" },
-  Excelente: { score: "4.9", color: "#22C55E", bg: "bg-emerald-50", border: "border-emerald-200", text: "text-[#22C55E]" },
-  Bom:       { score: "3.5", color: "#F59E0B", bg: "bg-amber-50",   border: "border-amber-200",   text: "text-amber-500" },
-  Crítico:   { score: "2.0", color: "#EF4444", bg: "bg-red-50",     border: "border-red-200",     text: "text-red-500"   },
-}
 
 const THUMB = [
   "absolute inset-0 h-full w-full cursor-pointer appearance-none bg-transparent pointer-events-none",
@@ -44,6 +25,22 @@ const THUMB = [
   "[&::-moz-range-thumb]:size-4 [&::-moz-range-thumb]:rounded-full",
   "[&::-moz-range-thumb]:bg-white [&::-moz-range-thumb]:border-2 [&::-moz-range-thumb]:border-slate-900 [&::-moz-range-thumb]:cursor-pointer",
 ].join(" ")
+
+export type ClientAdvancedFilters = {
+  name: string
+  locations: string[]
+  segmentos: ClientSegmento[]
+  minTotal: number
+  maxTotal: number
+}
+
+export const emptyClientAdvancedFilters: ClientAdvancedFilters = {
+  name: "",
+  locations: [],
+  segmentos: [],
+  minTotal: 0,
+  maxTotal: 100_000,
+}
 
 type MultiSelectProps = {
   label: string
@@ -166,13 +163,7 @@ export function ClientAdvancedFilterDialog({
   onApply: (filters: ClientAdvancedFilters) => void
   onClose: () => void
 }) {
-  const { clients } = useAppContext()
   const [draft, setDraft] = useState<ClientAdvancedFilters>(filters)
-
-  const locationOptions = useMemo(
-    () => [...new Set(clients.map((c) => c.location))].sort(),
-    [clients],
-  )
 
   return (
     <Dialog open onOpenChange={(open) => { if (!open) onClose() }}>
@@ -201,14 +192,14 @@ export function ClientAdvancedFilterDialog({
 
           <div className="border-t border-slate-100" />
 
-          {/* Localização + Avaliação */}
+          {/* Localização + Segmento */}
           <div className="flex flex-col gap-4 sm:flex-row">
             <MultiSelect
-              label="Localização"
-              options={locationOptions}
+              label="Estado"
+              options={STATE_OPTIONS}
               selected={draft.locations}
               onChange={(v) => setDraft((s) => ({ ...s, locations: v }))}
-              placeholder="Selecione uma localização"
+              placeholder="Selecione um estado"
               renderTag={(opt, onRemove) => (
                 <span key={opt} className="flex items-center gap-1 rounded-full border border-slate-200 px-2.5 py-0.5 text-xs text-slate-600">
                   {opt}
@@ -219,79 +210,33 @@ export function ClientAdvancedFilterDialog({
               )}
             />
             <MultiSelect
-              label="Avaliação"
-              options={ratingLabelOptions}
-              selected={draft.ratings}
-              onChange={(v) => setDraft((s) => ({ ...s, ratings: v as RatingLabel[] }))}
-              placeholder="Selecione a categoria"
-              renderOption={(opt) => {
-                const cfg = RATING_CONFIG[opt as RatingLabel]
-                return (
-                  <span className="flex items-center gap-2">
-                    <span
-                      className="flex h-4 w-6.5 shrink-0 items-center justify-center rounded px-1 text-[10px] font-bold text-white"
-                      style={{ backgroundColor: cfg.color }}
-                    >
-                      {cfg.score}
-                    </span>
-                    {opt}
-                  </span>
-                )
-              }}
-              renderTag={(opt, onRemove) => {
-                const cfg = RATING_CONFIG[opt as RatingLabel]
-                return (
-                  <span key={opt} className={cn("flex items-center gap-2 rounded-full border px-2.5 py-0.5 text-xs", cfg.bg, cfg.border, cfg.text)}>
-                    <span
-                      className="flex h-4 w-6.5 shrink-0 items-center justify-center rounded px-1 text-[10px] font-bold text-white"
-                      style={{ backgroundColor: cfg.color }}
-                    >
-                      {cfg.score}
-                    </span>
-                    {opt}
-                    <button type="button" onClick={onRemove} className="opacity-60 hover:opacity-100">
-                      <X className="size-3" />
-                    </button>
-                  </span>
-                )
-              }}
+              label="Segmento"
+              options={SEGMENTO_OPTIONS}
+              selected={draft.segmentos}
+              onChange={(v) => setDraft((s) => ({ ...s, segmentos: v as ClientSegmento[] }))}
+              placeholder="Selecione o segmento"
+              renderTag={(opt, onRemove) => (
+                <span key={opt} className={cn("flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs", SEGMENTO_CLASSES[opt as ClientSegmento])}>
+                  {opt}
+                  <button type="button" onClick={onRemove} className="opacity-60 hover:opacity-100">
+                    <X className="size-3" />
+                  </button>
+                </span>
+              )}
             />
           </div>
 
           <div className="border-t border-slate-100" />
 
-          {/* Faixa de preço + Status */}
+          {/* Faixa de preço */}
           <div className="flex flex-col gap-6 sm:flex-row">
             <div className="flex-1">
-              <label className="mb-3 block text-sm font-medium text-slate-700">Faixa de preço</label>
+              <label className="mb-3 block text-sm font-medium text-slate-700">Faixa de gastos</label>
               <TotalRange
                 min={draft.minTotal}
                 max={draft.maxTotal}
                 onChange={(minTotal, maxTotal) => setDraft((s) => ({ ...s, minTotal, maxTotal }))}
               />
-            </div>
-            <div className="flex-1">
-              <label className="mb-3 block text-sm font-medium text-slate-700">Status</label>
-              <div className="flex items-center gap-6">
-                {clientStatusOptions.map((status) => (
-                  <label key={status} className="flex cursor-pointer items-center gap-2 text-sm text-slate-600">
-                    <input
-                      type="checkbox"
-                      checked={draft.statuses.includes(status)}
-                      onChange={(e) =>
-                        setDraft((d) => ({
-                          ...d,
-                          statuses: e.target.checked
-                            ? [...d.statuses, status]
-                            : d.statuses.filter((x) => x !== status),
-                        }))
-                      }
-                      className="size-4 rounded border-slate-300 accent-indigo-600"
-                    />
-                    {status}
-                  </label>
-                ))}
-              </div>
             </div>
           </div>
         </div>
