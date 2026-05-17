@@ -1,0 +1,25 @@
+# Segredos
+.env
+
+# Virtualenv
+.venv/
+venv/
+env/
+
+# Python
+__pycache__/
+**/__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+
+# Ferramentas
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# IDE / SO
+.idea/
+.DS_Store
+Thumbs.db
