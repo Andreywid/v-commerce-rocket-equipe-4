@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { Calendar, MapPin, Phone } from "lucide-react"
+import { Calendar, MapPin, Pencil, Phone } from "lucide-react"
 
 import type { ClientRow, OrderRow, SupportRow } from "@/types"
 import { Button } from "@/components/ui/button"
@@ -135,7 +135,7 @@ export function ClientProfileDialog({
                       <td><StatusBadge className="bg-emerald-50 text-emerald-600 ring-emerald-200">{order.status}</StatusBadge></td>
                       <td>{order.quantity.replace("x", "")}</td>
                       <td>{order.value}</td>
-                      <td><button className="font-semibold text-indigo-600" type="button">Editar</button></td>
+                      <td><button className="grid place-items-center rounded-md p-1 transition hover:bg-indigo-50" type="button"><Pencil className="size-4 text-[#4F46E5]" /></button></td>
                     </tr>
                   ))}
                 </tbody>
@@ -158,7 +158,7 @@ export function ClientProfileDialog({
                       <td>{ticket.createdAt}</td>
                       <td><StatusBadge className="bg-emerald-50 text-emerald-600 ring-emerald-200">Resolvido</StatusBadge></td>
                       <td><StatusBadge className="bg-indigo-50 text-indigo-600 ring-indigo-200">{ticket.rating} {ticket.ratingLabel}</StatusBadge></td>
-                      <td><button className="font-semibold text-indigo-600" type="button">Editar</button></td>
+                      <td><button className="grid place-items-center rounded-md p-1 transition hover:bg-indigo-50" type="button"><Pencil className="size-4 text-[#4F46E5]" /></button></td>
                     </tr>
                   ))}
                 </tbody>

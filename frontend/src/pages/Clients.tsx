@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react"
-import { Users } from "lucide-react"
+import { Pencil, Users } from "lucide-react"
 
 import type { ClientFormValues, ClientRow, ClientStatus } from "@/types"
 import { clientStatusOptions } from "@/mocks/clients"
@@ -20,8 +20,8 @@ import { TableToolbar } from "@/components/shared/TableToolbar"
 const PAGE_SIZE = 5
 
 const statusClasses: Record<ClientStatus, string> = {
-  Novo: "bg-indigo-50 text-indigo-500 ring-indigo-200",
-  Recorrente: "bg-emerald-50 text-emerald-500 ring-emerald-200",
+  Novo:       "bg-indigo-50 text-indigo-500 border-indigo-200",
+  Recorrente: "bg-emerald-50 text-emerald-500 border-emerald-200",
 }
 
 function getInitials(name: string): string {
@@ -71,7 +71,7 @@ function ClientsTable({
         </TableHeader>
         <TableBody>
           {rows.map(({ client: row, index }) => (
-            <TableRow key={row.id} className="h-[58px] border-slate-100 text-sm text-slate-700">
+            <TableRow key={row.id} className="h-19 border-slate-200 text-sm text-slate-700">
               <TableCell className="pl-5">
                 <div className="flex items-center gap-3">
                   <span className="grid size-8 shrink-0 place-items-center rounded-full bg-indigo-100 text-xs font-bold text-indigo-600">
@@ -95,11 +95,11 @@ function ClientsTable({
               <TableCell className="font-medium">{row.total}</TableCell>
               <TableCell>
                 <button
-                  className="text-sm font-semibold text-indigo-600 transition hover:text-indigo-500"
+                  className="grid place-items-center rounded-md p-1 transition hover:bg-indigo-50"
                   onClick={() => onEditClient(index)}
                   type="button"
                 >
-                  Editar
+                  <Pencil className="size-4 text-[#4F46E5]" />
                 </button>
               </TableCell>
             </TableRow>
