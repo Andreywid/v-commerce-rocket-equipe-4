@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { Calendar, Check, Filter, X } from "lucide-react"
+import { Check, Filter, X } from "lucide-react"
 
 import type { OrderPrazo, OrderStatus } from "@/types"
 import { orderStatusOptions } from "@/mocks/orders"
@@ -103,9 +103,9 @@ export function OrderFilterModal({
 
   return (
     <Dialog open onOpenChange={(open) => { if (!open) onClose() }}>
-      <DialogContent className="sm:max-w-200 h-146.75 rounded-lg px-6 py-4 gap-2">
-        <DialogHeader className="gap-0">
-          <DialogTitle className="flex items-center gap-2 text-[18px] font-medium leading-6.75 tracking-normal text-[#4F46E5]">
+      <DialogContent className="sm:max-w-200 rounded-lg px-6 py-4 gap-0">
+        <DialogHeader className="border-b border-slate-100 pb-4">
+          <DialogTitle className="flex items-center gap-2 text-base font-semibold text-[#4F46E5]">
             <Filter className="size-4" />
             Filtro avançado
           </DialogTitle>
@@ -113,17 +113,14 @@ export function OrderFilterModal({
 
         <div className="grid gap-0">
           {/* Data do pedido */}
-          <div className="grid gap-2 pb-3">
+          <div className="grid gap-2 pt-4 pb-3">
             <Label className="text-sm font-semibold text-slate-800">Data do pedido</Label>
-            <div className="relative w-fit">
-              <Calendar className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
-              <Input
-                className="h-9 rounded-lg pl-9 sm:w-52"
-                placeholder="DD/MM/AAAA"
-                value={form.date}
-                onChange={(e) => setForm({ ...form, date: e.target.value })}
-              />
-            </div>
+            <input
+              type="date"
+              value={form.date}
+              onChange={(e) => setForm({ ...form, date: e.target.value })}
+              className="h-9 w-86 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            />
           </div>
 
           <hr className="border-slate-100" />
