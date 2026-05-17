@@ -98,33 +98,27 @@ function ProductsTable({
               </TableCell>
               <TableCell>
                 <div className="flex items-center gap-1">
-                  <Button
-                    variant="ghost"
-                    size="icon-sm"
-                    className="text-slate-400 hover:text-indigo-600"
+                  <button
+                    className="grid place-items-center rounded-md p-1 transition hover:bg-indigo-50"
                     onClick={() => onViewProduct(index)}
                     type="button"
                   >
-                    <Eye className="size-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon-sm"
-                    className="text-slate-400 hover:text-indigo-600"
+                    <Eye className="size-4 text-[#4F46E5]" />
+                  </button>
+                  <button
+                    className="grid place-items-center rounded-md p-1 transition hover:bg-indigo-50"
                     onClick={() => onEditProduct(index)}
                     type="button"
                   >
-                    <Pencil className="size-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon-sm"
-                    className="text-slate-400 hover:text-rose-600"
+                    <Pencil className="size-4 text-[#4F46E5]" />
+                  </button>
+                  <button
+                    className="grid place-items-center rounded-md p-1 transition hover:bg-rose-50"
                     onClick={() => onDeleteProduct(index)}
                     type="button"
                   >
-                    <Trash2 className="size-4" />
-                  </Button>
+                    <Trash2 className="size-4 text-[#F43F5E]" />
+                  </button>
                 </div>
               </TableCell>
             </TableRow>
@@ -232,6 +226,13 @@ export function ProductsPage() {
     showNotice("Produto apagado")
   }
 
+  function handleDeleteFromModal() {
+    if (editingIndex === null) return
+    deleteProduct(editingIndex)
+    setEditingIndex(null)
+    showNotice("Produto apagado")
+  }
+
   return (
     <PageShell title="Produtos">
       {highlights && (
@@ -306,7 +307,9 @@ export function ProductsPage() {
         <ProductFormModal
           initialValues={products[editingIndex]}
           onClose={() => setEditingIndex(null)}
+          onDelete={handleDeleteFromModal}
           onSubmit={handleUpdate}
+          productId={products[editingIndex].id}
           title="Editar produto"
         />
       )}
