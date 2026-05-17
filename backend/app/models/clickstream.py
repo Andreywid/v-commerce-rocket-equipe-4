@@ -7,7 +7,7 @@ class ClickstreamResumo(Base):
     __table_args__ = (UniqueConstraint("id_cliente", "data", name="uq_cliente_data"),)
 
     id = Column(Integer, primary_key=True, index=True)
-    id_cliente = Column(Integer, index=True)
+    id_cliente = Column(String, index=True)
     data = Column(Date)
 
     qtd_eventos = Column(Integer, default=0)

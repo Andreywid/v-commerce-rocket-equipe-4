@@ -5,11 +5,17 @@ from app.database import Base
 class Product(Base):
     __tablename__ = "gold_produto_performance"
 
-    id_produto = Column(Integer, primary_key=True, index=True)
-    nome_produto = Column(String)
+    id_produto = Column(String, primary_key=True, index=True)
+    nome_produto = Column(String, index=True)
+
     categoria = Column(String)
     preco_atual = Column(Float)
     ativo = Column(Boolean, default=True)
+    
+    # Novos campos para suporte ao CRUD e Frontend
+    estoque = Column(Integer, nullable=True)
+    descricao = Column(String, nullable=True)
+    imagem_url = Column(String, nullable=True)
 
     qtd_vendida_total = Column(Integer, default=0)
     qtd_vendida_30d = Column(Integer, default=0)

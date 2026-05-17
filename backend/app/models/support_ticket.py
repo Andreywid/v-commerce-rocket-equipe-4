@@ -5,10 +5,11 @@ from app.database import Base
 class SupportTicket(Base):
     __tablename__ = "gold_tickets"
 
-    id_ticket = Column(Integer, primary_key=True, index=True)
-    id_cliente = Column(Integer, index=True)
-    id_pedido = Column(Integer, nullable=True)
-    id_produto = Column(Integer, nullable=True, index=True)
+    id_ticket = Column(String, primary_key=True, index=True)
+    id_cliente = Column(String, index=True)
+    id_pedido = Column(String, nullable=True)
+    id_produto = Column(String, nullable=True)
+
 
     tipo_problema = Column(String)      # Entrega | Reembolso | Produto | Pagamento
     satisfacao_atendimento = Column(String)  # alta | media | baixa | sem_avaliacao
