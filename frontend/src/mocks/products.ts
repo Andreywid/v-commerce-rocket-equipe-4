@@ -123,6 +123,7 @@ export const emptyProductForm: ProductFormValues = {
   categories: ["Perfumaria"],
   price: "",
   stock: 0,
+  description: "",
   rating: "",
   ratingLabel: "Bom",
   sold: 0,
