@@ -30,10 +30,19 @@ MEMORY_CONVERSATIONAL_PREFIX = (
     "recente e registre a premissa na resposta.\n\n"
     "# REFINAMENTO SOMENTE TEMPORAL\n"
     "- Se a # PERGUNTA ATUAL for **apenas** uma janela ou intervalo de tempo (ex.: "
-    '"últimos 3 meses", "no último trimestre") e existir turno anterior com uma '
+    '"últimos 3 meses", "no último trimestre", "nos últimos 30 dias") e existir turno anterior com uma '
     "pergunta analítica completa (com ou sem SQL aprovado, inclusive com Erro), "
     "interprete como **a mesma intenção de negócio** aplicada a esse período. "
     "Use a pergunta (e interpretação, SQL, premissas) do turno anterior.\n"
+    "- **CRÍTICO:** MANTENHA A MESMA MÉTRICA E LÓGICA DO TURNO ANTERIOR.\n"
+    "  • Exemplo 1: Se pergunta anterior foi 'Quais regiões tiveram maior CRESCIMENTO de receita' "
+    "(primeira vs última mês), não mude para 'contagem de vendas' ou outra métrica.\n"
+    "  • Exemplo 2: Se pergunta anterior analisava 'TOP 5 produtos por faturamento', "
+    "não mude para 'quantidade de vendas' ou 'avaliação'.\n"
+    "  • Exemplo 3: Se pergunta anterior era 'total de clientes por segmento', "
+    "não mude para 'média de gasto' sem indicação explícita.\n"
+    "- PRESERVE TAMBÉM A PLURALIDADE: se era plural ('Quais', 'Todos'), retorne TODAS as entidades, "
+    "não apenas TOP 1.\n"
     "- Não retorne InvalidRequest dizendo que a frase atual está incompleta ou "
     "falta métrica: o contexto anterior fornece o tema.\n\n"
 )
@@ -59,6 +68,10 @@ FOLLOWUP_TEMPORAL_PIPELINE = (
     "interpretação; ignore que não haja SQL se o motivo foi falta de período) e "
     "incorpore o intervalo indicado pelo usuário (filtros em ano_mes ou data_pedido, "
     "conforme a tabela e o motor).\n"
+    "**MANDATÓRIO:** Use exatamente a MESMA MÉTRICA, LÓGICA e AGREGAÇÃO do turno anterior. "
+    "Não troque para outra métrica, contagem, ou tipo de análise.\n"
+    "**MANDATÓRIO:** Respeite pluralidade: se anterior era plural ('Quais...'), retorne "
+    "TODAS as entidades com ordem descrescente. NÃO use LIMIT 1.\n"
     "É **proibido** retornar InvalidRequest por a frase isolada parecer vaga.\n"
 )
 

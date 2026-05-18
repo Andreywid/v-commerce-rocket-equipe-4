@@ -145,7 +145,7 @@ GOLD_SCHEMA = {
             "origem": {
                 "descricao": "Canal de origem do cliente.",
                 "tipo": "enum",
-                "valores_validos": ["App", "Web", "Indicacao"]
+                "valores_validos": ["app", "web", "indicacao"]
             },
             "qtd_pedidos_total": {
                 "descricao": "Quantidade total de pedidos do cliente.",
@@ -228,7 +228,7 @@ GOLD_SCHEMA = {
             "canal_preferido": {
                 "descricao": "Canal mais utilizado pelo cliente.",
                 "tipo": "enum",
-                "valores_validos": ["Web", "Mobile", "App"]
+                "valores_validos": ["web", "mobile", "app"]
             },
             "segmento_ltv": {
                 "descricao": "Classificação do cliente por valor.",
@@ -681,12 +681,12 @@ GOLD_SCHEMA = {
             "canal_principal": {
                 "descricao": "Canal principal usado no dia.",
                 "tipo": "enum",
-                "valores_validos": ["Web", "Mobile", "App"]
+                "valores_validos": ["web", "mobile", "app"]
             },
             "dispositivo_principal": {
                 "descricao": "Dispositivo principal usado no dia.",
                 "tipo": "enum",
-                "valores_validos": ["Desktop", "Mobile", "Tablet"]
+                "valores_validos": ["desktop", "mobile", "tablet"]
             },
             "tempo_total_segundos": {
                 "descricao": "Tempo total de navegação em segundos.",
