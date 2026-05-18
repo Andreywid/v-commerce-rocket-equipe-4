@@ -97,7 +97,8 @@ GOLD_SCHEMA = {
             },
             "data_referencia_calculo": {
                 "descricao": "Data da última atualização do cálculo.",
-                "tipo": "data"
+                "tipo": "data",
+                "formato": "YYYY-MM-DD"
             }
         }
     },
@@ -111,12 +112,12 @@ GOLD_SCHEMA = {
             "Não use esta tabela para análises detalhadas de pedidos individuais.",
             "Para comportamento por dia, use gold_clickstream_resumo.",
             "Para avaliações individuais, use gold_avaliacoes.",
-            "Nordeste, Norte, Sul, Sudeste e Centro-Oeste são nomes de região: expanda para estado IN ('Estado',...) conforme o mapeamento de regiões do Brasil; não rejeite a pergunta só por usar o nome da região nem peça esclarecimento de granularidade geográfica quando a região puder ser inferida."
+            "Nordeste, Norte, Sul, Sudeste e Centro-Oeste são nomes de região: expanda para uf IN ('Estado',...) conforme o mapeamento de regiões do Brasil; não rejeite a pergunta só por usar o nome da região nem peça esclarecimento de granularidade geográfica quando a região puder ser inferida."
         ],
         "colunas": {
             "id_cliente": {
                 "descricao": "ID único do cliente.",
-                "tipo": "inteiro"
+                "tipo": "texto"
             },
             "nome": {
                 "descricao": "Nome completo do cliente.",
@@ -132,21 +133,29 @@ GOLD_SCHEMA = {
             },
             "data_cadastro": {
                 "descricao": "Data de cadastro do cliente.",
-                "tipo": "data"
+                "tipo": "data",
+                "formato": "YYYY-MM-DD"
             },
             "cidade": {
                 "descricao": "Cidade do cliente.",
                 "tipo": "texto"
             },
-            "estado": {
-                "descricao": "Nome completo do estado do cliente (Pernambuco, São Paulo, etc.). Se o usuário disser Nordeste, Sudeste, Sul, Norte ou Centro-Oeste, filtre com IN nos estados daquela região (ex.: Nordeste = Alagoas, Bahia, Ceará, etc.).",
+            "uf": {
+                "descricao": "Nome completo do estado do cliente, apesar do nome da coluna ser uf. Exemplos: Pernambuco, São Paulo, Bahia. Se o usuário disser Nordeste, Sudeste, Sul, Norte ou Centro-Oeste, filtre com IN nos estados daquela região.",
                 "tipo": "texto"
             },
+
             "origem": {
                 "descricao": "Canal de origem do cliente.",
                 "tipo": "enum",
-                "valores_validos": ["App", "Web", "Indicacao"]
+                "valores_validos": ["app", "web", "indicacao"]
             },
+
+            "maior_de_idade": {
+                "descricao": "Indica se o cliente é maior de idade.",
+                "tipo": "booleano"
+            },
+
             "qtd_pedidos_total": {
                 "descricao": "Quantidade total de pedidos do cliente.",
                 "tipo": "inteiro",
@@ -184,11 +193,13 @@ GOLD_SCHEMA = {
             },
             "data_primeiro_pedido": {
                 "descricao": "Data do primeiro pedido do cliente.",
-                "tipo": "data"
+                "tipo": "data",
+                "formato": "YYYY-MM-DD"
             },
             "data_ultimo_pedido": {
                 "descricao": "Data do último pedido do cliente.",
-                "tipo": "data"
+                "tipo": "data",
+                "formato": "YYYY-MM-DD"
             },
             "qtd_tickets_total": {
                 "descricao": "Total de tickets de suporte do cliente.",
@@ -228,7 +239,7 @@ GOLD_SCHEMA = {
             "canal_preferido": {
                 "descricao": "Canal mais utilizado pelo cliente.",
                 "tipo": "enum",
-                "valores_validos": ["Web", "Mobile", "App"]
+                "valores_validos": ["app", "mobile", "web"]
             },
             "segmento_ltv": {
                 "descricao": "Classificação do cliente por valor.",
@@ -245,7 +256,8 @@ GOLD_SCHEMA = {
             },
             "data_referencia_calculo": {
                 "descricao": "Data da última atualização do cálculo.",
-                "tipo": "data"
+                "tipo": "data",
+                "formato": "YYYY-MM-DD"
             }
         }
     },
@@ -267,7 +279,7 @@ GOLD_SCHEMA = {
         "colunas": {
             "id_produto": {
                 "descricao": "ID único do produto.",
-                "tipo": "inteiro"
+                "tipo": "texto"
             },
             "nome_produto": {
                 "descricao": "Nome do produto.",
@@ -358,11 +370,12 @@ GOLD_SCHEMA = {
             "classificacao": {
                 "descricao": "Classificação comercial do produto.",
                 "tipo": "enum",
-                "valores_validos": ["Top Vendedor", "Estável", "Problemático", "Encalhado"]
+                "valores_validos": ["Top Vendedor", "Estavel", "Problematico", "Encalhado"]
             },
             "data_referencia_calculo": {
                 "descricao": "Data da última atualização do cálculo.",
-                "tipo": "data"
+                "tipo": "data",
+                "formato": "YYYY-MM-DD"
             }
         }
     },
@@ -385,19 +398,20 @@ GOLD_SCHEMA = {
         "colunas": {
             "id_pedido": {
                 "descricao": "ID único do pedido.",
-                "tipo": "inteiro"
+                "tipo": "texto"
             },
             "id_cliente": {
                 "descricao": "ID do cliente relacionado ao pedido.",
-                "tipo": "inteiro"
+                "tipo": "texto"
             },
             "id_produto": {
                 "descricao": "ID do produto relacionado ao pedido.",
-                "tipo": "inteiro"
+                "tipo": "texto"
             },
             "data_pedido": {
                 "descricao": "Data do pedido.",
-                "tipo": "data"
+                "tipo": "data",
+                "formato": "YYYY-MM-DD"
             },
             "quantidade": {
                 "descricao": "Quantidade de unidades compradas.",
@@ -457,7 +471,7 @@ GOLD_SCHEMA = {
     "gold_tickets": {
         "descricao": "Tabela de chamados de suporte. Use para perguntas sobre problemas, SLA, tempo de resolução e qualidade do atendimento.",
         "granularidade": "Uma linha por ticket.",
-        "chave_primaria": ["id_ticket"],
+        "chave_primaria": ["ticket_id"],
         "chaves_estrangeiras": {
             "id_cliente": "gold_cliente_360.id_cliente",
             "id_produto": "gold_produto_performance.id_produto",
@@ -467,29 +481,32 @@ GOLD_SCHEMA = {
             "Use esta tabela para análise de suporte e problemas.",
             "Para tickets em aberto, filtre status_ticket = 'Aberto'.",
             "Para SLA estourado, filtre sla_estourado = true.",
-            "data_resolucao pode ser nula quando o ticket estiver aberto."
+            "data_resolucao pode ser nula quando o ticket estiver aberto.",
+            "Para analisar o tipo de problema, use a coluna tipo_problema_padronizado.",
+            "data_abertura e data_resolucao são campos datetime no formato YYYY-MM-DDTHH:MM:SS.mmmZ.",
+            "Para filtros, agrupamentos ou ordenações por dia usando data_abertura ou data_resolucao, converta o datetime para data conforme o dialeto do banco: em SQLite use date(data_abertura) e date(data_resolucao); em PostgreSQL use CAST(data_abertura AS DATE) e CAST(data_resolucao AS DATE)."
         ],
         "colunas": {
-            "id_ticket": {
+            "ticket_id": {
                 "descricao": "ID único do ticket.",
-                "tipo": "inteiro"
+                "tipo": "texto"
             },
             "id_cliente": {
                 "descricao": "ID do cliente relacionado ao ticket.",
-                "tipo": "inteiro"
+                "tipo": "texto"
             },
             "id_pedido": {
                 "descricao": "ID do pedido relacionado ao ticket.",
-                "tipo": "inteiro"
+                "tipo": "texto"
             },
             "id_produto": {
                 "descricao": "ID do produto relacionado ao ticket.",
-                "tipo": "inteiro"
+                "tipo": "texto"
             },
-            "tipo_problema": {
-                "descricao": "Tipo de problema reportado.",
+            "tipo_problema_padronizado": {
+                "descricao": "Tipo de problema reportado, já padronizado pela engenharia de dados.",
                 "tipo": "enum",
-                "valores_validos": ["Entrega", "Reembolso", "Produto", "Pagamento"]
+                "valores_validos": ["Entrega", "Reembolso", "Produto", "Pagamento", "Outros"]
             },
             "satisfacao_atendimento": {
                 "descricao": "Satisfação do cliente com o atendimento.",
@@ -497,12 +514,14 @@ GOLD_SCHEMA = {
                 "valores_validos": ["alta", "media", "baixa", "sem_avaliacao"]
             },
             "data_abertura": {
-                "descricao": "Data de abertura do ticket.",
-                "tipo": "data"
+                "descricao": "Data e hora de abertura do ticket.",
+                "tipo": "datetime",
+                "formato": "YYYY-MM-DDTHH:MM:SS.mmmZ"
             },
             "data_resolucao": {
-                "descricao": "Data de resolução do ticket. Pode ser nula se estiver aberto.",
-                "tipo": "data"
+                "descricao": "Data e hora de resolução do ticket. Pode ser nula se estiver aberto.",
+                "tipo": "datetime",
+                "formato": "YYYY-MM-DDTHH:MM:SS.mmmZ"
             },
             "tempo_resolucao_horas": {
                 "descricao": "Tempo de resolução em horas.",
@@ -535,9 +554,16 @@ GOLD_SCHEMA = {
                 "descricao": "Nome do produto, campo denormalizado.",
                 "tipo": "texto"
             },
+
+            "maior_de_idade": {
+                "descricao": "Indica se o cliente relacionado ao ticket é maior de idade.",
+                "tipo": "booleano"
+            },
+
             "data_referencia_calculo": {
                 "descricao": "Data da última atualização do cálculo.",
-                "tipo": "data"
+                "tipo": "data",
+                "formato": "YYYY-MM-DD" 
             }
         }
     },
@@ -555,24 +581,25 @@ GOLD_SCHEMA = {
             "Use esta tabela para análises de feedback individual.",
             "Para média de nota de produto, use AVG(nota_produto).",
             "Para média de NPS, use AVG(nota_nps).",
-            "Não invente sentimento além dos valores válidos."
+            "Não invente sentimento além dos valores válidos.",
+            "data_avaliacao está no formato DD/MM/YYYY. Para filtros, agrupamentos ou ordenações por data, converta para data conforme o dialeto do banco: em SQLite use date(substr(data_avaliacao, 7, 4) || '-' || substr(data_avaliacao, 4, 2) || '-' || substr(data_avaliacao, 1, 2)); em PostgreSQL use TO_DATE(data_avaliacao, 'DD/MM/YYYY')."
         ],
         "colunas": {
             "id_avaliacao": {
                 "descricao": "ID único da avaliação.",
-                "tipo": "inteiro"
+                "tipo": "texto"
             },
             "id_cliente": {
                 "descricao": "ID do cliente que avaliou.",
-                "tipo": "inteiro"
+                "tipo": "texto"
             },
             "id_pedido": {
                 "descricao": "ID do pedido relacionado à avaliação.",
-                "tipo": "inteiro"
+                "tipo": "texto"
             },
             "id_produto": {
                 "descricao": "ID do produto avaliado.",
-                "tipo": "inteiro"
+                "tipo": "texto"
             },
             "nota_produto": {
                 "descricao": "Nota do produto, de 1 a 5.",
@@ -598,8 +625,9 @@ GOLD_SCHEMA = {
                 "valores_validos": ["positivo", "neutro", "negativo"]
             },
             "data_avaliacao": {
-                "descricao": "Data da avaliação.",
-                "tipo": "data"
+                "descricao": "Data da avaliação. No CSV atual está no formato DD/MM/YYYY. Para filtros e ordenações por data, converter para formato de data antes de comparar quando necessário.",
+                "tipo": "data",
+                "formato": "DD/MM/YYYY"
             },
             "nome_produto": {
                 "descricao": "Nome do produto, campo denormalizado.",
@@ -627,16 +655,20 @@ GOLD_SCHEMA = {
             "Use esta tabela para comportamento digital diário.",
             "Para comportamento consolidado do cliente, use gold_cliente_360.",
             "Para abandono de carrinho, use qtd_abandon_cart.",
-            "Para adição ao carrinho, use qtd_add_to_cart."
+            "Para adição ao carrinho, use qtd_add_to_cart.",
+            "Para buscas, pesquisas ou termos pesquisados no comportamento digital, use qtd_search.",
+            "A coluna data está no formato DD/MM/YYYY. Para filtros, agrupamentos ou ordenações por data, converta para data conforme o dialeto do banco: em SQLite use date(substr(data, 7, 4) || '-' || substr(data, 4, 2) || '-' || substr(data, 1, 2)); em PostgreSQL use TO_DATE(data, 'DD/MM/YYYY').",
+            "data_referencia_calculo é um campo datetime no formato YYYY-MM-DDTHH:MM:SS.mmmZ. Para filtros por dia, converta conforme o dialeto do banco: em SQLite use date(data_referencia_calculo); em PostgreSQL use CAST(data_referencia_calculo AS DATE)."
         ],
         "colunas": {
             "id_cliente": {
                 "descricao": "ID do cliente.",
-                "tipo": "inteiro"
+                "tipo": "texto"
             },
             "data": {
-                "descricao": "Data da navegação.",
-                "tipo": "data"
+                "descricao": "Data da navegação. No CSV atual está no formato DD/MM/YYYY. Para filtros e ordenações por data, converter para formato de data antes de comparar quando necessário.",
+                "tipo": "data",
+                "formato": "DD/MM/YYYY"
             },
             "qtd_eventos": {
                 "descricao": "Quantidade total de eventos no dia.",
@@ -681,12 +713,12 @@ GOLD_SCHEMA = {
             "canal_principal": {
                 "descricao": "Canal principal usado no dia.",
                 "tipo": "enum",
-                "valores_validos": ["Web", "Mobile", "App"]
+                "valores_validos": ["app", "mobile", "web"]
             },
             "dispositivo_principal": {
                 "descricao": "Dispositivo principal usado no dia.",
                 "tipo": "enum",
-                "valores_validos": ["Desktop", "Mobile", "Tablet"]
+                "valores_validos": ["computador", "celular", "tablet"]
             },
             "tempo_total_segundos": {
                 "descricao": "Tempo total de navegação em segundos.",
@@ -694,8 +726,9 @@ GOLD_SCHEMA = {
                 "agregacao": "SUM"
             },
             "data_referencia_calculo": {
-                "descricao": "Data da última atualização do cálculo.",
-                "tipo": "data"
+                "descricao": "Data e hora da última atualização do cálculo.",
+                "tipo": "datetime",
+                "formato": "YYYY-MM-DDTHH:MM:SS.mmmZ"
             }
         }
     }
@@ -734,6 +767,9 @@ def get_schema_prompt():
 
             if "tipo" in dados:
                 prompt += f" Tipo: {dados['tipo']}."
+
+            if "formato" in dados:
+                prompt += f" Formato: {dados['formato']}."    
 
             if "agregacao" in dados:
                 prompt += f" Agregação recomendada: {dados['agregacao']}."

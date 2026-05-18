@@ -90,12 +90,19 @@ def mask_phone(value: Any) -> Any:
     if value is None:
         return None
 
-    digits = re.sub(r"\D", "", str(value))
+    raw = str(value).strip()
+    digits = re.sub(r"\D", "", raw)
 
     if len(digits) < 2:
+        if raw.startswith("+"):
+            return "+** (**)*******"
         return "(**)*******"
 
     last_two = digits[-2:]
+
+    if raw.startswith("+"):
+        return f"+** (**)*******{last_two}"
+
     return f"(**)*******{last_two}"
 
 
@@ -207,6 +214,10 @@ def mask_name(value: Any) -> Any:
     parts = name.split()
 
     first_name = parts[0]
+
+    if len(parts) == 1:
+        return first_name
+
     second_initial = parts[1][0]
 
     return f"{first_name} {second_initial}."
@@ -281,6 +292,7 @@ def mask_sensitive_fields_in_rows(
         masked_rows.append(masked_row)
 
     return masked_rows
+
 
 def mask_cpf_in_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return mask_sensitive_fields_in_rows(rows)
