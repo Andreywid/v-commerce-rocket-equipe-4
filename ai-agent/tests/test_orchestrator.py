@@ -141,6 +141,38 @@ class AgentOrchestratorTest(unittest.IsolatedAsyncioTestCase):
         self.assertIn("Motivo informado pelo agente", result.explanation)
         self.assertIsNone(executor.executed_sql)
 
+    async def test_recovers_growth_without_period_invalid_request_once(self) -> None:
+        sql_client = FakeSQLClientSequence(
+            [
+                InvalidRequest(
+                    error_message=(
+                        "O período para calcular o crescimento não foi especificado."
+                    ),
+                ),
+                _success("SELECT ano_mes FROM gold_vendas_kpis LIMIT 100"),
+            ],
+        )
+        executor = FakeExecutor()
+        orchestrator = AgentOrchestrator(
+            sql_client=sql_client,
+            executor=executor,
+            explainer=FakeExplainer(),
+            debug=False,
+        )
+
+        result = await orchestrator.ask(
+            "Qual região teve maior crescimento de receita?",
+            Deps(conn=object()),
+        )
+
+        self.assertIsNone(result.error)
+        self.assertEqual(sql_client.call_count, 2)
+        self.assertIn(
+            "RESOLUÇÃO OBRIGATÓRIA (CRESCIMENTO SEM PERÍODO)",
+            sql_client.questions_seen[1],
+        )
+        self.assertEqual(result.sql, executor.executed_sql)
+
     async def test_rejected_sql_short_circuits_execution(self) -> None:
         sql_client = FakeSQLClient(_success("SELECT * FROM silver_pedidos"))
         executor = FakeExecutor()

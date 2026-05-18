@@ -15,7 +15,7 @@ from app.api.dependencies import (
 from app.database.mock_gold import ensure_mock_sqlite
 from app.memory.conversation_store import (
     InMemoryConversationStore,
-    build_question_with_memory,
+    build_question_with_memory_and_context,
 )
 from app.models.api import AskRequest, AskResponse, HealthResponse
 
@@ -47,16 +47,19 @@ async def ask(
         tenant_id=request.tenant_id,
         user_id=request.user_id,
     )
-    question_for_agent = build_question_with_memory(
-        request.question,
-        previous_turns,
-    )
 
     conn: sqlite3.Connection | None = None
     try:
         if request.execute:
             mock_path = ensure_mock_sqlite()
             conn = sqlite3.connect(mock_path)
+
+        # Usa a versão enriquecida que extrai dados concretos dos turnos anteriores
+        question_for_agent = build_question_with_memory_and_context(
+            request.question,
+            previous_turns,
+            conn=conn,
+        )
 
         deps = deps_from_request(request, conn=conn)
         deps.conversation_id = conversation_id

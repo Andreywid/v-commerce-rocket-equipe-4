@@ -22,10 +22,22 @@ class AgentTextToSQLClientTest(unittest.TestCase):
         self.assertIn("maior crescimento de receita", examples_text)
         self.assertIn("gold_pedidos_enriquecidos", examples_text)
         self.assertIn("estado_cliente IN", examples_text)
+        self.assertIn("DATE_TRUNC", examples_text.upper())
+        self.assertIn("ELSE NULL", examples_text)
+        self.assertIn("regiao IS NOT NULL", examples_text)
+        self.assertNotIn("Indefinida", examples_text)
+        self.assertNotIn("STRFTIME", examples_text.upper())
+        self.assertNotIn("date('now'", examples_text)
 
     def test_select_examples_for_sqlite_avoid_postgres_only_syntax(self) -> None:
         examples_text = "\n".join(AgentTextToSQLClient._select_examples("sqlite"))
 
+        self.assertIn("maior crescimento de receita", examples_text)
+        self.assertIn("strftime('%Y-%m', data_pedido)", examples_text)
+        self.assertIn("date('now', 'start of month', '-12 months')", examples_text)
+        self.assertIn("ELSE NULL", examples_text)
+        self.assertIn("regiao IS NOT NULL", examples_text)
+        self.assertNotIn("Indefinida", examples_text)
         self.assertNotIn("DATE_TRUNC", examples_text.upper())
         self.assertNotIn("INTERVAL", examples_text.upper())
         self.assertNotIn("ILIKE", examples_text.upper())

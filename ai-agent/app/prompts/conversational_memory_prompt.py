@@ -1,6 +1,7 @@
 """Texto de memória conversacional prefixado à pergunta no fluxo Text-to-SQL."""
 
 import re
+import unicodedata
 
 MEMORY_CONVERSATIONAL_PREFIX = (
     "# CONTEXTO CONVERSACIONAL SEGURO\n"
@@ -61,6 +62,32 @@ FOLLOWUP_TEMPORAL_PIPELINE = (
     "É **proibido** retornar InvalidRequest por a frase isolada parecer vaga.\n"
 )
 
+FOLLOWUP_IMPLICIT_CONTEXT_OPERATION_PIPELINE = (
+    "\n\n"
+    "# RESOLUÇÃO OBRIGATÓRIA (OPERAÇÃO SOBRE RESULTADOS ANTERIORES)\n"
+    "A pergunta atual foi classificada como follow-up elíptico: ela pede uma métrica, "
+    "ranking, comparação ou detalhe sobre o conjunto listado no SQL aprovado mais "
+    "recente, mesmo sem usar palavras como \"desses\".\n"
+    "Use o conjunto anterior como escopo obrigatório. Se houver nomes/IDs no contexto "
+    "ou na instrução estruturada, filtre por eles com IN antes de calcular a nova "
+    "métrica. Preserve filtros temporais e de status do turno anterior quando ainda "
+    "fizerem parte da intenção.\n"
+    "Mapeamentos seguros comuns:\n"
+    "- \"melhor/pior avaliado\", \"maior/menor nota\": para produtos, use AVG(nota_produto) "
+    "em gold_avaliacoes filtrando os produtos anteriores; para clientes, use média de "
+    "nota/NPS quando existir no schema.\n"
+    "- \"vendeu mais\", \"mais vendido\", \"maior quantidade\": use contagem de pedidos "
+    "ou SUM(quantidade) conforme a granularidade, com status = 'Aprovado' para pedidos.\n"
+    "- \"maior receita/faturamento/valor\", \"menor receita\": use SUM(valor_total) "
+    "em pedidos aprovados ou SUM(receita_bruta) em KPIs agregados.\n"
+    "- \"mais tickets\", \"tickets críticos/abertos\", \"mais problemas\": use gold_tickets "
+    "com agregação por entidade anterior quando houver chave/nome compatível.\n"
+    "- \"mais recente/último/primeiro\": ordene pela coluna de data adequada do mesmo "
+    "domínio, mantendo o filtro do conjunto anterior.\n"
+    "É **proibido** retornar InvalidRequest alegando ambiguidade quando o critério "
+    "acima puder ser resolvido pelo contexto anterior e pelo schema.\n"
+)
+
 
 def _looks_demonstrative_followup(question: str) -> bool:
     """Heurística simples PT-BR para perguntas que referenciam o turno anterior."""
@@ -73,6 +100,10 @@ def _looks_demonstrative_followup(question: str) -> bool:
         " essa ",
         "esses ",
         "essas ",
+        " dos dois",
+        " das duas",
+        " desses dois",
+        " dessas duas",
         "aqueles",
         "aquela",
         "aquele",
@@ -99,16 +130,143 @@ def _looks_temporal_only_followup(question: str) -> bool:
     if len(s) > 120:
         return False
     t = s.casefold()
+    core_window = r"[uú]?lt(?:i)?m(?:o)?s?"
     patterns = (
-        r"^[uú]?ltimos?\s+\d+\s*m(?:eses|ês|es)?\.?\s*$",
-        r"^(?:n[oa]s?\s+)?[uú]?ltimos?\s+\d+\s*m(?:eses|ês|es)?\.?\s*$",
-        r"^(?:para\s+)?(?:n[oa]s?\s+)?[uú]?ltimos?\s+\d+\s*m(?:eses|ês|es)?\.?\s*$",
-        r"^[uú]?ltimo\s+trimestre\.?\s*$",
-        r"^[uú]?ltimos?\s+\d+\s*dias?\.?\s*$",
-        r"^[uú]?ltimos?\s+\d+\s*semanas?\.?\s*$",
-        r"^[uú]?ltimos?\s+\d+\s*anos?\.?\s*$",
+        rf"^{core_window}\s+\d+\s*m(?:eses|ês|es)?\.?\s*$",
+        rf"^(?:n[oa]s?\s+)?{core_window}\s+\d+\s*m(?:eses|ês|es)?\.?\s*$",
+        rf"^(?:para\s+)?(?:(?:n[oa]s?|[oa]s)\s+)?{core_window}\s+\d+\s*m(?:eses|ês|es)?\.?\s*$",
+        rf"^(?:para\s+)?(?:(?:n[oa]s?|[oa]s)\s+)?[uú]?lt(?:i)?m(?:o)?\s+trimestre\.?\s*$",
+        rf"^(?:para\s+)?(?:(?:n[oa]s?|[oa]s)\s+)?{core_window}\s+\d+\s*dias?\.?\s*$",
+        rf"^(?:para\s+)?(?:(?:n[oa]s?|[oa]s)\s+)?{core_window}\s+\d+\s*semanas?\.?\s*$",
+        rf"^(?:para\s+)?(?:(?:n[oa]s?|[oa]s)\s+)?{core_window}\s+\d+\s*anos?\.?\s*$",
     )
     return any(re.fullmatch(p, t) for p in patterns)
+
+
+def _normalize_text(text: str) -> str:
+    normalized = unicodedata.normalize("NFKD", text.casefold())
+    return "".join(
+        character for character in normalized if not unicodedata.combining(character)
+    )
+
+
+def _looks_implicit_context_operation_followup(question: str, context: str) -> bool:
+    """Detecta perguntas curtas como 'Qual vendeu mais?' após lista anterior."""
+
+    if not context.strip() or "SQL aprovado:" not in context:
+        return False
+
+    normalized_question = _normalize_text(question).strip()
+    if len(normalized_question) > 120:
+        return False
+
+    normalized_context = _normalize_text(context)
+    has_previous_entity_context = any(
+        token in normalized_context
+        for token in (
+            "id_produto",
+            "nome_produto",
+            "produto",
+            "id_cliente",
+            "nome_cliente",
+            "cliente",
+            "regiao",
+            "estado",
+            "cidade",
+            "id_ticket",
+            "ticket",
+            "categoria",
+            "marca",
+        )
+    )
+    if not has_previous_entity_context:
+        return False
+
+    explicit_reference_terms = (
+        "produto",
+        "produtos",
+        "protudo",
+        "protudos",
+        "cliente",
+        "clientes",
+        "regiao",
+        "regioes",
+        "estado",
+        "estados",
+        "cidade",
+        "cidades",
+        "ticket",
+        "tickets",
+        "pedido",
+        "pedidos",
+    )
+    ranking_terms = (
+        "melhor",
+        "pior",
+        "maior",
+        "menor",
+        "mais",
+        "menos",
+        "top",
+        "primeiro",
+        "ultimo",
+        "recente",
+        "antigo",
+    )
+    metric_terms = (
+        "avaliado",
+        "avaliada",
+        "avaliacao",
+        "nota",
+        "nps",
+        "vendeu",
+        "comprou",
+        "comprar",
+        "compra",
+        "compras",
+        "vendido",
+        "venda",
+        "vendas",
+        "receita",
+        "faturamento",
+        "valor",
+        "ticket medio",
+        "pedido",
+        "pedidos",
+        "quantidade",
+        "qtd",
+        "volume",
+        "preco",
+        "caro",
+        "barato",
+        "reembolso",
+        "recusa",
+        "aprovacao",
+        "conversao",
+        "problema",
+        "problemas",
+        "suporte",
+        "chamado",
+        "tickets",
+        "critico",
+        "aberto",
+        "risco",
+        "ativo",
+        "inativo",
+        "data",
+        "recente",
+        "antigo",
+        "primeiro",
+        "ultimo",
+    )
+
+    return (
+        any(term in normalized_question for term in metric_terms)
+        and (
+            any(term in normalized_question for term in ranking_terms)
+            or any(term in normalized_question for term in explicit_reference_terms)
+        )
+    )
 
 
 def format_question_with_conversational_memory(*, context: str, question: str) -> str:
@@ -118,7 +276,11 @@ def format_question_with_conversational_memory(*, context: str, question: str) -
     if _looks_demonstrative_followup(current):
         current = current + FOLLOWUP_DEMONSTRATIVE_PIPELINE
     elif context.strip() and _looks_temporal_only_followup(current):
+        # Refinamento temporal pode reaproveitar a intenção analítica mesmo quando
+        # o turno anterior não teve SQL aprovado (ex.: erro por falta de período).
         current = current + FOLLOWUP_TEMPORAL_PIPELINE
+    elif _looks_implicit_context_operation_followup(current, context):
+        current = current + FOLLOWUP_IMPLICIT_CONTEXT_OPERATION_PIPELINE
 
     return (
         f"{MEMORY_CONVERSATIONAL_PREFIX}"

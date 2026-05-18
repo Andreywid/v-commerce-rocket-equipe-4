@@ -40,6 +40,23 @@ class SqlPromptBuilderTest(unittest.TestCase):
         self.assertIn("TARGET DATABASE ENGINE", text)
         self.assertIn("PostgreSQL", text)
 
+    def test_prompt_defines_default_period_for_growth_questions(self) -> None:
+        text = build_prompt(
+            question="Qual região teve maior crescimento de receita?",
+            schema="CREATE TABLE t (x TEXT);",
+            examples=[],
+            values=[],
+            current_date=datetime(2026, 5, 12),
+            dialect="postgresql",
+        )
+
+        self.assertIn("DEFAULT RESOLUTION RULES", text)
+        self.assertIn("não rejeite por falta de período", text)
+        self.assertIn("últimos 12 meses completos", text)
+        self.assertIn("estado_cliente/estado com CASE", text)
+        self.assertIn("filtre regiao IS NOT NULL", text)
+        self.assertIn('não retorne "Indefinida"', text)
+
 
 if __name__ == "__main__":
     unittest.main()

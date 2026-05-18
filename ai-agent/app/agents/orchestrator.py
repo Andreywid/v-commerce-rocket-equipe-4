@@ -8,6 +8,7 @@ o SQL falho (até max_regenerations_on_exec_error tentativas adicionais).
 from __future__ import annotations
 
 import time
+import unicodedata
 from typing import TYPE_CHECKING
 
 from app.database.executor import QueryExecutor
@@ -129,6 +130,7 @@ class AgentOrchestrator:
         generated: Success | None = None
         rows: list[dict] = []
         execution_skipped = False
+        invalid_request_recovery_used = False
 
         for attempt_index in range(self._max_regenerations_on_exec_error + 1):
             if attempt_index > 0 and prev_retry_error is not None:
@@ -157,8 +159,33 @@ class AgentOrchestrator:
                 return generated
 
             if isinstance(generated, InvalidRequest):
-                return self._invalid_request_result(generated, flow_start)
+                if (
+                    not invalid_request_recovery_used
+                    and self._should_retry_invalid_request_for_default_growth_period(
+                        question=question,
+                        error_message=generated.error_message,
+                    )
+                ):
+                    invalid_request_recovery_used = True
+                    self._trace(
+                        "recuperando InvalidRequest de crescimento sem período",
+                        flow_start,
+                    )
+                    generated = await self._generate_sql(
+                        self._default_growth_period_recovery_prompt(
+                            question=question,
+                            error_message=generated.error_message,
+                        ),
+                        deps,
+                    )
+                    if isinstance(generated, OrchestratorResult):
+                        return generated
+                    if isinstance(generated, InvalidRequest):
+                        return self._invalid_request_result(generated, flow_start)
+                else:
+                    return self._invalid_request_result(generated, flow_start)
 
+            assert isinstance(generated, Success)
             validated = self._validate_generated_sql(generated)
             if isinstance(validated, OrchestratorResult):
                 prev_retry_error = validated
@@ -221,6 +248,66 @@ class AgentOrchestrator:
             )
 
         return None
+
+    @staticmethod
+    def _normalize_text(text: str) -> str:
+        """Normaliza texto curto para heurísticas determinísticas."""
+
+        normalized = unicodedata.normalize("NFKD", text or "")
+        normalized = "".join(
+            character for character in normalized if not unicodedata.combining(character)
+        )
+        return normalized.casefold()
+
+    @classmethod
+    def _should_retry_invalid_request_for_default_growth_period(
+        cls,
+        *,
+        question: str,
+        error_message: str,
+    ) -> bool:
+        """Recupera o caso em que o LLM ignora a regra de período padrão."""
+
+        normalized_question = cls._normalize_text(question)
+        normalized_error = cls._normalize_text(error_message)
+        growth_terms = (
+            "crescimento",
+            "variacao",
+            "evolucao",
+            "maior aumento",
+            "maior queda",
+        )
+        metric_terms = ("receita", "faturamento", "kpi", "vendas", "pedidos")
+
+        return (
+            "periodo" in normalized_error
+            and any(term in normalized_question for term in growth_terms)
+            and any(term in normalized_question for term in metric_terms)
+        )
+
+    @staticmethod
+    def _default_growth_period_recovery_prompt(
+        *,
+        question: str,
+        error_message: str,
+    ) -> str:
+        """Reforça a resolução padrão para crescimento sem período explícito."""
+
+        return (
+            "# CORREÇÃO NECESSÁRIA\n"
+            "A tentativa anterior retornou InvalidRequest, mas isso viola as regras "
+            "do agente para crescimento/variação sem período explícito.\n\n"
+            f"Pergunta original: {question}\n"
+            f"Erro anterior: {error_message}\n\n"
+            "# RESOLUÇÃO OBRIGATÓRIA (CRESCIMENTO SEM PERÍODO)\n"
+            "Não retorne InvalidRequest por falta de período. Assuma os últimos 12 "
+            "meses completos anteriores ao mês corrente informado no prompt como "
+            "janela padrão e registre essa premissa em assumptions. Se a pergunta "
+            "for por região, derive macro-região brasileira a partir de estado_cliente "
+            "ou estado com CASE/IN, use ELSE NULL para valores que não são estados "
+            "válidos, filtre regiao IS NOT NULL e compare a receita do primeiro mês "
+            "contra a do último mês da janela. Gere apenas SELECT seguro."
+        )
 
     async def _generate_sql(
         self,

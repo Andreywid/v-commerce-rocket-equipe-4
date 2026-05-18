@@ -67,7 +67,12 @@ class AgentTextToSQLClient:
                 if not any(token in example.upper() for token in blocked_tokens)
             ][:2]
 
-        return SQL_EXAMPLES[:2]
+        blocked_tokens = ("STRFTIME", "DATE('NOW'")
+        return [
+            example
+            for example in SQL_EXAMPLES
+            if not any(token in example.upper() for token in blocked_tokens)
+        ][:2]
 
     def generate_sql(
         self,

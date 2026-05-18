@@ -27,13 +27,24 @@ REGRAS DE NEGÓCIO (SCHEMA GOLD):
    - Use colunas de data reais como 'data_pedido', 'data_abertura', 'data_avaliacao' e 'data' quando a consulta for diária ou detalhada.
    - Para intervalos de datas em PostgreSQL, prefira intervalo fechado-aberto:
      data >= DATE '2026-04-01' AND data < DATE '2026-05-01'.
-   - "Último trimestre" (trimestre civil ou móvel): interprete como os três meses completos imediatamente anteriores ao mês da data corrente do prompt, salvo o usuário fixar datas; use data_pedido ou ano_mes conforme a granularidade da tabela.
+   - "Último mês" significa o mês completo imediatamente anterior ao mês atual.
+     Em PostgreSQL, use:
+     data >= DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '1 month'
+     AND data < DATE_TRUNC('month', CURRENT_DATE).
+     Em SQLite, use:
+     data >= date('now', 'start of month', '-1 month')
+     AND data < date('now', 'start of month').
+    - "Último trimestre" (trimestre civil ou móvel): interprete como os três meses completos imediatamente anteriores ao mês da data corrente do prompt, salvo o usuário fixar datas; use data_pedido ou ano_mes conforme a granularidade da tabela.
+    - Se a tabela não tem coluna de data e possui métricas por janela (ex.: gold_produto_performance), interprete "último mês" como últimos 30 dias e use colunas *_30d; para "últimos 90 dias", use *_90d; use *_total apenas para histórico/total.
 
 2. FATURAMENTO:
    - Para análises mensais e agregadas, prefira 'receita_bruta' da tabela gold_vendas_kpis.
    - Para análises detalhadas por pedido, produto, categoria, cliente ou método de pagamento, use 'valor_total' da gold_pedidos_enriquecidos.
+  - Expressões como "número de vendas", "quantidade de vendas", "maior volume de vendas" e "mais vendido" se referem à contagem de pedidos/vendas, não à receita.
+  - Quando a pergunta pedir "maior número de vendas" sem outra métrica explícita, use a contagem de pedidos no recorte temporal informado.
    - Para receita por região, use gold_pedidos_enriquecidos com status = 'Aprovado' e agrupe
-     estado_cliente em macro-regiões por CASE.
+     estado_cliente em macro-regiões por CASE; valores que não forem nomes de estados
+     válidos devem virar NULL e ser excluídos do ranking (não use "Indefinida" como região vencedora).
    - Quando usar gold_pedidos_enriquecidos para faturamento, filtre status = 'Aprovado', salvo se o usuário pedir outro status.
 
 3. MÉDIAS E TAXAS:
@@ -70,16 +81,22 @@ REGRAS DE NEGÓCIO (SCHEMA GOLD):
    - Sentimentos válidos: 'positivo', 'neutro', 'negativo'.
 
 6. LOCALIZAÇÃO (UF E REGIÕES):
+   - Sempre que citar regiões, estados ou cidades, use os campos e valores do schema.
+   - Use os campos de estado por extenso e cidade conforme o schema; não invente nomes, códigos ou siglas.
+   - Trate sempre regiões como conjuntos de estados por extenso, mesmo que o usuário não use o nome completo; por exemplo, "nordeste" deve ser traduzido para filtro com IN (...) nos estados correspondentes.
+   - Se a pergunta pedir "região" sem especificar o nome exato, assuma macro-região brasileira derivada de estado_cliente ou estado por CASE + IN nos estados correspondentes; não retorne InvalidRequest apenas porque a palavra "região" não aparece como coluna literal no schema.
+   - Ao derivar macro-região com CASE, use ELSE NULL e filtre regiao IS NOT NULL antes de ranquear, comparar ou ordenar; não retorne "Indefinida" como resultado analítico.
    - As colunas de estado (ex.: estado em gold_cliente_360, estado_cliente em gold_pedidos_enriquecidos)
-     guardam sigla UF com 2 letras: 'SP', 'PE', 'RJ', etc.
-   - Quando o usuário citar uma macro-região do Brasil, traduza para filtro com IN (...) nas siglas;
+     guardam o nome do estado por extenso; use o nome completo exatamente como aparece no schema.
+   - Quando o usuário citar uma macro-região do Brasil, traduza para filtro com IN (...) nos nomes dos estados;
      não retorne InvalidRequest apenas porque ele não digitou UFs.
    - Mapeamento usual (IBGE):
-     - Nordeste: ('AL','BA','CE','MA','PB','PE','PI','RN','SE')
-     - Norte: ('AC','AP','AM','PA','RO','RR','TO')
-     - Centro-Oeste: ('DF','GO','MT','MS')
-     - Sudeste: ('ES','MG','RJ','SP')
-     - Sul: ('PR','RS','SC')
+     - Nordeste: ('Alagoas','Bahia','Ceará','Maranhão','Paraíba','Pernambuco','Piauí','Rio Grande do Norte','Sergipe')
+     - Norte: ('Acre','Amapá','Amazonas','Pará','Rondônia','Roraima','Tocantins')
+     - Centro-Oeste: ('Distrito Federal','Goiás','Mato Grosso','Mato Grosso do Sul')
+     - Sudeste: ('Espírito Santo','Minas Gerais','Rio de Janeiro','São Paulo')
+     - Sul: ('Paraná','Rio Grande do Sul','Santa Catarina')
+   - Use os nomes dos estados exatamente como aparecem no schema e os nomes das cidades conforme o schema.
    - Cidades: use o nome em texto, por exemplo 'Recife' ou LIKE, conforme a pergunta.
 
 7. JOINS:
@@ -101,9 +118,9 @@ REGRAS DE NEGÓCIO (SCHEMA GOLD):
    - Expressões como "último ano", "ultimo ano", "últimos 12 meses" e "últimos 3 meses"
      são período explícito. Nunca retorne InvalidRequest alegando falta de período quando
      uma dessas expressões estiver presente; converta para filtro relativo à # CURRENT DATE.
-   - Para "qual região teve o maior crescimento de receita no último ano", use
+   - Para "qual região teve o maior crescimento de receita no último ano" ou perguntas equivalentes sobre região, use
      gold_pedidos_enriquecidos, status = 'Aprovado', agrupe estado_cliente em macro-região
-     e compare a receita do primeiro mês contra a do último mês dentro da janela.
+     por CASE/IN nos estados por extenso, filtre regiao IS NOT NULL e compare a receita do primeiro mês contra o do último mês dentro da janela.
    - Para perguntas em que não haja interpretação segura nem com data corrente nem com
      o schema, retorne InvalidRequest ou peça esclarecimento.
 

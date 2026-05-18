@@ -208,6 +208,136 @@ class InMemoryConversationStoreTest(unittest.TestCase):
         self.assertIn("RESOLUÇÃO OBRIGATÓRIA (PERÍODO)", prompt)
         self.assertIn("maior crescimento", prompt)
 
+    def test_build_question_with_memory_temporal_pipeline_with_prefix(self) -> None:
+        store = InMemoryConversationStore()
+        store.append_result(
+            conversation_id="conv-1",
+            tenant_id="tenant-1",
+            user_id="user-1",
+            question="qual região teve o maior crescimento de receita",
+            result=OrchestratorResult(
+                explanation="x",
+                error="ambígua",
+                error_kind="invalid_request",
+            ),
+        )
+        turns = store.list_turns(
+            conversation_id="conv-1",
+            tenant_id="tenant-1",
+            user_id="user-1",
+        )
+
+        prompt = build_question_with_memory("nos ultimos 30 dias", turns)
+        self.assertIn("RESOLUÇÃO OBRIGATÓRIA (PERÍODO)", prompt)
+        self.assertIn("maior crescimento", prompt)
+
+    def test_build_question_with_memory_temporal_pipeline_with_article_prefix(self) -> None:
+        store = InMemoryConversationStore()
+        store.append_result(
+            conversation_id="conv-1",
+            tenant_id="tenant-1",
+            user_id="user-1",
+            question="qual região teve o maior crescimento de receita",
+            result=OrchestratorResult(
+                explanation="x",
+                error="período não especificado",
+                error_kind="invalid_request",
+            ),
+        )
+        turns = store.list_turns(
+            conversation_id="conv-1",
+            tenant_id="tenant-1",
+            user_id="user-1",
+        )
+
+        prompt = build_question_with_memory("Para os ultimos 12 meses", turns)
+        self.assertIn("RESOLUÇÃO OBRIGATÓRIA (PERÍODO)", prompt)
+        self.assertIn("maior crescimento", prompt)
+
+    def test_build_question_with_memory_implicit_product_evaluation_followup(self) -> None:
+        store = InMemoryConversationStore()
+        store.append_result(
+            conversation_id="conv-1",
+            tenant_id="tenant-1",
+            user_id="user-1",
+            question="Quais foram os 5 produtos mais vendidos no último mês?",
+            result=OrchestratorResult(
+                explanation="resposta",
+                sql=(
+                    "SELECT nome_produto, SUM(quantidade) AS qtd_vendida "
+                    "FROM gold_pedidos_enriquecidos "
+                    "WHERE status = 'Aprovado' "
+                    "GROUP BY nome_produto "
+                    "ORDER BY qtd_vendida DESC LIMIT 5"
+                ),
+                interpretation="Top 5 produtos mais vendidos.",
+            ),
+        )
+        turns = store.list_turns(
+            conversation_id="conv-1",
+            tenant_id="tenant-1",
+            user_id="user-1",
+        )
+
+        prompt = build_question_with_memory("Qual o melhor avaliado?", turns)
+
+        self.assertIn("RESOLUÇÃO OBRIGATÓRIA (OPERAÇÃO SOBRE RESULTADOS ANTERIORES)", prompt)
+        self.assertIn("AVG(nota_produto)", prompt)
+        self.assertIn("É **proibido** retornar InvalidRequest", prompt)
+
+    def test_build_question_with_memory_implicit_sales_followup(self) -> None:
+        store = InMemoryConversationStore()
+        store.append_result(
+            conversation_id="conv-1",
+            tenant_id="tenant-1",
+            user_id="user-1",
+            question="Quais clientes compraram no App no último mês?",
+            result=OrchestratorResult(
+                explanation="resposta",
+                sql=(
+                    "SELECT id_cliente, nome_cliente "
+                    "FROM gold_pedidos_enriquecidos "
+                    "WHERE canal = 'App' LIMIT 20"
+                ),
+                interpretation="Clientes que compraram pelo App.",
+            ),
+        )
+        turns = store.list_turns(
+            conversation_id="conv-1",
+            tenant_id="tenant-1",
+            user_id="user-1",
+        )
+
+        prompt = build_question_with_memory("Qual comprou mais?", turns)
+
+        self.assertIn("RESOLUÇÃO OBRIGATÓRIA (OPERAÇÃO SOBRE RESULTADOS ANTERIORES)", prompt)
+        self.assertIn("SUM(quantidade)", prompt)
+        self.assertIn("status = 'Aprovado'", prompt)
+
+    def test_build_question_with_memory_implicit_ticket_followup(self) -> None:
+        store = InMemoryConversationStore()
+        store.append_result(
+            conversation_id="conv-1",
+            tenant_id="tenant-1",
+            user_id="user-1",
+            question="Quais clientes de alto valor compraram pelo App?",
+            result=OrchestratorResult(
+                explanation="resposta",
+                sql="SELECT id_cliente, nome FROM gold_cliente_360 WHERE segmento_ltv = 'Alto'",
+                interpretation="Clientes de alto valor.",
+            ),
+        )
+        turns = store.list_turns(
+            conversation_id="conv-1",
+            tenant_id="tenant-1",
+            user_id="user-1",
+        )
+
+        prompt = build_question_with_memory("Qual tem mais tickets abertos?", turns)
+
+        self.assertIn("RESOLUÇÃO OBRIGATÓRIA (OPERAÇÃO SOBRE RESULTADOS ANTERIORES)", prompt)
+        self.assertIn("gold_tickets", prompt)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -267,6 +267,15 @@ class SQLValidator:
         }
 
         for function in tree.find_all(exp.Func):
+            if not isinstance(function, exp.Func):
+                continue
+
+            if type(function).__name__ in PREDICATE_EXPRESSION_NAMES:
+                continue
+
+            if isinstance(function, (exp.Case, exp.If)):
+                continue
+
             function_head = self._normalize_function_head(function)
             function_name = function_head.rsplit(".", 1)[-1]
 

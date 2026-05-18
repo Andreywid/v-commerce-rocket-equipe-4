@@ -14,7 +14,7 @@ from app.cli.render import (
     print_mock_skip_message,
 )
 from app.memory.conversation_store import (
-    build_question_with_memory,
+    build_question_with_memory_and_context,
     get_default_conversation_store,
 )
 from app.models.deps import Deps
@@ -90,7 +90,11 @@ async def _ask_with_memory(
         conversation_id=conversation_id,
         conn=conn,
     )
-    question_for_agent = build_question_with_memory(question, previous_turns)
+    question_for_agent = build_question_with_memory_and_context(
+        question,
+        previous_turns,
+        conn=conn,
+    )
 
     if context.debug_memory:
         _print_memory_debug(

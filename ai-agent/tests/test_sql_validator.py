@@ -82,6 +82,64 @@ class SQLValidatorTest(unittest.TestCase):
 
         self.assertIn('"outra_coluna"', sql)
 
+    def test_allows_case_when_conditions_in_select(self) -> None:
+        sql = validate_sql(
+            """
+            SELECT
+                CASE
+                    WHEN t1.estado_cliente IN ('São Paulo', 'Rio de Janeiro') THEN 1
+                    ELSE 0
+                END AS regiao_prioritaria
+            FROM gold_pedidos_enriquecidos AS t1
+            """
+        )
+
+        self.assertIn("CASE WHEN", sql)
+        self.assertIn("estado_cliente IN", sql)
+
+    def test_allows_date_function_inside_boolean_predicate(self) -> None:
+        sql = validate_sql(
+            "SELECT * FROM gold_pedidos_enriquecidos WHERE status = 'Aprovado' AND data_pedido >= date('now', '-30 day')"
+        )
+
+        self.assertIn("DATE('now', '-30 day')", sql)
+        self.assertIn("status = 'Aprovado'", sql)
+
+    def test_allows_join_on_multiple_qualified_column_predicates(self) -> None:
+        sql = validate_sql(
+            """
+            WITH receita_mensal AS (
+              SELECT
+                estado_cliente AS regiao,
+                strftime('%Y-%m', data_pedido) AS mes,
+                SUM(valor_total) AS receita
+              FROM gold_pedidos_enriquecidos
+              WHERE status = 'Aprovado'
+              GROUP BY regiao, mes
+            ),
+            extremos AS (
+              SELECT
+                regiao,
+                MIN(mes) AS primeiro_mes,
+                MAX(mes) AS ultimo_mes
+              FROM receita_mensal
+              GROUP BY regiao
+            )
+            SELECT
+              e.regiao,
+              r_inicial.receita AS receita_inicial
+            FROM extremos e
+            JOIN receita_mensal r_inicial
+              ON r_inicial.regiao = e.regiao
+             AND r_inicial.mes = e.primeiro_mes
+            LIMIT 1
+            """
+        )
+
+        self.assertIn("JOIN receita_mensal AS r_inicial ON", sql)
+        self.assertIn("r_inicial.regiao = e.regiao", sql)
+        self.assertIn("r_inicial.mes = e.primeiro_mes", sql)
+
 
 if __name__ == "__main__":
     unittest.main()

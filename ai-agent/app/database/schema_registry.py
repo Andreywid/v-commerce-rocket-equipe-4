@@ -111,7 +111,7 @@ GOLD_SCHEMA = {
             "Não use esta tabela para análises detalhadas de pedidos individuais.",
             "Para comportamento por dia, use gold_clickstream_resumo.",
             "Para avaliações individuais, use gold_avaliacoes.",
-            "Nordeste, Norte, Sul, Sudeste e Centro-Oeste são nomes de região: expanda para estado IN ('UF',...) conforme o mapeamento de regiões do Brasil; não rejeite a pergunta só por usar o nome da região."
+            "Nordeste, Norte, Sul, Sudeste e Centro-Oeste são nomes de região: expanda para estado IN ('Estado',...) conforme o mapeamento de regiões do Brasil; não rejeite a pergunta só por usar o nome da região nem peça esclarecimento de granularidade geográfica quando a região puder ser inferida."
         ],
         "colunas": {
             "id_cliente": {
@@ -139,7 +139,7 @@ GOLD_SCHEMA = {
                 "tipo": "texto"
             },
             "estado": {
-                "descricao": "UF do cliente (2 letras). Se o usuário disser Nordeste, Sudeste, Sul, Norte ou Centro-Oeste, filtre com IN nas UFs daquela região (ex.: Nordeste = AL, BA, CE, MA, PB, PE, PI, RN, SE).",
+                "descricao": "Nome completo do estado do cliente (Pernambuco, São Paulo, etc.). Se o usuário disser Nordeste, Sudeste, Sul, Norte ou Centro-Oeste, filtre com IN nos estados daquela região (ex.: Nordeste = Alagoas, Bahia, Ceará, etc.).",
                 "tipo": "texto"
             },
             "origem": {
@@ -259,7 +259,10 @@ GOLD_SCHEMA = {
             "Não use esta tabela para listar pedidos individuais.",
             "Para detalhes de pedidos de um produto, use gold_pedidos_enriquecidos.",
             "Não some taxa_conversao diretamente.",
-            "Não some taxa_problema diretamente."
+            "Não some taxa_problema diretamente.",
+            "Para 'último mês' ou 'últimos 30 dias', use colunas *_30d (qtd_vendida_30d, receita_30d, qtd_tickets_30d).",
+            "Para 'últimos 90 dias', use colunas *_90d.",
+            "Use colunas *_total apenas para histórico/total, sem filtro de data nesta tabela."
         ],
         "colunas": {
             "id_produto": {
@@ -377,7 +380,7 @@ GOLD_SCHEMA = {
             "Use esta tabela quando a pergunta envolver status, método de pagamento, cliente, produto ou categoria por pedido.",
             "Para KPIs mensais prontos, prefira gold_vendas_kpis.",
             "Para receita, considere apenas status = 'Aprovado', salvo se o usuário pedir outro status.",
-            "Filtros por região (Nordeste, Sudeste, etc.): use estado_cliente IN (lista de UFs da região), nunca compare estado_cliente à palavra 'Nordeste'."
+            "Filtros por região (Nordeste, Sudeste, etc.): use estado_cliente IN (lista de estados da região por extenso), nunca compare estado_cliente à palavra 'Nordeste'. Se a pergunta pedir 'região', trate como macro-região derivada de estado_cliente por CASE e agregue a receita ou contagem antes de ordenar. No CASE de macro-região, use ELSE NULL para valores que não são estados válidos e filtre regiao IS NOT NULL antes de ranquear; não use 'Indefinida' como região analítica."
         ],
         "colunas": {
             "id_pedido": {
@@ -425,7 +428,7 @@ GOLD_SCHEMA = {
                 "tipo": "texto"
             },
             "estado_cliente": {
-                "descricao": "UF do cliente no pedido (2 letras). Macro-regiões (Nordeste, etc.) devem ser expandidas para IN com lista de UFs, não usadas como valor literal.",
+                "descricao": "UF do cliente no pedido nome completo (Pernambuco, São Paulo, etc) . Macro-regiões (Nordeste, etc.) devem ser expandidas para IN com lista de nome de estados, não usadas como valor literal.",
                 "tipo": "texto"
             },
             "nome_produto": {

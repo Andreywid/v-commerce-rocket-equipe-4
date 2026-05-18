@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import csv
 import sqlite3
 from pathlib import Path
 
@@ -33,10 +34,93 @@ def _create_tables(cur: sqlite3.Cursor) -> None:
         cur.execute(f'CREATE TABLE "{table}" ({cols})')
 
 
-def _seed(cur: sqlite3.Cursor) -> None:
-    """Insere uma amostra pequena e coerente para smoke tests locais."""
+def _load_csv_data(csv_path: Path) -> list[dict] | None:
+    """Carrega dados de um arquivo CSV e retorna lista de dicts."""
+    try:
+        if not csv_path.exists():
+            return None
+        with open(csv_path, "r", encoding="utf-8") as f:
+            reader = csv.DictReader(f)
+            return list(reader)
+    except Exception as e:
+        print(f"Erro ao carregar {csv_path}: {e}")
+        return None
 
-    ref = "2026-05-10"
+
+def _load_and_seed_csv_data(cur: sqlite3.Cursor) -> bool:
+    """
+    Tenta carregar dados dos CSVs na pasta data/.
+    Retorna True se conseguiu, False caso contrário.
+    """
+    data_dir = Path(__file__).resolve().parent / "data"
+    
+    # Mapear tabelas para arquivos CSV
+    csv_mappings = {
+        "gold_cliente_360": "gold_clientes_360.csv",
+        "gold_produto_performance": "gold_produto_performance.csv",
+        "gold_avaliacoes": "gold_avaliacoes.csv",
+        "gold_tickets": "gold_tickets.csv",
+        "gold_vendas_kpis": "gold_vendas_kpis.csv",
+        "gold_pedidos_enriquecidos": "gold_pedidos_enriquecidos.csv",
+        "gold_clickstream_resumo": "gold_clickstream_resumo.csv",
+    }
+    
+    loaded_any = False
+    
+    for table_name, csv_filename in csv_mappings.items():
+        csv_path = data_dir / csv_filename
+        rows = _load_csv_data(csv_path)
+        
+        if rows:
+            loaded_any = True
+            spec = GOLD_SCHEMA.get(table_name, {})
+            cols = list(spec.get("colunas", {}).keys())
+            
+            # Converter valores aos tipos corretos
+            for row in rows:
+                values = []
+                for col in cols:
+                    val = row.get(col, "")
+                    # Converter valores
+                    if val == "" or val is None:
+                        values.append(None)
+                    else:
+                        meta = spec.get("colunas", {}).get(col, {})
+                        tipo = meta.get("tipo", "texto")
+                        try:
+                            if tipo == "inteiro":
+                                values.append(int(val) if val else None)
+                            elif tipo == "decimal":
+                                values.append(float(val) if val else None)
+                            elif tipo == "booleano":
+                                values.append(1 if str(val).lower() in ["true", "1", "sim"] else 0)
+                            else:
+                                values.append(val)
+                        except (ValueError, TypeError):
+                            values.append(val)
+                
+                placeholders = ",".join(["?" for _ in cols])
+                col_list = ", ".join(f'"{c}"' for c in cols)
+                try:
+                    cur.execute(
+                        f'INSERT INTO "{table_name}" ({col_list}) VALUES ({placeholders})',
+                        values
+                    )
+                except Exception as e:
+                    print(f"Erro inserindo linha em {table_name}: {e}")
+    
+    return loaded_any
+
+
+def _seed(cur: sqlite3.Cursor) -> None:
+    """Insere dados: primeiro tenta CSV, depois usa dados hardcoded como fallback."""
+    
+    # Tenta carregar dados dos CSVs
+    if _load_and_seed_csv_data(cur):
+        print("Dados carregados dos arquivos CSV")
+        return
+
+    # Fallback: dados hardcoded
 
     cur.executemany(
         """

@@ -5,6 +5,106 @@
 # ============================================
 
 SQL_EXAMPLES = [
+  """
+  Pergunta:
+  Qual região teve maior crescimento de receita?
+
+  SQL:
+  WITH receita_mensal AS (
+    SELECT
+      CASE
+        WHEN estado_cliente IN ('Alagoas','Bahia','Ceará','Maranhão','Paraíba','Pernambuco','Piauí','Rio Grande do Norte','Sergipe') THEN 'Nordeste'
+        WHEN estado_cliente IN ('Acre','Amapá','Amazonas','Pará','Rondônia','Roraima','Tocantins') THEN 'Norte'
+        WHEN estado_cliente IN ('Distrito Federal','Goiás','Mato Grosso','Mato Grosso do Sul') THEN 'Centro-Oeste'
+        WHEN estado_cliente IN ('Espírito Santo','Minas Gerais','Rio de Janeiro','São Paulo') THEN 'Sudeste'
+        WHEN estado_cliente IN ('Paraná','Rio Grande do Sul','Santa Catarina') THEN 'Sul'
+        ELSE NULL
+      END AS regiao,
+      DATE_TRUNC('month', data_pedido)::date AS mes,
+      SUM(valor_total) AS receita
+    FROM gold_pedidos_enriquecidos
+    WHERE status = 'Aprovado'
+      AND data_pedido >= DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '12 months'
+      AND data_pedido < DATE_TRUNC('month', CURRENT_DATE)
+    GROUP BY regiao, mes
+  ),
+  extremos AS (
+    SELECT
+      regiao,
+      MIN(mes) AS primeiro_mes,
+      MAX(mes) AS ultimo_mes
+    FROM receita_mensal
+    WHERE regiao IS NOT NULL
+    GROUP BY regiao
+  ),
+  comparacao AS (
+    SELECT
+      e.regiao,
+      r_inicial.receita AS receita_inicial,
+      r_final.receita AS receita_final,
+      r_final.receita - r_inicial.receita AS crescimento_receita
+    FROM extremos e
+    JOIN receita_mensal r_inicial
+      ON r_inicial.regiao = e.regiao AND r_inicial.mes = e.primeiro_mes
+    JOIN receita_mensal r_final
+      ON r_final.regiao = e.regiao AND r_final.mes = e.ultimo_mes
+  )
+  SELECT regiao, receita_inicial, receita_final, crescimento_receita
+  FROM comparacao
+  ORDER BY crescimento_receita DESC
+  LIMIT 1;
+  """,
+
+  """
+  Pergunta:
+  Qual região teve maior crescimento de receita?
+
+  SQL:
+  WITH receita_mensal AS (
+    SELECT
+      CASE
+        WHEN estado_cliente IN ('Alagoas','Bahia','Ceará','Maranhão','Paraíba','Pernambuco','Piauí','Rio Grande do Norte','Sergipe') THEN 'Nordeste'
+        WHEN estado_cliente IN ('Acre','Amapá','Amazonas','Pará','Rondônia','Roraima','Tocantins') THEN 'Norte'
+        WHEN estado_cliente IN ('Distrito Federal','Goiás','Mato Grosso','Mato Grosso do Sul') THEN 'Centro-Oeste'
+        WHEN estado_cliente IN ('Espírito Santo','Minas Gerais','Rio de Janeiro','São Paulo') THEN 'Sudeste'
+        WHEN estado_cliente IN ('Paraná','Rio Grande do Sul','Santa Catarina') THEN 'Sul'
+        ELSE NULL
+      END AS regiao,
+      strftime('%Y-%m', data_pedido) AS mes,
+      SUM(valor_total) AS receita
+    FROM gold_pedidos_enriquecidos
+    WHERE status = 'Aprovado'
+      AND data_pedido >= date('now', 'start of month', '-12 months')
+      AND data_pedido < date('now', 'start of month')
+    GROUP BY regiao, mes
+  ),
+  extremos AS (
+    SELECT
+      regiao,
+      MIN(mes) AS primeiro_mes,
+      MAX(mes) AS ultimo_mes
+    FROM receita_mensal
+    WHERE regiao IS NOT NULL
+    GROUP BY regiao
+  ),
+  comparacao AS (
+    SELECT
+      e.regiao,
+      r_inicial.receita AS receita_inicial,
+      r_final.receita AS receita_final,
+      r_final.receita - r_inicial.receita AS crescimento_receita
+    FROM extremos e
+    JOIN receita_mensal r_inicial
+      ON r_inicial.regiao = e.regiao AND r_inicial.mes = e.primeiro_mes
+    JOIN receita_mensal r_final
+      ON r_final.regiao = e.regiao AND r_final.mes = e.ultimo_mes
+  )
+  SELECT regiao, receita_inicial, receita_final, crescimento_receita
+  FROM comparacao
+  ORDER BY crescimento_receita DESC
+  LIMIT 1;
+  """,
+
     """
     Pergunta:
     Qual região teve o maior crescimento de receita no último ano?
@@ -13,12 +113,12 @@ SQL_EXAMPLES = [
     WITH receita_mensal AS (
         SELECT
             CASE
-                WHEN estado_cliente IN ('AL','BA','CE','MA','PB','PE','PI','RN','SE') THEN 'Nordeste'
-                WHEN estado_cliente IN ('AC','AP','AM','PA','RO','RR','TO') THEN 'Norte'
-                WHEN estado_cliente IN ('DF','GO','MT','MS') THEN 'Centro-Oeste'
-                WHEN estado_cliente IN ('ES','MG','RJ','SP') THEN 'Sudeste'
-                WHEN estado_cliente IN ('PR','RS','SC') THEN 'Sul'
-                ELSE 'Indefinida'
+          WHEN estado_cliente IN ('Alagoas','Bahia','Ceará','Maranhão','Paraíba','Pernambuco','Piauí','Rio Grande do Norte','Sergipe') THEN 'Nordeste'
+          WHEN estado_cliente IN ('Acre','Amapá','Amazonas','Pará','Rondônia','Roraima','Tocantins') THEN 'Norte'
+          WHEN estado_cliente IN ('Distrito Federal','Goiás','Mato Grosso','Mato Grosso do Sul') THEN 'Centro-Oeste'
+          WHEN estado_cliente IN ('Espírito Santo','Minas Gerais','Rio de Janeiro','São Paulo') THEN 'Sudeste'
+          WHEN estado_cliente IN ('Paraná','Rio Grande do Sul','Santa Catarina') THEN 'Sul'
+                ELSE NULL
             END AS regiao,
             DATE_TRUNC('month', data_pedido)::date AS mes,
             SUM(valor_total) AS receita
@@ -34,6 +134,7 @@ SQL_EXAMPLES = [
             MIN(mes) AS primeiro_mes,
             MAX(mes) AS ultimo_mes
         FROM receita_mensal
+        WHERE regiao IS NOT NULL
         GROUP BY regiao
     ),
     comparacao AS (
@@ -51,6 +152,34 @@ SQL_EXAMPLES = [
     SELECT regiao, receita_inicial, receita_final, crescimento_receita
     FROM comparacao
     ORDER BY crescimento_receita DESC
+    LIMIT 1;
+    """,
+
+    """
+    Pergunta:
+    Qual das regiões possui a maior quantidade de vendas dos últimos 30 dias?
+
+    SQL:
+    WITH vendas_por_regiao AS (
+      SELECT
+        CASE
+          WHEN estado_cliente IN ('Alagoas','Bahia','Ceará','Maranhão','Paraíba','Pernambuco','Piauí','Rio Grande do Norte','Sergipe') THEN 'Nordeste'
+          WHEN estado_cliente IN ('Acre','Amapá','Amazonas','Pará','Rondônia','Roraima','Tocantins') THEN 'Norte'
+          WHEN estado_cliente IN ('Distrito Federal','Goiás','Mato Grosso','Mato Grosso do Sul') THEN 'Centro-Oeste'
+          WHEN estado_cliente IN ('Espírito Santo','Minas Gerais','Rio de Janeiro','São Paulo') THEN 'Sudeste'
+          WHEN estado_cliente IN ('Paraná','Rio Grande do Sul','Santa Catarina') THEN 'Sul'
+          ELSE NULL
+        END AS regiao,
+        COUNT(*) AS qtd_vendas
+      FROM gold_pedidos_enriquecidos
+      WHERE status = 'Aprovado'
+        AND data_pedido >= date('now', 'start of day', '-30 days')
+      GROUP BY regiao
+    )
+    SELECT regiao, qtd_vendas
+    FROM vendas_por_regiao
+    WHERE regiao IS NOT NULL
+    ORDER BY qtd_vendas DESC
     LIMIT 1;
     """,
 
@@ -85,6 +214,19 @@ SQL_EXAMPLES = [
     SELECT id_produto, nome_produto, categoria, preco_atual
     FROM gold_produto_performance
     WHERE ativo = TRUE AND preco_atual > 100;
+    """,
+
+    # NOVO:
+    # Exemplo de ranking por janela de 30 dias em gold_produto_performance.
+    """
+    Pergunta:
+    Quais foram os 5 produtos mais vendidos no último mês?
+
+    SQL:
+    SELECT nome_produto, qtd_vendida_30d
+    FROM gold_produto_performance
+    ORDER BY qtd_vendida_30d DESC
+    LIMIT 5;
     """,
 
     """
