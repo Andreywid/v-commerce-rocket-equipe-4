@@ -5,6 +5,24 @@ O objetivo do módulo é permitir que usuários façam perguntas em linguagem na
 
 ---
 
+## Documentação técnica centralizada
+
+A documentação detalhada dos módulos foi movida para [`docs/README.md`](docs/README.md).
+
+### Índice rápido
+
+- [`docs/modules/agents.md`](docs/modules/agents.md)
+- [`docs/modules/api.md`](docs/modules/api.md)
+- [`docs/modules/cli.md`](docs/modules/cli.md)
+- [`docs/modules/database.md`](docs/modules/database.md)
+- [`docs/modules/memory.md`](docs/modules/memory.md)
+- [`docs/modules/prompts.md`](docs/modules/prompts.md)
+- [`docs/modules/security.md`](docs/modules/security.md)
+- [`docs/architecture/module-organization.md`](docs/architecture/module-organization.md)
+- [`docs/solutions/solucao-contexto-multi-turno.md`](docs/solutions/solucao-contexto-multi-turno.md)
+
+---
+
 ## 1. Visão geral do módulo
 
 O módulo de IA é responsável por transformar uma pergunta do usuário em uma consulta SQL segura, executar essa consulta e explicar o resultado de forma clara.

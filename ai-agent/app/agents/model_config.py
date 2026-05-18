@@ -7,7 +7,7 @@ from typing import Callable, TypeVar
 
 from pydantic_ai import Agent
 
-DEFAULT_MODEL = "google-gla:gemini-2.5-flash-lite"
+DEFAULT_MODEL = "google-gla:gemini-3.1-flash-lite"
 FALLBACK_MODEL = "google-gla:gemini-3.1-flash-lite"
 
 # TypeVars para suportar qualquer combinação de Deps e Output type
