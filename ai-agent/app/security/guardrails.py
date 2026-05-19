@@ -113,18 +113,6 @@ OUT_OF_DOMAIN_RULES = (
             r"\bhospedagem\b",
         ),
     ),
-    (
-        "informações de identificação pessoal (PII)",
-        (
-            r"\bemail\b",
-            r"\btelefone\b",
-            r"\bcpf\b",
-            r"\bdocumento\b",
-            r"\brg\b",
-            r"\bendereco\b",
-            r"\bcep\b",
-        ),
-    ),
 )
 
 
@@ -303,22 +291,9 @@ class QueryPolicy:
                     "SELECT * não permitido quando há política de colunas"
                 )
 
-        denied_columns = {
-            "email",
-            "telefone",
-            "cpf",
-            "rg",
-            "documento",
-            "endereco",
-            "cep",
-        }
-        for table, columns in access.columns_by_table.items():
-            found_denied = sorted(columns.intersection(denied_columns))
-            if found_denied:
-                raise PolicyViolation(
-                    f"Acesso negado à coluna sensível em {table}: "
-                    + ", ".join(found_denied)
-                )
+        # REMOVIDO: Bloqueio de colunas sensíveis (PII)
+        # As colunas sensíveis agora são apenas MASCARADAS nas respostas,
+        # não bloqueadas na validação. Ver pii_mask.py para regras de mascaramento.
 
         if deps.allow_all_schema_access or not deps.allowed_columns:
             return

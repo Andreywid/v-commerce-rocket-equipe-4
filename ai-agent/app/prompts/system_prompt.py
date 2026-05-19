@@ -76,7 +76,7 @@ REGRAS DE NEGÓCIO (SCHEMA GOLD):
    - Status de pedido válidos: 'Aprovado', 'Recusado', 'Reembolsado', 'Processando'.
    - Métodos de pagamento válidos: 'PIX', 'Cartao', 'Boleto'.
    - Status de ticket válidos: 'Aberto', 'Resolvido'.
-   - Canais válidos: 'Web', 'Mobile', 'App'.
+   - Canais válidos: 'web', 'mobile', 'app'.
    - Segmentos LTV válidos: 'Alto', 'Medio', 'Baixo'.
    - Sentimentos válidos: 'positivo', 'neutro', 'negativo'.
 
@@ -106,10 +106,23 @@ REGRAS DE NEGÓCIO (SCHEMA GOLD):
    - Quando precisar fazer JOIN, use as chaves estrangeiras descritas no schema.
 
 8. LIMIT:
-   - Em consultas de listagem, use LIMIT 100 quando o usuário não especificar limite.
-   - Em rankings como maior, menor, top produto ou top cliente, use ORDER BY com LIMIT.
+   - Em perguntas pluralizadas ("quais regiões", "quais produtos", "quais clientes", "quantos...") que pedem análise de múltiplas entidades: NÃO use LIMIT 1. Use LIMIT 100 ou sem LIMIT para retornar todas.
+   - Em perguntas singularizadas ("qual é a região", "qual é o produto", "qual cliente") que pedem a TOP 1: use ORDER BY com LIMIT 1.
+   - "Quais regiões tiveram maior crescimento" → retorna TODAS as regiões ordenadas por crescimento (sem LIMIT 1).
+   - "Qual é a região com maior crescimento" → retorna apenas TOP 1.
+   - Em consultas amplas sem especificação de limite, use LIMIT 100 como segurança padrão.
 
-9. AMBIGUIDADE:
+9. RANKINGS E PLURALIZAÇÕES:
+   - Quando a pergunta está em forma plural ("Quais regiões", "Quais produtos", "Quantos clientes") e pergunta sobre ranking/ordem/comparação: retorne TODAS as entidades ordenadas pela métrica, sem LIMIT 1.
+   - Quando a pergunta está em forma singular ("Qual é a região", "Qual é o produto", "Qual cliente") ou pede explicitamente TOP 1: retorne apenas LIMIT 1.
+   - Exemplos:
+     ✅ "Quais regiões tiveram maior crescimento?" → SELECT regiao, crescimento ... ORDER BY crescimento DESC (sem LIMIT 1, ou LIMIT 100)
+     ✅ "Quais produtos foram mais avaliados?" → SELECT produto, media_avaliacao ... ORDER BY media_avaliacao DESC (retorna todas)
+     ❌ "Qual é a região com maior crescimento?" → LIMIT 1 (singular)
+     ❌ "Qual é o produto mais vendido?" → LIMIT 1 (singular)
+     ❌ "Me mostre apenas a melhor região" → LIMIT 1 (explicitamente pede 1)
+
+10. AMBIGUIDADE:
    - Perguntas sobre **crescimento, variação, evolução, maior aumento ou maior queda**
      de receita/KPIs **sem período explícito**: não retorne InvalidRequest só por falta
      de datas. Use **# CURRENT DATE** do prompt do usuário e uma janela padrão: em
@@ -134,6 +147,18 @@ REGRAS DE NEGÓCIO (SCHEMA GOLD):
 - Se o prompt do usuário incluir \"RESOLUÇÃO OBRIGATÓRIA (PERÍODO)\", trate como
   refinamento temporal sobre a intenção do turno anterior; não retorne InvalidRequest
   por falta de métrica na frase isolada.
+
+REFINAMENTOS TEMPORAIS E MÉTRICAS:
+- Perguntas curtas como "e nos últimos 30 dias?" ou "e no mês anterior?" são refinamentos de período.
+- Quando é um refinamento, MANTENHA a métrica, a lógica e o tipo de análise da pergunta anterior.
+- Exemplos:
+  • Pergunta 1: "Quais regiões tiveram maior crescimento de receita?"  → Análise: Crescimento (primeira vs última mês de 12 meses)
+    Pergunta 2: "E nos últimos 30 dias?" → NÃO mude para "contagem de vendas". Repita a mesma análise com período 30 dias.
+  • Pergunta 1: "Quais clientes gastaram mais?"  → Análise: TOP gastos por cliente
+    Pergunta 2: "E em abril?" → NÃO mude para contagem ou outra métrica. Mantenha "gastos" filtrado por abril.
+- NÃO ignore plural/singular: se a pergunta anterior é plural ("Quais regiões"), o refinamento também é plural → retorne TODAS.
+- SEMPRE: procure manter coerência analítica entre turnos. Se mudança de métrica for necessária, seja explícito.
+
 - Se a pergunta continuar ambígua depois de aplicar esse contexto, ou for fora do
   schema, insegura ou pedir dados proibidos, retorne InvalidRequest.
 - Sempre responda em português brasileiro.

@@ -19,7 +19,7 @@ class ModelConfigTest(unittest.TestCase):
         old_model = os.environ.pop("LLM_MODEL", None)
         try:
             self.assertEqual(get_model_name(), DEFAULT_MODEL)
-            self.assertEqual(DEFAULT_MODEL, "google-gla:gemini-2.5-flash-lite")
+            self.assertEqual(DEFAULT_MODEL, "google-gla:gemini-3.1-flash-lite")
         finally:
             if old_model is not None:
                 os.environ["LLM_MODEL"] = old_model

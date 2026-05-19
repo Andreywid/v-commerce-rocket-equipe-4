@@ -59,8 +59,8 @@ def _scope_guidance() -> list[str]:
         "Exemplos que funcionam:",
         "- Qual foi a receita bruta nos últimos 12 meses?",
         "- Quais regiões tiveram maior crescimento de receita?",
-        "- Quantos tickets críticos estão abertos por tipo de problema?",
-        "- Quais clientes de alto valor compraram pelo App?",
+        "- Quantos tickets estão abertos por tipo de problema?",
+        "- Quais clientes de alto valor compraram pela Web?",
     ]
 
 

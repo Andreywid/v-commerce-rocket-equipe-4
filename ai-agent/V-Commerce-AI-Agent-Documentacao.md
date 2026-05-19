@@ -1,705 +1,384 @@
-# V-Commerce AI Agent — Documentação Técnica
+# V-Commerce AI Agent: Arquitetura Atual
 
-## 1. Visão geral
+## 1. Objetivo do módulo
 
-O **V-Commerce AI Agent** é um agente conversacional de IA focado em **Text-to-SQL**.  
-O objetivo da aplicação é permitir que usuários façam perguntas em linguagem natural sobre a **Camada Gold** e recebam:
+O módulo `ai-agent` implementa o núcleo conversacional NL2SQL do projeto V-Commerce. Ele recebe perguntas em linguagem natural, interpreta a intenção de negócio, gera SQL seguro, valida a consulta, executa quando permitido e devolve a resposta em linguagem natural com contexto operacional.
 
-- a interpretação da pergunta;
-- a SQL gerada;
-- a execução opcional da consulta;
-- os resultados em formato estruturado;
-- uma explicação final em linguagem natural.
+A arquitetura atual foi desenhada para funcionar em dois cenários principais:
 
-A aplicação foi desenhada com foco em:
+- **API HTTP** para integração com o frontend e com outros clientes;
+- **CLI local** para inspeção, depuração e execução manual.
 
-- **governança de schema**;
-- **validação de SQL por AST**;
-- **controle de acesso por tabela e coluna**;
-- **memória conversacional**;
-- **segurança contra queries perigosas**;
-- **modo local com SQLite mock**;
-- **API HTTP e CLI**.
+O sistema combina quatro capacidades centrais:
+
+1. **Text-to-SQL** com LLM;
+2. **validação determinística** de SQL e de política de uso;
+3. **memória conversacional curta** para follow-ups;
+4. **resposta explicada** em português brasileiro.
 
 ---
 
-## 2. Fluxo principal da aplicação
+## 2. Visão macro da arquitetura
 
-O fluxo principal do sistema é:
-
-1. o usuário envia uma pergunta em linguagem natural;
-2. a API ou CLI cria um contexto de execução;
-3. o orquestrador consulta a política de segurança;
-4. o gerador de SQL monta a query com base no schema Gold;
-5. a query passa por validação determinística;
-6. se permitido, a consulta é executada;
-7. o resultado é explicado ao usuário;
-8. a conversa é registrada na memória curta.
-
-### Fluxo simplificado
+A organização atual pode ser lida como uma arquitetura em camadas.
 
 ```text
-Usuário
-  ↓
-API / CLI
-  ↓
-Contexto + Memória
-  ↓
-Orquestrador
-  ↓
-Gerador SQL
-  ↓
-Validador SQL
-  ↓
-Executor
-  ↓
-Explainer
-  ↓
-Resposta final
+Entrada
+├── app/api        # HTTP/FastAPI
+├── app/cli        # terminal e ferramentas locais
+└── app/main.py    # bootstrap local
+
+Aplicação
+├── app/agents     # orquestração, geração SQL e explicação
+├── app/prompts    # prompts, exemplos e recovery prompts
+├── app/memory     # histórico curto e contexto conversacional
+
+Infraestrutura
+├── app/database   # conexão, executor, tradução e schema
+├── app/security   # guardrails, policy e mascaramento
+
+Contratos e mensagens
+├── app/models     # Pydantic/dataclasses de entrada e saída
+└── app/messages   # textos amigáveis de erro e rejeição
+```
+
+### Leitura arquitetural correta
+
+- **`api` e `cli` são bordas**: não decidem regra de negócio, só iniciam o fluxo.
+- **`agents` é a camada de aplicação**: concentra o caso de uso principal.
+- **`database` e `security` são infraestrutura transversal**: servem à aplicação inteira.
+- **`prompts` e `messages` são ativos textuais**: não devem conter regra de domínio executável.
+- **`models` são contratos**: não devem esconder comportamento de infraestrutura.
+
+---
+
+## 3. Fluxo de execução atual
+
+O fluxo principal, hoje, é o seguinte:
+
+1. O usuário envia uma pergunta pela API ou CLI.
+2. O sistema monta um `Deps` com conexão, permissões e contexto de execução.
+3. A memória conversacional recupera os turnos anteriores relevantes.
+4. O prompt é enriquecido com contexto histórico e, quando possível, com entidades concretas retornadas do SQL anterior.
+5. O `AgentOrchestrator` valida a pergunta contra a política de segurança.
+6. O `AgentTextToSQLClient` gera o SQL com apoio de schema, exemplos e prompts.
+7. O `SQLValidator` valida o SQL de forma determinística.
+8. O `QueryExecutor` executa a consulta, traduzindo dialeto quando necessário.
+9. O `ResultExplainer` sintetiza o resultado em linguagem natural.
+10. O resultado agregado retorna como `OrchestratorResult`.
+11. A conversa é persistida no store em memória.
+
+```text
+Pergunta -> Memória -> Orquestrador -> SQL Generator -> Validador -> Executor -> Explainer -> Resposta
 ```
 
 ---
 
-## 3. Estrutura do projeto
-
-```text
-app/
-├── agents/      # Geração SQL, explicação e orquestração
-├── api/         # FastAPI, rotas e dependências
-├── cli/         # Execução local via terminal
-├── database/    # Schema, mock SQLite, execução e tradução
-├── memory/      # Memória conversacional
-├── messages/    # Mensagens de rejeição e respostas de erro
-├── models/      # Contratos Pydantic
-├── prompts/     # Prompts do agente e exemplos few-shot
-└── security/    # Guardrails, validação SQL e mascaramento de PII
-
-tests/           # Testes automatizados
-```
-
----
-
-## 4. Módulos principais
+## 4. Mapa de responsabilidades por pasta
 
 ### 4.1 `app/agents`
 
-Responsável pela lógica de IA do sistema.
+Camada de aplicação do NL2SQL.
 
-Componentes principais:
-
-- `sql_generator.py`  
-  Gera SQL a partir da pergunta e do contexto.
-
-- `orchestrator.py`  
-  Coordena o fluxo completo: política, geração, validação, execução e explicação.
-
-- `explainer.py`  
-  Converte resultado de banco em explicação em linguagem natural.
-
-- `model_config.py`  
-  Centraliza configurações do modelo.
+- `orchestrator.py`: coordena política, geração, validação, execução e explicação.
+- `sql_generator.py`: monta o prompt SQL e chama o LLM com fallback de modelo.
+- `explainer.py`: transforma o resultado tabular em texto explicativo.
+- `model_config.py`: resolve a cadeia de modelos e o fallback entre providers.
 
 ### 4.2 `app/api`
 
-Expõe a API HTTP do agente via FastAPI.
+Camada HTTP.
 
-- `app.py`  
-  Factory da aplicação FastAPI.
-
-- `routes.py`  
-  Rotas públicas (`/health` e `/ask`).
-
-- `dependencies.py`  
-  Injeção de dependências para orquestrador, memória e contexto.
+- `app.py`: factory FastAPI.
+- `routes.py`: endpoints `/health` e `/ask`.
+- `dependencies.py`: converte request HTTP em `Deps` e instancia componentes compartilhados.
 
 ### 4.3 `app/cli`
 
-Interface de linha de comando para uso local, inspeção e debug.
+Camada de operação local.
 
-- `args.py`  
-  Parser principal da CLI.
-
-- `runner.py`  
-  Executa chat, API e orquestrador.
-
-- `inspect.py`  
-  Mostra informações do schema e prompt.
-
-- `mock.py`  
-  Garante o SQLite mock local.
-
-- `context.py`  
-  Contexto de autorização e execução.
+- `args.py`: parser de argumentos e roteamento de comandos.
+- `runner.py`: executa modos `ask`, `chat`, `api` e inspeção.
+- `context.py`: contexto de execução local e permissões.
+- `inspect.py`: leitura de schema e prompt dry-run.
+- `mock.py`: setup do banco SQLite mock.
+- `render.py`: formatação de saída no terminal.
 
 ### 4.4 `app/database`
 
-Camada de dados e compatibilidade entre ambientes.
+Camada de persistência, execução e compatibilidade de dialeto.
 
-- `schema_registry.py`  
-  Registra o `GOLD_SCHEMA`.
-
-- `mock_gold.py`  
-  Cria o SQLite mock da camada Gold.
-
-- `executor.py`  
-  Executa SQL validado.
-
-- `translator.py`  
-  Traduz SQL PostgreSQL para SQLite quando necessário.
-
-- `connection.py`  
-  Define o tipo de banco usado pelo executor.
+- `connection.py`: factory de conexão com SQLite ou PostgreSQL.
+- `executor.py`: execução de SQL e mascaramento de PII.
+- `translator.py`: tradução PostgreSQL → SQLite quando aplicável.
+- `schema_registry.py`: schema Gold e regras de uso.
+- `mock_gold.py`: seed do SQLite de testes.
+- `data/`: CSVs e artefatos de carga.
 
 ### 4.5 `app/memory`
 
-Gerencia memória conversacional de curto prazo.
+Memória conversacional curta.
 
-- armazena turns por conversa;
-- recupera histórico para a geração;
-- injeta contexto anterior na pergunta atual.
+- `conversation_store.py`: armazena turnos por conversa com TTL e limite de histórico.
+- `context_extractor.py`: executa SQL anterior e extrai entidades/filtros úteis.
 
 ### 4.6 `app/prompts`
 
-Contém prompts estruturados e exemplos few-shot.
+Engenharia de prompt.
 
-- `system_prompt.py`
-- `sql_prompt_builder.py`
-- `sql_user_prompt.py`
-- `examples.py`
-- `conversational_memory_prompt.py`
-- `explainer_prompt_builder.py`
-- `explainer_prompts.py`
-- `schema_prompt_intro.py`
-- `orchestrator_prompts.py`
+- `system_prompt.py`: comportamento base do agente de SQL.
+- `sql_prompt_builder.py`: compõe schema, exemplos e pergunta.
+- `conversational_memory_prompt.py`: regras de follow-up e contexto conversacional.
+- `explainer_prompt_builder.py`: prompt para explicação do resultado.
+- `explainer_prompts.py`: system prompt do explicador.
+- `orchestrator_prompts.py`: prompts de recuperação após erro.
+- `examples.py`: exemplos few-shot.
+- `schema_prompt_intro.py`: introdução textual do schema.
+- `sql_user_prompt.py`: template de prompt do usuário.
 
 ### 4.7 `app/security`
 
-Implementa o núcleo de segurança do projeto.
+Segurança de entrada e saída.
 
-- `guardrails.py`  
-  Regras de política da pergunta e do contexto.
+- `guardrails.py`: política da pergunta e bloqueios de uso indevido.
+- `sql_validator.py`: validação sintática e estrutural do SQL.
+- `pii_mask.py`: mascaramento de dados sensíveis.
+- `policies.py`: constantes, limites e listas permitidas.
+- `exceptions.py`: exceções específicas.
 
-- `sql_validator.py`  
-  Validação determinística do SQL com `sqlglot`.
+### 4.8 `app/models`
 
-- `pii_mask.py`  
-  Mascaramento de CPF em resultados.
+Contratos internos e públicos.
 
-- `policies.py`  
-  Constantes e limites de segurança.
+- `api.py`: request/response da API.
+- `deps.py`: dependências compartilhadas entre camadas.
+- `responses.py`: modelos de saída do fluxo de agentes.
+- `conversation.py`: chave e turno de conversa.
+- `metadata.py`: metadados genéricos, com utilidade limitada hoje.
 
-- `exceptions.py`  
-  Exceções da camada de segurança.
+### 4.9 `app/messages`
 
----
+Textos amigáveis de rejeição e erro.
 
-## 5. API HTTP
-
-A aplicação expõe a API via FastAPI.
-
-### 5.1 `GET /health`
-
-Endpoint de saúde da aplicação.
-
-#### Resposta
-
-```json
-{
-  "status": "ok"
-}
-```
-
-### 5.2 `POST /ask`
-
-Recebe uma pergunta em linguagem natural e retorna a resposta do orquestrador.
-
-#### Exemplo de request
-
-```json
-{
-  "question": "Qual a receita bruta total em 2024-11?",
-  "conversation_id": "conv-123",
-  "user_id": "user-1",
-  "tenant_id": "tenant-a",
-  "roles": ["analyst"],
-  "allowed_tables": ["gold_vendas_kpis"],
-  "allowed_columns": {
-    "gold_vendas_kpis": ["ano_mes", "receita_bruta"]
-  },
-  "allow_all_schema_access": false,
-  "allow_sensitive_pii": false,
-  "require_tenant": false,
-  "execute": true
-}
-```
-
-#### Exemplo de response
-
-```json
-{
-  "conversation_id": "conv-123",
-  "explanation": "A receita bruta total em 2024-11 foi ...",
-  "sql": "SELECT ...",
-  "rows": [
-    {
-      "receita_bruta_total": 12345.67
-    }
-  ],
-  "interpretation": "Somar receita bruta em novembro de 2024.",
-  "reasoning": [
-    "Usar a tabela de KPIs de vendas.",
-    "Filtrar o mês de 2024-11."
-  ],
-  "assumptions": [],
-  "error": null,
-  "error_kind": null
-}
-```
-
-### 5.3 Contratos Pydantic
-
-Os contratos HTTP ficam em `app/models/api.py`:
-
-- `HealthResponse`
-- `AskRequest`
-- `AskResponse`
-
-Esses modelos garantem validação automática e documentação OpenAPI.
+- `rejection_copy.py`: mensagens explicativas para política, validação, execução e rejeição de request.
 
 ---
 
-## 6. CLI
+## 5. Contratos e tipos centrais
 
-A aplicação também pode ser executada via terminal.
+### 5.1 `Deps`
 
-### 6.1 Entrypoint
+`Deps` é o objeto de contexto e autorização que atravessa o fluxo.
 
-O ponto de entrada está em `app/main.py`.
+Ele carrega:
 
-### 6.2 Principais modos de uso
+- conexão com o banco;
+- `conversation_id`;
+- `user_id` e `tenant_id`;
+- roles;
+- tabelas permitidas;
+- colunas permitidas;
+- flags de acesso total ao schema e PII;
+- exigência de tenant.
 
-- `--chat`  
-  abre um chat interativo.
+Esse objeto é a principal ponte entre HTTP/CLI e a aplicação.
 
-- `--question`  
-  executa uma pergunta única.
+### 5.2 `AskRequest` e `AskResponse`
 
-- `--serve-api`  
-  sobe a API FastAPI.
+`AskRequest` é o contrato de entrada da API.
 
-- `--dry-prompt`  
-  imprime o prompt montado antes de chamar o modelo.
+`AskResponse` é a resposta pública com:
 
-- `--schema-info`  
-  mostra estatísticas e informações do schema.
+- `conversation_id`;
+- explicação final;
+- SQL gerado;
+- linhas retornadas;
+- interpretação;
+- raciocínio;
+- premissas;
+- erro e categoria de erro.
 
-- `--mock-only`  
-  recria e valida apenas o SQLite mock.
+### 5.3 `Success`, `InvalidRequest` e `OrchestratorResult`
 
-- `--no-exec-mock`  
-  gera SQL, mas não executa a consulta no mock.
+Esses modelos formam a linguagem interna do fluxo.
 
-### 6.3 Exemplo de execução
+- `Success`: o modelo gerou uma consulta segura.
+- `InvalidRequest`: a pergunta foi rejeitada antes da execução.
+- `OrchestratorResult`: agrega resposta final, SQL, linhas e metadados de falha.
 
-```bash
-python -m app.main --question "Qual a receita bruta total em 2024-11?"
-```
+### 5.4 `ConversationTurn` e `ConversationKey`
 
-### 6.4 Contexto de autorização na CLI
+A memória conversacional trabalha com esses dois contratos.
 
-A CLI permite controlar:
-
-- `--conversation-id`
-- `--user-id`
-- `--tenant-id`
-- `--role`
-- `--allowed-table`
-- `--allowed-column`
-- `--allow-all-schema-access`
-- `--allow-sensitive-pii`
-- `--require-tenant`
-- `--debug-memory`
-
-Isso torna o ambiente local adequado para testes com governança e restrições semelhantes às da aplicação real.
+- `ConversationKey` isola por conversa, tenant e usuário.
+- `ConversationTurn` guarda pergunta, SQL aprovado, interpretação, raciocínio, premissas e erro.
 
 ---
 
-## 7. Schema Gold e governança semântica
+## 6. Prompt engineering atual
 
-O coração do sistema é o `GOLD_SCHEMA`, definido em `app/database/schema_registry.py`.
+A arquitetura de prompts está dividida em três funções:
 
-Ele descreve, para cada tabela:
+1. **gerar SQL**;
+2. **reaproveitar contexto conversacional**;
+3. **explicar o resultado**.
 
-- descrição de negócio;
-- granularidade;
-- chave primária;
-- chaves estrangeiras;
-- regras de IA;
-- colunas;
-- tipos;
-- agregações válidas;
-- valores válidos.
+### 6.1 Geração de SQL
 
-### Objetivo do schema semântico
+O prompt de geração recebe:
 
-O schema não serve apenas como catálogo técnico.  
-Ele funciona como uma camada de governança que ajuda o modelo a:
+- system prompt;
+- schema Gold;
+- exemplos few-shot;
+- valores conhecidos do domínio;
+- data atual;
+- pergunta final enriquecida.
 
-- escolher a tabela correta;
-- evitar agregações inválidas;
-- respeitar regras de negócio;
-- reduzir alucinações;
-- evitar joins incorretos;
-- impedir o uso de colunas fora do contexto.
+O objetivo é reduzir alucinação e forçar o LLM a atuar como um gerador determinístico de SQL.
 
-### Exemplos de uso
+### 6.2 Memória conversacional
 
-- tabelas agregadas para KPIs mensais;
-- tabelas detalhadas para análises de pedidos;
-- tabelas de comportamento para análise diária;
-- filtros por enum com valores controlados;
-- regras para `SUM`, `AVG` e campos que não devem ser somados diretamente.
+O prompt conversacional adiciona regras para:
 
----
+- follow-ups com demonstrativos;
+- refinamentos temporais;
+- operações implícitas sobre conjunto anterior;
+- mudança de dimensão.
 
-## 8. Geração de SQL
+Quando há SQL anterior executável, o `ContextExtractor` extrai IDs ou valores de filtro e gera uma instrução explícita do tipo `WHERE ... IN (...)`.
 
-A geração de SQL é feita pelo agente em `app/agents/sql_generator.py`.
+### 6.3 Explicação
 
-### Características do gerador
+O prompt do explicador transforma o resultado em texto de negócio, evitando incluir detalhes internos do sistema ou dados sensíveis.
 
-- usa prompt estruturado;
-- usa schema Gold como contexto;
-- trabalha com exemplos few-shot;
-- retorna saída estruturada;
-- permite rejeição explícita de requisições inválidas.
+### 6.4 Recovery prompts
 
-### Saída estruturada
-
-O gerador pode retornar:
-
-- `Success`
-- `InvalidRequest`
-
-Isso permite que o sistema distinga entre:
-
-- uma SQL válida;
-- uma pergunta insegura;
-- uma pergunta fora de escopo.
+Quando a validação ou a execução falha, o orquestrador injeta o SQL anterior e o erro em um prompt de recuperação para tentar regenerar a consulta.
 
 ---
 
-## 9. Validação de SQL
+## 7. Segurança atual
 
-A validação é determinística e fica em `app/security/sql_validator.py`.
+A segurança está distribuída em três níveis.
 
-### O que o validador faz
+### 7.1 Política da pergunta
 
-- rejeita SQL vazio;
-- rejeita SQL muito grande;
-- aceita apenas um statement;
-- aceita apenas `SELECT`;
-- bloqueia CTEs;
-- bloqueia operações de conjunto como `UNION`;
-- bloqueia comandos de mutação;
-- valida tabelas permitidas;
-- valida funções bloqueadas;
-- valida joins;
-- normaliza literais;
-- controla complexidade;
-- força `LIMIT`.
+`QueryPolicy` bloqueia perguntas que tentam:
 
-### Por que isso é importante
+- explorar prompt injection;
+- pedir instruções internas;
+- sair do domínio analítico;
+- disparar ações operacionais indevidas.
 
-O LLM gera texto probabilístico.  
-O validador converte isso em uma camada determinística de controle.
+### 7.2 Validação de SQL
 
-Isso reduz riscos como:
+`SQLValidator` aplica uma política conservadora:
 
-- `DROP TABLE`;
-- `INSERT`;
-- `UPDATE`;
-- `DELETE`;
-- consultas arbitrárias;
-- queries muito caras;
-- bypass de política.
+- somente `SELECT`;
+- apenas tabelas Gold;
+- bloqueio de DML/DDL;
+- bloqueio de funções perigosas;
+- limite de joins;
+- limite de complexidade;
+- adição de `LIMIT` quando necessário.
 
----
+### 7.3 Mascaramento de dados
 
-## 10. Execução da query
+`QueryExecutor` integra `mask_sensitive_fields_in_rows` para reduzir exposição de PII.
 
-A execução é feita por `app/database/executor.py`.
+Hoje a proteção cobre principalmente:
 
-### Comportamento
-
-- em modo SQLite, a SQL é traduzida para SQLite;
-- em conexões DB-API síncronas, executa com cursor;
-- em drivers assíncronos, usa `fetch`;
-- as linhas retornadas são normalizadas para dicionários;
-- o resultado é mascarado quando necessário.
-
-### Mascaramento de PII
-
-O executor aplica mascaramento de CPF nos resultados.
-
-Isso evita vazamento de dados sensíveis na resposta final.
+- email;
+- telefone;
+- CPF;
+- senha;
+- campos equivalentes de alto risco.
 
 ---
 
-## 11. Memória conversacional
+## 8. Dados e banco
 
-A memória curta fica em `app/memory/conversation_store.py`.
+O ambiente atual trabalha com duas formas de execução:
 
-### Funções principais
+- **SQLite mock** para desenvolvimento e testes locais;
+- **PostgreSQL** para ambiente real.
 
-- criar novo `conversation_id`;
-- listar turns anteriores;
-- anexar o resultado de uma conversa;
-- construir a pergunta enriquecida com memória.
+`app/database/mock_gold.py` cria o banco local com dados de apoio.
 
-### Limitação atual
+`app/database/translator.py` adapta SQL de PostgreSQL para SQLite quando o modo local precisa reproduzir consultas do modelo.
 
-A memória é in-memory.
+### Ponto estrutural importante
 
-Isso é adequado para:
-
-- local development;
-- protótipos;
-- testes.
-
-Mas não é ideal para produção distribuída sem persistência externa.
+Existe um arquivo `app/database/data/connection.py` que contém código executável. Pela arquitetura atual, isso está deslocado: a pasta `data` deveria conter apenas dados, não código. O local correto para conexão é `app/database/connection.py`.
 
 ---
 
-## 12. Prompts
+## 9. Limitações da arquitetura atual
 
-Os prompts estão organizados para separar cada responsabilidade.
+### 9.1 Memória em memória apenas
 
-### Tipos de prompt
+O store conversacional é volátil. Reiniciar o processo perde o histórico.
 
-- **System prompt**  
-  regras gerais do agente.
+### 9.2 Heurísticas de follow-up
 
-- **Prompt de schema**  
-  representação textual do schema Gold.
+A detecção de referência e mudança de dimensão depende de heurísticas textuais e keywords. Isso funciona bem para o domínio atual, mas não é semanticamente completo.
 
-- **Prompt do usuário**  
-  pergunta + memória + contexto.
+### 9.3 Schema e prompts em código
 
-- **Prompt do orquestrador**  
-  recuperação após erro de execução.
+Parte importante da base de conhecimento fica em Python. Isso facilita o agente, mas exige disciplina para manter o schema sincronizado com o banco real.
 
-- **Prompt do explicador**  
-  transforma resultado em texto natural.
+### 9.4 Arquivos pequenos sem claro dono
 
-### Objetivo
+`app/models/metadata.py` tem utilidade limitada hoje. Se não for consumido, deve ser consolidado ou removido.
 
-Essa organização melhora:
+### 9.5 Tensão entre feedback humano e LLM
 
-- legibilidade;
-- manutenção;
-- teste;
-- controle do comportamento do modelo.
+Mesmo com prompts e guardrails, o LLM ainda pode gerar consultas semanticamente inadequadas. A arquitetura reduz risco, mas não elimina completamente a variabilidade do modelo.
 
 ---
 
-## 13. Segurança
+## 10. Onde cada coisa deveria viver
 
-O projeto adota uma abordagem de defesa em profundidade.
+Essa é a leitura arquitetural mais importante do módulo.
 
-### Camadas de proteção
+| Responsabilidade | Local correto |
+|---|---|
+| Entrada HTTP | `app/api/` |
+| Entrada CLI | `app/cli/` |
+| Orquestração do caso de uso | `app/agents/` |
+| Schema e execução de dados | `app/database/` |
+| Memória de conversa | `app/memory/` |
+| Prompts e exemplos | `app/prompts/` |
+| Guardrails e validação | `app/security/` |
+| Contratos e DTOs | `app/models/` |
+| Textos de rejeição | `app/messages/` |
+| Bootstrap local | `app/main.py` |
 
-1. **Guardrails de política**  
-   bloqueiam perguntas fora de contexto.
+### Regra prática
 
-2. **Controle de tabelas e colunas**  
-   restringe o acesso ao schema.
-
-3. **Validação determinística de SQL**  
-   evita queries perigosas.
-
-4. **Mascaramento de PII**  
-   protege dados sensíveis na resposta.
-
-5. **Limites de complexidade e tamanho**  
-   reduzem risco de abuso e custo alto.
-
-### Riscos ainda existentes
-
-- prompt injection;
-- bypass semântico;
-- over-permission em ambientes mal configurados;
-- dependência de validação por blacklist em algumas políticas;
-- necessidade de maior observabilidade em produção.
+- Se o arquivo **decide o que fazer**, ele tende a viver em `agents`.
+- Se o arquivo **só conecta entrada com fluxo**, ele vive em `api` ou `cli`.
+- Se o arquivo **lê, traduz ou executa dados**, ele vive em `database`.
+- Se o arquivo **bloqueia uso indevido**, ele vive em `security`.
+- Se o arquivo **só monta texto para o LLM**, ele vive em `prompts`.
+- Se o arquivo **só carrega metadados de conversas**, ele vive em `memory`.
+- Se o arquivo **é contrato compartilhado**, ele vive em `models`.
 
 ---
 
-## 14. Testes automatizados
+## 11. Conclusão
 
-O projeto possui testes para partes centrais do sistema.
+A arquitetura atual está relativamente bem separada por responsabilidade, com três núcleos claros:
 
-### Cobertura esperada
+- **orquestração de IA** em `app/agents`;
+- **infraestrutura de dados e segurança** em `app/database` e `app/security`;
+- **interfaces de entrada** em `app/api` e `app/cli`.
 
-- API;
-- memória;
-- guardrails;
-- configuração de modelo;
-- orquestrador;
-- mascaramento de PII;
-- geração de SQL;
-- builder de prompts;
-- validador SQL.
+Os principais ajustes arquiteturais que merecem atenção são:
 
-### Objetivo dos testes
+1. evitar código executável dentro de `app/database/data/`;
+2. consolidar ou remover modelos pouco usados;
+3. manter prompts e mensagens estritamente textuais;
+4. preservar a separação entre contratos, caso de uso e infraestrutura.
 
-Garantir que:
-
-- o fluxo principal não quebre;
-- a segurança continue funcionando;
-- as regras de negócio permaneçam estáveis;
-- a integração entre módulos siga consistente.
-
----
-
-## 15. Configuração de ambiente
-
-### Variáveis principais
-
-A aplicação usa `.env` e também permite fallback para variáveis de ambiente.
-
-#### Exemplo
-
-```env
-GOOGLE_API_KEY=...
-API_KEY=...
-```
-
-### Arquivo `.env.example`
-
-O projeto fornece um exemplo de configuração para facilitar o setup local.
-
----
-
-## 16. Dependências principais
-
-O projeto usa, entre outras bibliotecas:
-
-- `fastapi`
-- `pydantic`
-- `sqlglot`
-- `pandas`
-- `python-dotenv`
-
----
-
-## 17. Como executar localmente
-
-### 17.1 Via CLI
-
-```bash
-python -m app.main --chat
-```
-
-### 17.2 Via pergunta única
-
-```bash
-python -m app.main --question "Qual a receita bruta total em 2024-11?"
-```
-
-### 17.3 Via API
-
-```bash
-python -m app.main --serve-api
-```
-
----
-
-## 18. Exemplos práticos
-
-### Exemplo 1 — inspeção do prompt
-
-```bash
-python -m app.main --dry-prompt --question "Quais foram os 10 produtos mais vendidos no mês?"
-```
-
-### Exemplo 2 — visão do schema
-
-```bash
-python -m app.main --schema-info
-```
-
-### Exemplo 3 — chat com memória
-
-```bash
-python -m app.main --chat --conversation-id conv-001
-```
-
-### Exemplo 4 — execução controlada com permissões
-
-```bash
-python -m app.main   --question "Qual a receita bruta total em 2024-11?"   --tenant-id tenant-a   --user-id user-1   --role analyst   --allowed-table gold_vendas_kpis
-```
-
----
-
-## 19. Limitações atuais
-
-Apesar da boa arquitetura, a solução ainda tem limitações importantes:
-
-- memória in-memory;
-- ausência de persistência distribuída;
-- observabilidade limitada;
-- dependência forte de LLM;
-- necessidade de melhor engine de avaliação;
-- ausência de rate limiting explícito;
-- necessidade de integração com autenticação/autorização completa em produção.
-
----
-
-## 20. Evoluções recomendadas
-
-### Curto prazo
-
-- adicionar logging estruturado;
-- incluir tracing;
-- persistir memória em Redis ou banco;
-- ampliar testes adversariais;
-- criar benchmark de execução SQL.
-
-### Médio prazo
-
-- adicionar cache;
-- criar autenticação real;
-- adicionar rate limiting;
-- suportar múltiplos provedores LLM;
-- separar planner semântico do gerador SQL.
-
-### Longo prazo
-
-- migrar para arquitetura com IR intermediária;
-- introduzir camada semântica consultável;
-- adicionar avaliação contínua de qualidade;
-- suportar governança enterprise com políticas centralizadas.
-
----
-
-## 21. Resumo executivo
-
-O V-Commerce AI Agent é uma aplicação de IA bastante madura para um sistema Text-to-SQL, com destaque para:
-
-- boa separação arquitetural;
-- prompt engineering cuidadoso;
-- validação SQL por AST;
-- governança semântica do schema;
-- segurança em múltiplas camadas;
-- suporte a CLI e API;
-- memória conversacional;
-- cobertura de testes relevante.
-
-É uma base forte para evoluir para um produto enterprise, desde que receba melhorias em:
-
-- observabilidade;
-- persistência;
-- controle de acesso;
-- avaliação;
-- escalabilidade operacional.
+Se a intenção for evoluir a base sem aumentar acoplamento, esse é o mapa correto para orientar qualquer refatoração futura.

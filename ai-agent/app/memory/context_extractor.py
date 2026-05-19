@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 import sqlite3
 import unicodedata
 from typing import TYPE_CHECKING
@@ -100,7 +101,6 @@ class ContextExtractor:
             return None
 
         try:
-            # Executa o SQL anterior
             cursor = conn.cursor()
             cursor.execute(turn.sql)
             rows = cursor.fetchall()
@@ -108,19 +108,14 @@ class ContextExtractor:
             if not rows:
                 return None
 
-            # Extrai nomes de colunas
             columns = [desc[0] for desc in cursor.description]
-
-            # Encontra colunas de ID (qualquer coluna que comece com id_)
             id_columns = [col for col in columns if col.startswith("id_")]
 
-            # Extrai IDs do primeira coluna de ID encontrada
             ids = []
             if id_columns:
                 id_col_index = columns.index(id_columns[0])
                 ids = [str(row[id_col_index]) for row in rows[:max_values]]
 
-            # Prepara exemplo de linhas (sem colunas sensíveis)
             sensitive_patterns = ("email", "telefone", "cpf", "senha", "token")
             safe_columns = [
                 col
@@ -158,8 +153,7 @@ class ContextExtractor:
                 "filter_values": filter_values,
             }
 
-        except Exception as e:
-            # Se falhar ao executar, retorna None (não bloqueia o fluxo)
+        except Exception:
             return None
 
     def _detect_referencing_pattern(self, question: str) -> tuple[str, bool]:
@@ -171,7 +165,12 @@ class ContextExtractor:
         q_lower = question.lower()
         normalized_question = self._normalize_text(question)
 
-        # Padrões que indicam referência aos resultados anteriores
+        if re.search(
+            r"\b(desses|dessas|destes|destas)\s+\d+\s+que\s+voce\s+trouxe\b",
+            normalized_question,
+        ):
+            return "filter", True
+
         demonstrative_markers = {
             "qual dos": "demonstrative",
             "quais dos": "demonstrative",
@@ -433,7 +432,8 @@ class ContextExtractor:
         if not entities:
             return ""
 
-        pattern_type, is_referencing = self._detect_referencing_pattern(question)
+        normalized_question = self._normalize_text(question)
+        pattern_type, _ = self._detect_referencing_pattern(question)
 
         if pattern_type == "none":
             return ""
@@ -451,6 +451,39 @@ class ContextExtractor:
                     if part
                 )
             )
+
+            is_evaluation_question = any(
+                token in normalized_question
+                for token in (
+                    "avaliado",
+                    "avaliada",
+                    "avaliacao",
+                    "nota",
+                    "nps",
+                    "review",
+                    "rating",
+                )
+            )
+
+            has_product_or_evaluation_context = any(
+                token in previous_columns_text
+                for token in (
+                    "produto",
+                    "item",
+                    "sku",
+                    "categoria",
+                    "marca",
+                    "avaliacao",
+                    "nota",
+                    "nps",
+                    "review",
+                    "rating",
+                )
+            )
+
+            if is_evaluation_question and not has_product_or_evaluation_context:
+                return ""
+
             if not any(
                 token in previous_columns_text
                 for token in (
@@ -480,7 +513,6 @@ class ContextExtractor:
         def _format_value(value: str) -> str:
             return "'" + value.replace("'", "''") + "'"
 
-        # Limita a lista para evitar prompt muito longo
         values_str = ", ".join(_format_value(value) for value in filter_values[:20])
         overflow = (
             f" ... (e mais {len(filter_values) - 20})"
@@ -488,7 +520,6 @@ class ContextExtractor:
             else ""
         )
 
-        # Exemplo de SQL correto com e sem agregação
         example_with_where = f"WHERE {filter_column} IN ({values_str})"
 
         operation_hint = ""
