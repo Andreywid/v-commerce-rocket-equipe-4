@@ -4,6 +4,7 @@ export type PageKey = "dashboard" | "orders" | "support"
 export type MetricTone = "rose" | "emerald" | "indigo" | "violet"
 export type OrderStatus = "Processando" | "Entregue" | "Cancelado" | "Em trânsito"
 export type SupportType = "Pagamento" | "Atraso" | "Reembolso"
+export type SupportStatus = "Aberto" | "Em andamento" | "Resolvido" | "Fechado"
 export type RatingLabel = "Ótimo" | "Bom" | "Excelente" | "Crítico"
 export type ProductCategory =
   | "Perfumaria"
@@ -30,6 +31,8 @@ export type Metric = {
   icon: LucideIcon
 }
 
+export type OrderPrazo = "No prazo" | "Fora do prazo"
+
 export type OrderRow = {
   id: string
   product: string
@@ -39,12 +42,14 @@ export type OrderRow = {
   date: string
   status: OrderStatus
   quantity: string
+  prazo: OrderPrazo
 }
 
 export type SupportRow = {
   ticket: string
   customer: string
   type: SupportType
+  status: SupportStatus
   createdAt: string
   resolvedIn: string
   rating: string
@@ -55,6 +60,8 @@ export type ProductRow = {
   id: string
   name: string
   categories: ProductCategory[]
+  imageUrl?: string
+  description?: string
   price: string
   stock: number
   rating: string

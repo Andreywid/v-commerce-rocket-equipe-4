@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { Plus, Search, SlidersHorizontal, type LucideIcon } from "lucide-react"
+import { Download, Plus, Search, SlidersHorizontal, type LucideIcon } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -15,6 +15,7 @@ export function TableToolbar({
   onAction,
   onAdvancedFilter,
   advancedFilterActive,
+  onExport,
   onFilterChange,
   onSearchChange,
   placeholder,
@@ -29,6 +30,7 @@ export function TableToolbar({
   onAction: () => void
   onAdvancedFilter?: () => void
   advancedFilterActive?: boolean
+  onExport?: () => void
   onFilterChange?: (value: string) => void
   onSearchChange: (value: string) => void
   placeholder: string
@@ -50,7 +52,7 @@ export function TableToolbar({
           <div className="relative">
             <Search className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
             <Input
-              className="h-9 rounded-full pl-10 pr-4 sm:w-77.5"
+              className="h-9 rounded-full pl-10 pr-4 sm:w-[310px]"
               onChange={(e) => onSearchChange(e.target.value)}
               placeholder={placeholder}
               type="search"
@@ -66,15 +68,33 @@ export function TableToolbar({
                 ? "border-indigo-200 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 hover:text-indigo-700"
                 : "",
             ].join(" ")}
-            onClick={onAdvancedFilter ? onAdvancedFilter : () => setIsFilterOpen((c) => !c)}
+            onClick={() => {
+              if (onAdvancedFilter) {
+                onAdvancedFilter()
+                return
+              }
+              setIsFilterOpen((c) => !c)
+            }}
             type="button"
           >
             <SlidersHorizontal className="size-4" />
             Filtro
           </Button>
 
+          {onExport && (
+            <Button
+              variant="outline"
+              className="h-10 min-h-10 gap-2 rounded-full px-5 border-slate-200 text-slate-600 hover:bg-slate-50"
+              onClick={onExport}
+              type="button"
+            >
+              <Download className="size-4" />
+              Exportar lista (.csv)
+            </Button>
+          )}
+
           <Button
-            className="h-9 rounded-full px-5"
+            className="h-10 min-h-10 gap-2 rounded-full px-6 bg-[#0F172A] hover:bg-[#0F172A]/90 text-white"
             onClick={onAction}
             type="button"
           >

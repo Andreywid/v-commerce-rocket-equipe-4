@@ -1,12 +1,15 @@
 import { useMemo, useState } from "react"
-import { Users } from "lucide-react"
+import { Pencil, Users } from "lucide-react"
 
-import type { ClientFormValues, ClientRow, ClientStatus, FilterValue } from "@/types"
+import type { ClientFormValues, ClientRow, ClientStatus } from "@/types"
 import { clientStatusOptions } from "@/mocks/clients"
 import { useAppContext } from "@/context/AppContext"
 import { getClientsMetrics } from "@/helpers/metrics"
 import { rowIncludes } from "@/helpers/storage"
+import { ClientAdvancedFilterDialog, emptyClientAdvancedFilters } from "@/components/shared/ClientAdvancedFilterDialog"
+import type { ClientAdvancedFilters } from "@/components/shared/ClientAdvancedFilterDialog"
 import { ClientFormModal } from "@/components/shared/ClientFormModal"
+import { ClientProfileDialog } from "@/components/shared/ClientProfileDialog"
 import { DataPanel } from "@/components/shared/DataPanel"
 import { MetricGrid } from "@/components/shared/MetricCard"
 import { PageShell } from "@/components/shared/PageShell"
@@ -17,14 +20,18 @@ import { TableToolbar } from "@/components/shared/TableToolbar"
 const PAGE_SIZE = 5
 
 const statusClasses: Record<ClientStatus, string> = {
-  Novo: "bg-indigo-50 text-indigo-500 ring-indigo-200",
-  Recorrente: "bg-emerald-50 text-emerald-500 ring-emerald-200",
+  Novo:       "bg-indigo-50 text-indigo-500 border-indigo-200",
+  Recorrente: "bg-emerald-50 text-emerald-500 border-emerald-200",
 }
 
 function getInitials(name: string): string {
   const parts = name.trim().split(" ")
   if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase()
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+}
+
+function parseCurrency(value: string) {
+  return Number(value.replace(/[^\d,]/g, "").replace(",", ".")) || 0
 }
 
 type FilteredClient = { client: ClientRow; index: number }
@@ -34,6 +41,7 @@ function ClientsTable({
   filteredCount,
   onEditClient,
   onPageChange,
+  onViewProfile,
   pageCount,
   rows,
   totalCount,
@@ -42,6 +50,7 @@ function ClientsTable({
   filteredCount: number
   onEditClient: (index: number) => void
   onPageChange: (page: number) => void
+  onViewProfile: (index: number) => void
   pageCount: number
   rows: FilteredClient[]
   totalCount: number
@@ -62,13 +71,19 @@ function ClientsTable({
         </TableHeader>
         <TableBody>
           {rows.map(({ client: row, index }) => (
-            <TableRow key={row.id} className="h-[58px] border-slate-100 text-sm text-slate-700">
+            <TableRow key={row.id} className="h-19 border-slate-200 text-sm text-slate-700">
               <TableCell className="pl-5">
                 <div className="flex items-center gap-3">
                   <span className="grid size-8 shrink-0 place-items-center rounded-full bg-indigo-100 text-xs font-bold text-indigo-600">
                     {getInitials(row.name)}
                   </span>
-                  <span className="font-semibold text-slate-800">{row.name}</span>
+                  <button
+                    className="text-left font-semibold text-slate-800 transition hover:text-indigo-600"
+                    onClick={() => onViewProfile(index)}
+                    type="button"
+                  >
+                    {row.name}
+                  </button>
                 </div>
               </TableCell>
               <TableCell className="text-slate-400">{row.location}</TableCell>
@@ -80,11 +95,11 @@ function ClientsTable({
               <TableCell className="font-medium">{row.total}</TableCell>
               <TableCell>
                 <button
-                  className="text-sm font-semibold text-indigo-600 transition hover:text-indigo-500"
+                  className="grid place-items-center rounded-md p-1 transition hover:bg-indigo-50"
                   onClick={() => onEditClient(index)}
                   type="button"
                 >
-                  Editar
+                  <Pencil className="size-4 text-[#4F46E5]" />
                 </button>
               </TableCell>
             </TableRow>
@@ -103,7 +118,7 @@ function ClientsTable({
   )
 }
 
-function useFilteredClients(search: string, statusFilter: FilterValue<ClientStatus>) {
+function useFilteredClients(search: string, filters: ClientAdvancedFilters) {
   const { clients } = useAppContext()
   return useMemo(
     () =>
@@ -114,22 +129,30 @@ function useFilteredClients(search: string, statusFilter: FilterValue<ClientStat
             { name: client.name, location: client.location, status: client.status, lastOrder: client.lastOrder, total: client.total },
             search,
           )
-          const matchesStatus = statusFilter === "Todos" || client.status === statusFilter
-          return matchesSearch && matchesStatus
+          const matchesName = !filters.name ||
+            client.name.toLowerCase().includes(filters.name.toLowerCase()) ||
+            client.id.toLowerCase().includes(filters.name.toLowerCase())
+          const matchesLocation = filters.locations.length === 0 || filters.locations.includes(client.location)
+          const matchesStatus = filters.statuses.length === 0 || filters.statuses.includes(client.status)
+          const total = parseCurrency(client.total)
+          const matchesTotal = total >= filters.minTotal && (filters.maxTotal >= 100_000 || total <= filters.maxTotal)
+          return matchesSearch && matchesName && matchesLocation && matchesStatus && matchesTotal
         }),
-    [clients, search, statusFilter],
+    [clients, search, filters],
   )
 }
 
 export function ClientsPage() {
-  const { clients, addClient, updateClient, showNotice } = useAppContext()
+  const { clients, addClient, updateClient, removeClient, orders, tickets, showNotice } = useAppContext()
   const [search, setSearch] = useState("")
-  const [statusFilter, setStatusFilter] = useState<FilterValue<ClientStatus>>("Todos")
+  const [advancedFilters, setAdvancedFilters] = useState<ClientAdvancedFilters>(emptyClientAdvancedFilters)
   const [currentPage, setCurrentPage] = useState(1)
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
+  const [isAdvancedFilterOpen, setIsAdvancedFilterOpen] = useState(false)
   const [editingIndex, setEditingIndex] = useState<number | null>(null)
+  const [profileIndex, setProfileIndex] = useState<number | null>(null)
 
-  const filteredClients = useFilteredClients(search, statusFilter)
+  const filteredClients = useFilteredClients(search, advancedFilters)
   const metrics = getClientsMetrics(clients)
 
   const pageCount = Math.max(1, Math.ceil(filteredClients.length / PAGE_SIZE))
@@ -142,7 +165,10 @@ export function ClientsPage() {
   }
 
   function handleFilterChange(value: string) {
-    setStatusFilter(value as FilterValue<ClientStatus>)
+    setAdvancedFilters((current) => ({
+      ...current,
+      statuses: value === "Todos" ? [] : [value as ClientStatus],
+    }))
     setCurrentPage(1)
   }
 
@@ -159,6 +185,13 @@ export function ClientsPage() {
     showNotice("Cliente atualizado")
   }
 
+  function handleDelete() {
+    if (editingIndex === null) return
+    removeClient(editingIndex)
+    setEditingIndex(null)
+    showNotice("Cliente removido")
+  }
+
   return (
     <PageShell title="Clientes">
       <MetricGrid metrics={metrics} />
@@ -168,10 +201,11 @@ export function ClientsPage() {
           actionLabel="Adicionar cliente"
           filterLabel="Status"
           filterOptions={["Todos", ...clientStatusOptions]}
-          filterValue={statusFilter}
+          filterValue={advancedFilters.statuses.length === 1 ? advancedFilters.statuses[0] : "Todos"}
           icon={Users}
           label="Lista de clientes"
           onAction={() => setIsAddModalOpen(true)}
+          onAdvancedFilter={() => setIsAdvancedFilterOpen(true)}
           onFilterChange={handleFilterChange}
           onSearchChange={handleSearchChange}
           placeholder="Busque por um cliente, localização ou status"
@@ -182,6 +216,7 @@ export function ClientsPage() {
           filteredCount={filteredClients.length}
           onEditClient={setEditingIndex}
           onPageChange={setCurrentPage}
+          onViewProfile={setProfileIndex}
           pageCount={pageCount}
           rows={paginatedClients}
           totalCount={clients.length}
@@ -191,12 +226,32 @@ export function ClientsPage() {
       {isAddModalOpen && (
         <ClientFormModal onClose={() => setIsAddModalOpen(false)} onSubmit={handleAdd} title="Adicionar cliente" />
       )}
+      {isAdvancedFilterOpen && (
+        <ClientAdvancedFilterDialog
+          filters={advancedFilters}
+          onApply={(filters) => {
+            setAdvancedFilters(filters)
+            setCurrentPage(1)
+            setIsAdvancedFilterOpen(false)
+          }}
+          onClose={() => setIsAdvancedFilterOpen(false)}
+        />
+      )}
       {editingIndex !== null && (
         <ClientFormModal
           initialValues={clients[editingIndex]}
           onClose={() => setEditingIndex(null)}
+          onDelete={handleDelete}
           onSubmit={handleUpdate}
           title="Editar cliente"
+        />
+      )}
+      {profileIndex !== null && (
+        <ClientProfileDialog
+          client={clients[profileIndex]}
+          onClose={() => setProfileIndex(null)}
+          orders={orders}
+          tickets={tickets}
         />
       )}
     </PageShell>
