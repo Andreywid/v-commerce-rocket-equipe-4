@@ -1,9 +1,10 @@
-type HighlightTone = "emerald" | "amber" | "rose"
+type HighlightTone = "emerald" | "indigo" | "amber" | "rose"
 
 const highlightBadge: Record<HighlightTone, string> = {
-  emerald: "bg-[#22C55E]/15 border-[#22C55E]/40 text-[#22C55E]",
-  amber:   "bg-[#FDE68A]/40 border-[#FDE68A]    text-[#F59E0B]",
-  rose:    "bg-[#FECDD3]/40 border-[#FECDD3]    text-[#F43F5E]",
+  emerald: "bg-[#F0FDF4] border-[#BBF7D0] text-[#22C55E]",
+  indigo:  "bg-[#EEF2FF] border-[#C7D2FE] text-[#6366F1]",
+  amber:   "bg-[#FFFBEB] border-[#FDE68A] text-[#F59E0B]",
+  rose:    "bg-[#FFF1F2] border-[#FECDD3] text-[#F43F5E]",
 }
 
 export function ProductHighlightCard({

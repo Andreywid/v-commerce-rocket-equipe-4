@@ -56,7 +56,7 @@ export function getKpiCards(mes: VendasKPIMes): Metric[] {
   ]
 }
 
-export function getKpiInsights(mes: VendasKPIMes): Metric[] {
+export function getKpiInsights(mes: VendasKPIMes, topProductName?: string | null): Metric[] {
   const perf = getPerformance(mes.taxa_aprovacao)
   const regionPct = mes.qtd_pedidos > 0
     ? Math.round((mes.qtd_pedidos_aprovados / mes.qtd_pedidos) * 100)
@@ -72,7 +72,7 @@ export function getKpiInsights(mes: VendasKPIMes): Metric[] {
     },
     {
       label: "Produto mais vendido",
-      value: mes.categoria_mais_vendida,
+      value: topProductName ?? mes.categoria_mais_vendida,
       helper: `${mes.qtd_pedidos_aprovados.toLocaleString("pt-BR")} unidades`,
       tone: "emerald",
       icon: Smartphone,

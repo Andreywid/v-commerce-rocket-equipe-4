@@ -1,5 +1,4 @@
-import { useState } from "react"
-import { Calendar, MapPin, MoreHorizontal, Phone, Send } from "lucide-react"
+import { Calendar, MapPin, Phone } from "lucide-react"
 
 import type { SupportType } from "@/types"
 import type { TicketOut } from "@/types/api"
@@ -69,7 +68,6 @@ export function TicketDetailModal({
   ticket: TicketOut
   onClose: () => void
 }) {
-  const [question, setQuestion] = useState("")
   const { data: customer } = useCustomer360(ticket.id_cliente)
 
   const satisfaction = SATISFACTION_MAP[ticket.satisfacao_atendimento] ?? SATISFACTION_MAP.sem_avaliacao
@@ -154,12 +152,7 @@ export function TicketDetailModal({
           <section className="flex min-h-0 flex-col overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
             {/* Ticket header */}
             <div className="border-b border-slate-100 p-5 pb-4">
-              <div className="flex items-start justify-between">
-                <h2 className="text-2xl font-bold text-slate-900">{title}</h2>
-                <button type="button" className="text-slate-400 hover:text-slate-600">
-                  <MoreHorizontal className="size-5" />
-                </button>
-              </div>
+              <h2 className="text-2xl font-bold text-slate-900">{title}</h2>
               <p className="mt-0.5 text-sm text-slate-400">#{ticket.id_ticket}</p>
               <div className="mt-3 flex flex-wrap gap-2">
                 {ticket.sla_estourado && (
@@ -201,24 +194,6 @@ export function TicketDetailModal({
               </div>
             </div>
 
-            {/* Input footer */}
-            <div className="border-t border-slate-100 px-5 py-3">
-              <div className="flex items-center gap-3">
-                <input
-                  className="flex-1 bg-transparent text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none"
-                  placeholder="Pergunte qualquer coisa..."
-                  value={question}
-                  onChange={(e) => setQuestion(e.target.value)}
-                />
-                <button
-                  type="button"
-                  className="text-slate-400 transition hover:text-indigo-600"
-                  onClick={() => setQuestion("")}
-                >
-                  <Send className="size-4" />
-                </button>
-              </div>
-            </div>
           </section>
         </div>
       </DialogContent>

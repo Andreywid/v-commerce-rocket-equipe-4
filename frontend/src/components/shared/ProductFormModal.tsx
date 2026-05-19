@@ -1,5 +1,5 @@
-import { useRef, useState } from "react"
-import { Check, Pencil, Trash2, Upload, X } from "lucide-react"
+import { useState } from "react"
+import { Check, Pencil, Trash2, X } from "lucide-react"
 
 import type { ProductCategory } from "@/types"
 import type { ProductCreate } from "@/types/api"
@@ -18,15 +18,6 @@ const EMPTY: ProductCreate = {
   preco_atual: 0,
   ativo: true,
   estoque: 0,
-  descricao: "",
-  imagem_url: null,
-}
-
-function deriveImageName(url?: string | null): string {
-  if (!url) return ""
-  const parts = url.split("/")
-  const last = parts[parts.length - 1]
-  return last.includes(".") ? last : "imagem.jpg"
 }
 
 export function ProductFormModal({
@@ -47,21 +38,7 @@ export function ProductFormModal({
   title?: string
 }) {
   const [form, setForm] = useState<ProductCreate>(initialValues)
-  const [imageName, setImageName] = useState(() => deriveImageName(initialValues.imagem_url))
-  const fileInputRef = useRef<HTMLInputElement>(null)
   const isEditing = productId !== undefined
-
-  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
-    if (!file) return
-    setImageName(file.name)
-    const reader = new FileReader()
-    reader.onload = (ev) => {
-      const dataUrl = ev.target?.result as string | undefined
-      setForm((prev) => ({ ...prev, imagem_url: dataUrl ?? null }))
-    }
-    reader.readAsDataURL(file)
-  }
 
   return (
     <Dialog open onOpenChange={(open) => { if (!open) onClose() }}>
@@ -134,48 +111,6 @@ export function ProductFormModal({
                 placeholder="ex: 24"
                 value={form.estoque === 0 || form.estoque == null ? "" : String(form.estoque)}
                 onChange={(e) => setForm({ ...form, estoque: Number(e.target.value) || 0 })}
-              />
-            </div>
-          </div>
-
-          {/* Descrição */}
-          <div className="grid gap-1.5">
-            <Label className="text-sm font-semibold text-slate-700">Descrição</Label>
-            <textarea
-              className="min-h-24 resize-none rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              placeholder="Descreva o produto..."
-              value={form.descricao ?? ""}
-              onChange={(e) => setForm({ ...form, descricao: e.target.value })}
-            />
-          </div>
-
-          {/* Imagem */}
-          <div className="grid gap-1.5">
-            <Label className="text-sm font-semibold text-slate-700">Imagem</Label>
-            <div className="flex items-center justify-between rounded-lg border border-slate-200 px-4 py-3">
-              <div className="flex items-center gap-3">
-                {form.imagem_url && (
-                  <img src={form.imagem_url} alt="" className="size-10 rounded-md object-cover" />
-                )}
-                <span className="text-sm font-medium text-indigo-600">
-                  {imageName || "Nenhuma imagem selecionada"}
-                </span>
-              </div>
-              <Button
-                type="button"
-                variant="outline"
-                className="h-9 gap-2 rounded-full px-4 text-sm"
-                onClick={() => fileInputRef.current?.click()}
-              >
-                <Upload className="size-4" />
-                Substituir imagem
-              </Button>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={handleFileChange}
               />
             </div>
           </div>

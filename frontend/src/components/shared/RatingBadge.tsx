@@ -10,25 +10,25 @@ type RatingStyle = {
 
 const RATING_STYLES: Record<RatingLabel, RatingStyle> = {
   "Excelente": {
-    outerBg:    "bg-[#22C55E]/15",
-    outerBorder:"border-[#22C55E]/40",
+    outerBg:    "bg-[#F0FDF4]",
+    outerBorder:"border-[#BBF7D0]",
     innerBg:    "bg-[#22C55E]",
     textColor:  "text-[#22C55E]",
   },
   "Ótimo": {
-    outerBg:    "bg-[#C7D2FE]/40",
+    outerBg:    "bg-[#EEF2FF]",
     outerBorder:"border-[#C7D2FE]",
     innerBg:    "bg-[#6366F1]",
     textColor:  "text-[#6366F1]",
   },
   "Bom": {
-    outerBg:    "bg-[#FDE68A]/40",
+    outerBg:    "bg-[#FFFBEB]",
     outerBorder:"border-[#FDE68A]",
     innerBg:    "bg-[#F59E0B]",
     textColor:  "text-[#F59E0B]",
   },
   "Crítico": {
-    outerBg:    "bg-[#FECDD3]/40",
+    outerBg:    "bg-[#FFF1F2]",
     outerBorder:"border-[#FECDD3]",
     innerBg:    "bg-[#F43F5E]",
     textColor:  "text-[#F43F5E]",
