@@ -59,12 +59,12 @@ export type CustomerOut = {
   estado: string
   origem: string
   qtd_pedidos_total: number
-  valor_total_gasto: number
-  ticket_medio: number
+  valor_total_gasto: number | null
+  ticket_medio: number | null
   data_ultimo_pedido: string | null
   qtd_tickets_abertos: number
   segmento_ltv: "Alto" | "Medio" | "Baixo"
-  is_ativo_90d: boolean
+  is_ativo_90d: boolean | null
   is_em_risco: boolean
 }
 
@@ -76,7 +76,7 @@ export type Customer360 = CustomerOut & {
   data_primeiro_pedido: string | null
   qtd_tickets_total: number
   qtd_tickets_resolvidos: number
-  qtd_avaliacoes: number
+  qtd_avaliacoes: number | null
   nota_media_dada: number | null
   nps_medio_avaliacoes_cliente: number | null
   qtd_eventos_clickstream: number
@@ -85,6 +85,36 @@ export type Customer360 = CustomerOut & {
 }
 
 export type CustomerListResponse = PagedResponse<CustomerOut>
+
+export type CustomerCreate = {
+  nome: string
+  email: string
+  telefone?: string
+  cidade?: string
+  estado?: string
+  origem?: "App" | "Web" | "Indicacao"
+}
+
+export type CustomerUpdate = {
+  nome?: string
+  email?: string
+  telefone?: string
+  cidade?: string
+  estado?: string
+  origem?: "App" | "Web" | "Indicacao"
+  segmento_ltv?: "Alto" | "Medio" | "Baixo"
+}
+
+export type CustomerStats = {
+  total_clientes: number
+  nps_medio: number | null
+  nota_media: number | null
+  top_estado: string | null
+  top_estado_percentual: number | null
+  clientes_em_risco: number
+  clientes_ativos_90d: number
+  segmentos: Record<string, number>
+}
 
 // Pedidos
 export type OrderOut = {
@@ -191,20 +221,39 @@ export type TicketOut = {
 
 export type TicketListResponse = PagedResponse<TicketOut>
 
+export type TicketCreate = {
+  id_cliente: string
+  tipo_problema: "Entrega" | "Reembolso" | "Produto" | "Pagamento"
+  agente_suporte: string
+  nome_cliente: string
+  id_pedido?: string
+  id_produto?: string
+  nome_produto?: string
+  data_abertura?: string
+}
+
+export type TicketUpdate = {
+  tipo_problema?: "Entrega" | "Reembolso" | "Produto" | "Pagamento"
+  status_ticket?: "Aberto" | "Resolvido"
+  agente_suporte?: string
+  nota_avaliacao?: number
+  satisfacao_atendimento?: "alta" | "media" | "baixa" | "sem_avaliacao"
+}
+
 // Avaliações
 export type ReviewOut = {
   id_avaliacao: string
   id_cliente: string
   id_pedido: string
   id_produto: string
-  nota_produto: number
-  nota_nps: number
+  nota_produto: number | null
+  nota_nps: number | null
   recomenda: boolean
   comentario: string | null
-  sentimento: "positivo" | "neutro" | "negativo"
+  sentimento: "positivo" | "neutro" | "negativo" | null
   data_avaliacao: string
   nome_produto: string
-  categoria_produto: string
+  categoria_produto: string | null
   nome_cliente: string
 }
 

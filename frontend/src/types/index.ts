@@ -19,6 +19,8 @@ export type ProductCategory =
   | "Sem categoria"
 export type ProductClassificacao = "Top Vendedor" | "Estável" | "Problemático" | "Encalhado"
 export type ClientSegmento = "Alto" | "Medio" | "Baixo"
+export type ClienteStatus = "Novo" | "Recorrente"
+export type ReviewSentimento = "positivo" | "neutro" | "negativo"
 export type MetodoPagamento = "Cartao" | "PIX" | "Boleto" | "App"
 
 export type NavItem = {
@@ -40,4 +42,7 @@ export type ChatMessage = {
   id: string
   role: "assistant" | "user"
   content: string
+  timestamp: Date
+  source?: string | null
+  isError?: boolean
 }

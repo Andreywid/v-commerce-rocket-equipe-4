@@ -50,9 +50,9 @@ export function TableToolbar({
 
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
           <div className="relative">
-            <Search className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
+            <Search className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-slate-500" />
             <Input
-              className="h-9 rounded-full pl-10 pr-4 sm:w-[310px]"
+              className="h-10 rounded-full pl-10 pr-3 placeholder:text-[#64748B] sm:w-[348px]"
               onChange={(e) => onSearchChange(e.target.value)}
               placeholder={placeholder}
               type="search"
@@ -63,7 +63,7 @@ export function TableToolbar({
           <Button
             variant="outline"
             className={[
-              "h-9 rounded-full px-4",
+              "h-10 rounded-full px-4",
               (onAdvancedFilter ? advancedFilterActive : filterValue !== "Todos")
                 ? "border-indigo-200 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 hover:text-indigo-700"
                 : "",
@@ -95,7 +95,7 @@ export function TableToolbar({
 
           {actionLabel && onAction && (
             <Button
-              className="h-10 min-h-10 w-[217px] gap-2 rounded-full px-6 bg-[#0F172A] hover:bg-[#0F172A]/90 text-white"
+              className="h-10 min-h-10 w-[209px] gap-2 rounded-full px-5 py-2.5 bg-[#0F172A] hover:bg-[#0F172A]/90 text-white"
               onClick={onAction}
               type="button"
             >
