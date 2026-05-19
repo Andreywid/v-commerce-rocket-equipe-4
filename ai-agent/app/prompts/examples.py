@@ -5,6 +5,31 @@
 # ============================================
 
 SQL_EXAMPLES = [
+    """
+    Pergunta:
+    Produtos com muitas visualizações mas poucas vendas.
+
+    SQL:
+    SELECT
+        id_produto,
+        nome_produto,
+        categoria,
+        qtd_visualizacoes,
+        qtd_vendida_total,
+        taxa_conversao
+    FROM gold_produto_performance
+    WHERE qtd_visualizacoes > (
+        SELECT AVG(qtd_visualizacoes)
+        FROM gold_produto_performance
+    )
+      AND qtd_vendida_total < (
+        SELECT AVG(qtd_vendida_total)
+        FROM gold_produto_performance
+    )
+    ORDER BY qtd_visualizacoes DESC, qtd_vendida_total ASC, taxa_conversao ASC
+    LIMIT 10;
+    """,
+
   """
   Pergunta:
   Qual região teve maior crescimento de receita?

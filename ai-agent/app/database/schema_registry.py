@@ -274,7 +274,9 @@ GOLD_SCHEMA = {
             "Não some taxa_problema diretamente.",
             "Para 'último mês' ou 'últimos 30 dias', use colunas *_30d (qtd_vendida_30d, receita_30d, qtd_tickets_30d).",
             "Para 'últimos 90 dias', use colunas *_90d.",
-            "Use colunas *_total apenas para histórico/total, sem filtro de data nesta tabela."
+            "Use colunas *_total apenas para histórico/total, sem filtro de data nesta tabela.",
+            "Para perguntas como 'produtos com muitas visualizações mas poucas vendas', use somente gold_produto_performance; não faça JOIN nem CROSS JOIN. Use qtd_visualizacoes, qtd_vendida_total e taxa_conversao.",
+            "Se precisar comparar 'muitas visualizações' e 'poucas vendas' com a média da base, use subconsultas escalares no WHERE, nunca JOIN com subquery sem ON."
         ],
         "colunas": {
             "id_produto": {
