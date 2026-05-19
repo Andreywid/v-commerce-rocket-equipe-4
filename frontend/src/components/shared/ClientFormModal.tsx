@@ -1,5 +1,6 @@
 import { useState } from "react"
 import { Check, SquarePen, Trash2, X } from "lucide-react"
+import { toast } from "sonner"
 
 import type { CustomerOut } from "@/types/api"
 import { useCustomerMutations } from "@/hooks/useCustomers"
@@ -34,7 +35,18 @@ export function ClientFormModal({ mode, customer, onClose, onDelete, onSubmit }:
   }
 
   function handleSubmit() {
-    if (!nome.trim() || !email.trim()) return
+    if (!nome.trim()) {
+      toast.error("O nome do cliente é obrigatório")
+      return
+    }
+    if (!email.trim()) {
+      toast.error("O e-mail do cliente é obrigatório")
+      return
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      toast.error("Informe um e-mail válido")
+      return
+    }
     const payload = {
       nome: nome.trim(),
       email: email.trim(),
@@ -139,7 +151,7 @@ export function ClientFormModal({ mode, customer, onClose, onDelete, onSubmit }:
               </Button>
               <Button
                 className="h-10 gap-2 rounded-full px-6 bg-[#0F172A] hover:bg-[#0F172A]/90 text-white disabled:opacity-60"
-                disabled={isPending || !nome.trim() || !email.trim()}
+                disabled={isPending}
                 type="submit"
               >
                 <Check className="size-4" />

@@ -1,5 +1,6 @@
 import { useState } from "react"
 import { Check, Pencil, Trash2, X } from "lucide-react"
+import { toast } from "sonner"
 
 import type { ProductCategory } from "@/types"
 import type { ProductCreate } from "@/types/api"
@@ -39,6 +40,18 @@ export function ProductFormModal({
 }) {
   const [form, setForm] = useState<ProductCreate>(initialValues)
   const isEditing = productId !== undefined
+
+  function handleSubmit() {
+    if (!form.nome_produto.trim()) {
+      toast.error("O nome do produto é obrigatório")
+      return
+    }
+    if (!form.preco_atual || form.preco_atual <= 0) {
+      toast.error("Informe um preço válido para o produto")
+      return
+    }
+    onSubmit(form)
+  }
 
   return (
     <Dialog open onOpenChange={(open) => { if (!open) onClose() }}>
@@ -144,10 +157,7 @@ export function ProductFormModal({
                 className="h-10 gap-2 rounded-full px-6 bg-[#1E293B] hover:bg-[#1E293B]/90 text-white disabled:opacity-60"
                 disabled={isSubmitting}
                 type="button"
-                onClick={() => {
-                  if (!form.nome_produto.trim()) return
-                  onSubmit(form)
-                }}
+                onClick={handleSubmit}
               >
                 {isSubmitting ? (
                   <span className="size-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />

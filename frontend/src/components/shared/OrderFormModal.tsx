@@ -1,5 +1,6 @@
 import { useState } from "react"
 import { Check, ClipboardList, Trash2, X } from "lucide-react"
+import { toast } from "sonner"
 
 import type { OrderCreate, OrderUpdate } from "@/types/api"
 import { useProducts } from "@/hooks/useProducts"
@@ -46,7 +47,14 @@ export function OrderFormModal(props: Props) {
   const products = productsData?.items ?? []
 
   function handleSubmit() {
-    if (!form.id_produto || !form.data_pedido) return
+    if (!form.id_produto) {
+      toast.error("Selecione um produto para o pedido")
+      return
+    }
+    if (!form.data_pedido) {
+      toast.error("Informe a data do pedido")
+      return
+    }
     if (isEditing) {
       props.onSubmit({ ...form })
     } else {
@@ -167,7 +175,7 @@ export function OrderFormModal(props: Props) {
               </Button>
               <Button
                 className="h-10 gap-2 rounded-full px-6 bg-[#1E293B] hover:bg-[#1E293B]/90 text-white disabled:opacity-60"
-                disabled={isSubmitting || !form.id_produto || !form.data_pedido}
+                disabled={isSubmitting}
                 type="button"
                 onClick={handleSubmit}
               >
