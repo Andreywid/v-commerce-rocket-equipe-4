@@ -1,4 +1,4 @@
-from sqlalchemy import Boolean, Column, Date, Float, Integer, String
+from sqlalchemy import Boolean, Column, Float, Integer, String
 from app.database import Base
 
 
@@ -10,18 +10,17 @@ class SupportTicket(Base):
     id_pedido = Column(String, nullable=True)
     id_produto = Column(String, nullable=True)
 
-
-    tipo_problema = Column(String)      # Entrega | Reembolso | Produto | Pagamento
-    satisfacao_atendimento = Column(String)  # alta | media | baixa | sem_avaliacao
-    data_abertura = Column(Date)
-    data_resolucao = Column(Date, nullable=True)
+    tipo_problema = Column(String)
+    satisfacao_atendimento = Column(String)
+    data_abertura = Column(String)
+    data_resolucao = Column(String, nullable=True)
     tempo_resolucao_horas = Column(Float, nullable=True)
     agente_suporte = Column(String)
-    nota_avaliacao = Column(Integer, nullable=True)  # 1-5
+    nota_avaliacao = Column(Integer, nullable=True)
 
-    status_ticket = Column(String)      # Aberto | Resolvido
+    status_ticket = Column(String)
     sla_estourado = Column(Boolean, default=False)
 
     nome_cliente = Column(String)
     nome_produto = Column(String, nullable=True)
-    data_referencia_calculo = Column(Date, nullable=True)
+    data_referencia_calculo = Column(String, nullable=True)
