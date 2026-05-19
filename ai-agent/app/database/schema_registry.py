@@ -7,11 +7,12 @@ GOLD_SCHEMA = {
         "chave_primaria": ["ano_mes"],
         "regras_ia": [
             "Use esta tabela para análises mensais e agregadas.",
+            "Sempre use CAST(receita_bruta AS REAL) ou multiplique por 1.0 em divisões para evitar arredondamentos de inteiros.",
             "Não use esta tabela para listar pedidos individuais.",
             "Não some ticket_medio diretamente.",
             "Para faturamento, use receita_bruta.",
-            "Para calcular ticket médio em vários meses, use SUM(receita_bruta) / SUM(qtd_pedidos_aprovados).",
-            "Para recalcular taxas em múltiplos meses, divida a soma do subconjunto pela soma do total. Ex: SUM(qtd_pedidos_aprovados) / SUM(qtd_pedidos) para calcular a taxa de aprovação agregada."
+            "Para calcular ticket médio em vários meses, use SUM(receita_bruta) * 1.0 / NULLIF(SUM(qtd_pedidos_aprovados), 0).",
+            "Para recalcular taxas em múltiplos meses, divida a soma do subconjunto pela soma do total. Ex: SUM(qtd_pedidos_aprovados) * 1.0 / SUM(qtd_pedidos) para calcular a taxa de aprovação agregada."
         ],
         "colunas": {
             "ano": {
@@ -111,12 +112,12 @@ GOLD_SCHEMA = {
             "Não use esta tabela para análises detalhadas de pedidos individuais.",
             "Para comportamento por dia, use gold_clickstream_resumo.",
             "Para avaliações individuais, use gold_avaliacoes.",
-            "Nordeste, Norte, Sul, Sudeste e Centro-Oeste são nomes de região: expanda para estado IN ('Estado',...) conforme o mapeamento de regiões do Brasil; não rejeite a pergunta só por usar o nome da região nem peça esclarecimento de granularidade geográfica quando a região puder ser inferida."
+            "Nordeste, Norte, Sul, Sudeste e Centro-Oeste são nomes de região: expanda para uf IN ('Estado',...) conforme o mapeamento de regiões do Brasil; não rejeite a pergunta só por usar o nome da região nem peça esclarecimento de granularidade geográfica quando a região puder ser inferida."
         ],
         "colunas": {
             "id_cliente": {
                 "descricao": "ID único do cliente.",
-                "tipo": "inteiro"
+                "tipo": "texto"
             },
             "nome": {
                 "descricao": "Nome completo do cliente.",
@@ -138,7 +139,7 @@ GOLD_SCHEMA = {
                 "descricao": "Cidade do cliente.",
                 "tipo": "texto"
             },
-            "estado": {
+            "uf": {
                 "descricao": "Nome completo do estado do cliente (Pernambuco, São Paulo, etc.). Se o usuário disser Nordeste, Sudeste, Sul, Norte ou Centro-Oeste, filtre com IN nos estados daquela região (ex.: Nordeste = Alagoas, Bahia, Ceará, etc.).",
                 "tipo": "texto"
             },
@@ -256,18 +257,20 @@ GOLD_SCHEMA = {
         "chave_primaria": ["id_produto"],
         "regras_ia": [
             "Use esta tabela para análises agregadas por produto.",
+            "Ao filtrar por categoria, SEMPRE use o valor sem acento (ex: 'Vestuario', 'Eletronicos', 'Moveis', 'Beleza').",
+            "Sempre use CAST(coluna AS REAL) ou multiplique por 1.0 em divisões para evitar arredondamentos de inteiros.",
+            "Ao ordenar por preço ou buscar o produto 'mais caro', filtre sempre 'WHERE preco_atual IS NOT NULL'.",
+            "NÃO use a coluna receita_90d; use receita_30d ou receita_total.",
             "Não use esta tabela para listar pedidos individuais.",
             "Para detalhes de pedidos de um produto, use gold_pedidos_enriquecidos.",
-            "Não some taxa_conversao diretamente.",
-            "Não some taxa_problema diretamente.",
-            "Para 'último mês' ou 'últimos 30 dias', use colunas *_30d (qtd_vendida_30d, receita_30d, qtd_tickets_30d).",
-            "Para 'últimos 90 dias', use colunas *_90d.",
+            "Não some taxa_conversao diretamente; calcule como SUM(qtd_vendida_total) * 1.0 / NULLIF(SUM(qtd_visualizacoes), 0).",
+            "Para 'últimos 90 dias', use a coluna qtd_vendida_90d (receita_90d NÃO existe).",
             "Use colunas *_total apenas para histórico/total, sem filtro de data nesta tabela."
         ],
         "colunas": {
             "id_produto": {
                 "descricao": "ID único do produto.",
-                "tipo": "inteiro"
+                "tipo": "texto"
             },
             "nome_produto": {
                 "descricao": "Nome do produto.",
@@ -356,7 +359,7 @@ GOLD_SCHEMA = {
                 "agregacao": "NAO_SOMAR"
             },
             "classificacao": {
-                "descricao": "Classificação comercial do produto.",
+                "descricao": "Classificação comercial do produto. SEMPRE use os valores sem acento no SQL (ex: 'Problematico', 'Estavel').",
                 "tipo": "enum",
                 "valores_validos": ["Top Vendedor", "Estável", "Problemático", "Encalhado"]
             },
@@ -376,7 +379,8 @@ GOLD_SCHEMA = {
             "id_produto": "gold_produto_performance.id_produto"
         },
         "regras_ia": [
-            "Use esta tabela para consultas detalhadas de pedidos.",
+            "Use esta tabela for consultas detalhadas de pedidos.",
+            "Ao filtrar por categoria, SEMPRE use o valor sem acento (ex: 'Vestuario', 'Eletronicos', 'Moveis', 'Beleza').",
             "Use esta tabela quando a pergunta envolver status, método de pagamento, cliente, produto ou categoria por pedido.",
             "Para KPIs mensais prontos, prefira gold_vendas_kpis.",
             "Para receita, considere apenas status = 'Aprovado', salvo se o usuário pedir outro status.",
@@ -385,15 +389,15 @@ GOLD_SCHEMA = {
         "colunas": {
             "id_pedido": {
                 "descricao": "ID único do pedido.",
-                "tipo": "inteiro"
+                "tipo": "texto"
             },
             "id_cliente": {
                 "descricao": "ID do cliente relacionado ao pedido.",
-                "tipo": "inteiro"
+                "tipo": "texto"
             },
             "id_produto": {
                 "descricao": "ID do produto relacionado ao pedido.",
-                "tipo": "inteiro"
+                "tipo": "texto"
             },
             "data_pedido": {
                 "descricao": "Data do pedido.",
@@ -457,7 +461,7 @@ GOLD_SCHEMA = {
     "gold_tickets": {
         "descricao": "Tabela de chamados de suporte. Use para perguntas sobre problemas, SLA, tempo de resolução e qualidade do atendimento.",
         "granularidade": "Uma linha por ticket.",
-        "chave_primaria": ["id_ticket"],
+        "chave_primaria": ["ticket_id"],
         "chaves_estrangeiras": {
             "id_cliente": "gold_cliente_360.id_cliente",
             "id_produto": "gold_produto_performance.id_produto",
@@ -465,28 +469,29 @@ GOLD_SCHEMA = {
         },
         "regras_ia": [
             "Use esta tabela para análise de suporte e problemas.",
+            "Para filtrar por categoria, FAÇA JOIN com gold_produto_performance (coluna categoria) ou gold_pedidos_enriquecidos (coluna categoria_produto).",
             "Para tickets em aberto, filtre status_ticket = 'Aberto'.",
             "Para SLA estourado, filtre sla_estourado = true.",
             "data_resolucao pode ser nula quando o ticket estiver aberto."
         ],
         "colunas": {
-            "id_ticket": {
+            "ticket_id": {
                 "descricao": "ID único do ticket.",
-                "tipo": "inteiro"
+                "tipo": "texto"
             },
             "id_cliente": {
                 "descricao": "ID do cliente relacionado ao ticket.",
-                "tipo": "inteiro"
+                "tipo": "texto"
             },
             "id_pedido": {
                 "descricao": "ID do pedido relacionado ao ticket.",
-                "tipo": "inteiro"
+                "tipo": "texto"
             },
             "id_produto": {
                 "descricao": "ID do produto relacionado ao ticket.",
-                "tipo": "inteiro"
+                "tipo": "texto"
             },
-            "tipo_problema": {
+            "tipo_problema_padronizado": {
                 "descricao": "Tipo de problema reportado.",
                 "tipo": "enum",
                 "valores_validos": ["Entrega", "Reembolso", "Produto", "Pagamento"]
@@ -560,19 +565,19 @@ GOLD_SCHEMA = {
         "colunas": {
             "id_avaliacao": {
                 "descricao": "ID único da avaliação.",
-                "tipo": "inteiro"
+                "tipo": "texto"
             },
             "id_cliente": {
                 "descricao": "ID do cliente que avaliou.",
-                "tipo": "inteiro"
+                "tipo": "texto"
             },
             "id_pedido": {
                 "descricao": "ID do pedido relacionado à avaliação.",
-                "tipo": "inteiro"
+                "tipo": "texto"
             },
             "id_produto": {
                 "descricao": "ID do produto avaliado.",
-                "tipo": "inteiro"
+                "tipo": "texto"
             },
             "nota_produto": {
                 "descricao": "Nota do produto, de 1 a 5.",
@@ -632,7 +637,7 @@ GOLD_SCHEMA = {
         "colunas": {
             "id_cliente": {
                 "descricao": "ID do cliente.",
-                "tipo": "inteiro"
+                "tipo": "texto"
             },
             "data": {
                 "descricao": "Data da navegação.",
