@@ -1,5 +1,5 @@
 from datetime import date
-from sqlalchemy import asc, desc
+from sqlalchemy import asc, desc, or_
 from app.database import SessionLocal
 from app.models.product import Product
 
@@ -30,7 +30,10 @@ def get_all(
         if ativo is not None:
             query = query.filter(Product.ativo == ativo)
         if nome:
-            query = query.filter(Product.nome_produto.ilike(f"%{nome}%"))
+            query = query.filter(or_(
+                Product.nome_produto.ilike(f"%{nome}%"),
+                Product.id_produto.ilike(f"%{nome}%"),
+            ))
         if preco_min is not None:
             query = query.filter(Product.preco_atual >= preco_min)
         if preco_max is not None:

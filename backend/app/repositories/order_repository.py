@@ -9,6 +9,9 @@ _SORTABLE = {
     "data_pedido":  Order.data_pedido,
 }
 
+_DENTRO_PRAZO = ["Aprovado", "Processando"]
+_FORA_PRAZO   = ["Recusado", "Reembolsado"]
+
 def get_all(
     status: list[str] | None = None,
     categoria: str | None = None,
@@ -23,6 +26,7 @@ def get_all(
     size: int = 20,
     sort_by: str | None = None,
     order: str | None = None,
+    dentro_prazo: bool | None = None,
 ) -> tuple[list[Order], int]:
     db = SessionLocal()
     try:
@@ -30,6 +34,10 @@ def get_all(
 
         if status:
             query = query.filter(Order.status.in_(status))
+        if dentro_prazo is True:
+            query = query.filter(Order.status.in_(_DENTRO_PRAZO))
+        elif dentro_prazo is False:
+            query = query.filter(Order.status.in_(_FORA_PRAZO))
         if valor_min is not None:
             query = query.filter(Order.valor_total >= valor_min)
         if valor_max is not None:
