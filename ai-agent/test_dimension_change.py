@@ -25,6 +25,9 @@ from app.memory.conversation_store import (
 from app.models.conversation import ConversationTurn
 
 
+import pytest
+
+@pytest.mark.asyncio
 async def test_dimension_change():
     """Reproduz o fluxo: produtos → regiões com mudança de dimensão."""
     

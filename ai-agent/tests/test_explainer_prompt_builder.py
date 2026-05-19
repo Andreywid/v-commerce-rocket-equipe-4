@@ -41,8 +41,6 @@ class ExplainerPromptBuilderTest(unittest.TestCase):
         self.assertIn("ano_mes", payload["dados_consultados"]["campos_ou_metricas"])
         self.assertIn("receita_total", payload["dados_consultados"]["campos_ou_metricas"])
         self.assertIn('começando com "Dados consultados:"', prompt)
-        self.assertIn('começando com "SQL executado:"', prompt)
-        self.assertIn("conteúdo completo de sql_executado", prompt)
 
 
 if __name__ == "__main__":

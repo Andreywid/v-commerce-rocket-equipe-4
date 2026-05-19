@@ -69,11 +69,12 @@ class QueryPolicyTest(unittest.TestCase):
             Deps(conn=None, require_tenant=True, tenant_id="tenant-1"),
         )
 
-    def test_allows_email_and_nome_without_special_role(self) -> None:
-        self.policy.validate_sql(
-            "SELECT email, nome FROM gold_cliente_360 LIMIT 100",
-            Deps(conn=None),
-        )
+    def test_blocks_email_as_sensitive_column(self) -> None:
+        with self.assertRaises(PolicyViolation):
+            self.policy.validate_sql(
+                "SELECT email, nome FROM gold_cliente_360 LIMIT 100",
+                Deps(conn=None),
+            )
 
     def test_allows_select_star_without_pii_reader(self) -> None:
         self.policy.validate_sql(
@@ -134,14 +135,15 @@ class QueryPolicyTest(unittest.TestCase):
             ),
         )
 
-    def test_allow_all_schema_access_allows_email_and_cpf_columns(self) -> None:
-        self.policy.validate_sql(
-            "SELECT email, cpf FROM gold_cliente_360 LIMIT 100",
-            Deps(
-                conn=None,
-                allow_all_schema_access=True,
-            ),
-        )
+    def test_allow_all_schema_access_still_blocks_pii_columns(self) -> None:
+        with self.assertRaises(PolicyViolation):
+            self.policy.validate_sql(
+                "SELECT email, cpf FROM gold_cliente_360 LIMIT 100",
+                Deps(
+                    conn=None,
+                    allow_all_schema_access=True,
+                ),
+            )
 
     def test_count_star_is_not_treated_as_pii_projection(self) -> None:
         self.policy.validate_sql(

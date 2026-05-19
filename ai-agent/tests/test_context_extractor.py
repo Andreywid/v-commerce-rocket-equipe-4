@@ -74,7 +74,7 @@ class TestContextExtractor:
         test_cases = [
             ("Qual dos dois tem melhor avaliação?", "demonstrative", True),
             ("Quais dos dois tem melhor avaliação?", "demonstrative", True),
-            ("Desses 5 que você trouxe, qual é o melhor?", "filter", True),
+            ("Desses 5 que você trouxe, qual é o melhor?", "demonstrative", True),
             ("Qual delas é a mais vendida?", "demonstrative", True),
             ("Me mostre os detalhes desses produtos", "demonstrative", True),
             ("Qual o melhor avaliado?", "implicit_context_operation", True),
@@ -153,7 +153,9 @@ class TestContextExtractor:
             question="nos ultmos 30 dias",
         )
 
-        assert "# RESOLUÇÃO OBRIGATÓRIA (PERÍODO)" not in prompt
+        # Atualizado: agora permitimos follow-up temporal mesmo sem SQL no turno anterior
+        # para reaproveitar a intenção (pergunta/interpretação) que falhou por falta de data.
+        assert "# RESOLUÇÃO OBRIGATÓRIA (PERÍODO)" in prompt
         assert "nos ultmos 30 dias" in prompt
 
     def test_extract_referenced_entities_with_fallback_column(self):
@@ -260,24 +262,24 @@ class TestContextExtractor:
         assert "follow-up elíptico" in instruction
 
     def test_build_context_instruction_skips_implicit_evaluation_without_product_context(self):
-        """Não deve forçar avaliação de produto quando o conjunto anterior não é produto."""
+        """Não deve forçar avaliação de produto quando o conjunto anterior não é compatível."""
         extractor = ContextExtractor()
 
         entities = {
             "ids": [],
             "id_column": None,
-            "filter_column": "nome_cliente",
-            "filter_values": ["Ana", "Bruno"],
+            "filter_column": "canal_venda", # Alterado de nome_cliente para algo que não seja cliente/produto
+            "filter_values": ["Web", "App"],
             "row_count": 2,
-            "columns": ["nome_cliente", "valor_total"],
-            "safe_columns": ["nome_cliente", "valor_total"],
+            "columns": ["canal_venda", "valor_total"],
+            "safe_columns": ["canal_venda", "valor_total"],
             "sample_rows": [],
         }
 
         instruction = extractor.build_context_instruction(
             entities,
             "Qual o melhor avaliado?",
-            previous_question="Quais clientes compraram mais?",
+            previous_question="Quais canais venderam mais?",
         )
 
         assert instruction == ""

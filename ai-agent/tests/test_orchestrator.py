@@ -235,7 +235,7 @@ class AgentOrchestratorTest(unittest.IsolatedAsyncioTestCase):
         self.assertFalse(sql_client.called)
         self.assertIsNone(executor.executed_sql)
 
-    async def test_email_select_not_blocked_by_pii_policy(self) -> None:
+    async def test_email_select_blocked_by_pii_policy(self) -> None:
         sql_client = FakeSQLClient(
             _success("SELECT email FROM gold_cliente_360 LIMIT 100"),
         )
@@ -249,8 +249,8 @@ class AgentOrchestratorTest(unittest.IsolatedAsyncioTestCase):
 
         result = await orchestrator.ask("listar emails de clientes", Deps(conn=object()))
 
-        self.assertIsNone(result.error)
-        self.assertIsNotNone(executor.executed_sql)
+        self.assertIsNotNone(result.error)
+        self.assertIsNone(executor.executed_sql)
 
     async def test_regenerates_sql_after_execution_error_then_succeeds(self) -> None:
         ok_sql = _success("SELECT ano_mes FROM gold_vendas_kpis LIMIT 100")

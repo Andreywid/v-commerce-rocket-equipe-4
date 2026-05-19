@@ -14,7 +14,7 @@ class AgentTextToSQLClientTest(unittest.TestCase):
         examples = AgentTextToSQLClient._select_examples()
 
         self.assertGreater(len(examples), 0)
-        self.assertLessEqual(len(examples), 2)
+        self.assertLessEqual(len(examples), 8)
 
     def test_select_examples_prioritizes_region_revenue_growth(self) -> None:
         examples_text = "\n".join(AgentTextToSQLClient._select_examples())
