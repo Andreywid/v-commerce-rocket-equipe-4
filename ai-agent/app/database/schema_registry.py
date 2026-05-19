@@ -297,6 +297,26 @@ GOLD_SCHEMA = {
                 "descricao": "Indica se o produto está ativo para venda.",
                 "tipo": "booleano"
             },
+
+            "fornecedor": {
+                "descricao": "Fornecedor responsável pelo produto.",
+                "tipo": "texto"
+            },
+            "peso_kg": {
+                "descricao": "Peso do produto em quilogramas. Pode estar nulo para alguns produtos.",
+                "tipo": "decimal"
+            },
+            "estoque_disponivel": {
+                "descricao": "Quantidade de unidades disponíveis em estoque. Pode estar nulo para alguns produtos.",
+                "tipo": "inteiro",
+                "agregacao": "SUM"
+            },
+"           data_cadastro_produto": {
+                "descricao": "Data de cadastro do produto.",
+                "tipo": "data",
+                "formato": "YYYY-MM-DD"
+            },
+
             "qtd_vendida_total": {
                 "descricao": "Quantidade total vendida do produto.",
                 "tipo": "inteiro",
