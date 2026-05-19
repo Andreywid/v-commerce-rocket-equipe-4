@@ -12,7 +12,7 @@ export type OrderFilters = {
   statuses: OrderStatus[]
   priceMin: number
   priceMax: number
-  dentroDoPrazo: boolean
+  dentroDosPrazo: boolean
   foraDoPrazo: boolean
 }
 
@@ -21,7 +21,7 @@ export const emptyOrderFilters: OrderFilters = {
   statuses: [],
   priceMin: 0,
   priceMax: 100000,
-  dentroDoPrazo: false,
+  dentroDosPrazo: false,
   foraDoPrazo: false,
 }
 
@@ -84,7 +84,7 @@ export function OrderFilterModal({
         <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4">
           <div className="flex items-center gap-2">
             <SlidersHorizontal className="size-4 text-[#4F46E5]" />
-            <span className="font-semibold text-[#4F46E5]">Filtro avançado</span>
+            <span className="font-semibold text-[#4F46E5]">Filtros avançados</span>
           </div>
           <button
             type="button"
@@ -159,7 +159,6 @@ export function OrderFilterModal({
 
           {/* Faixa de preço + Prazo */}
           <div className="grid grid-cols-2 gap-8">
-            {/* Left: price range */}
             <div>
               <label className="mb-3 block text-sm font-medium text-slate-700">Faixa de preço</label>
               <div className="mb-4 flex gap-3">
@@ -168,10 +167,10 @@ export function OrderFilterModal({
                   <input
                     type="number"
                     min={0}
-                    max={form.priceMax - 1000}
+                    max={form.priceMax}
                     value={form.priceMin === 0 ? "" : form.priceMin}
                     placeholder="0"
-                    onChange={(e) => setForm({ ...form, priceMin: Math.min(Number(e.target.value) || 0, form.priceMax - 1000) })}
+                    onChange={(e) => setForm({ ...form, priceMin: Math.min(Number(e.target.value) || 0, form.priceMax) })}
                     className="w-full text-sm text-slate-700 outline-none"
                   />
                 </label>
@@ -179,11 +178,11 @@ export function OrderFilterModal({
                   <span className="shrink-0 text-sm text-slate-400">R$ Máx</span>
                   <input
                     type="number"
-                    min={form.priceMin + 1000}
+                    min={form.priceMin}
                     max={PRICE_MAX}
                     value={form.priceMax === PRICE_MAX ? "" : form.priceMax}
                     placeholder="100.000"
-                    onChange={(e) => setForm({ ...form, priceMax: Math.max(Number(e.target.value) || PRICE_MAX, form.priceMin + 1000) })}
+                    onChange={(e) => setForm({ ...form, priceMax: Math.max(Number(e.target.value) || PRICE_MAX, form.priceMin) })}
                     className="w-full text-sm text-slate-700 outline-none"
                   />
                 </label>
@@ -195,12 +194,12 @@ export function OrderFilterModal({
                 />
                 <input
                   type="range" min={0} max={PRICE_MAX} step={1000} value={form.priceMin}
-                  onChange={(e) => setForm({ ...form, priceMin: Math.min(Number(e.target.value), form.priceMax - 1000) })}
+                  onChange={(e) => setForm({ ...form, priceMin: Math.min(Number(e.target.value), form.priceMax) })}
                   className={RANGE_THUMB_CLASSES}
                 />
                 <input
                   type="range" min={0} max={PRICE_MAX} step={1000} value={form.priceMax}
-                  onChange={(e) => setForm({ ...form, priceMax: Math.max(Number(e.target.value), form.priceMin + 1000) })}
+                  onChange={(e) => setForm({ ...form, priceMax: Math.max(Number(e.target.value), form.priceMin) })}
                   className={RANGE_THUMB_CLASSES}
                 />
               </div>
@@ -210,16 +209,15 @@ export function OrderFilterModal({
               </div>
             </div>
 
-            {/* Right: prazo */}
             <div>
               <label className="mb-3 block text-sm font-medium text-slate-700">Prazo</label>
               <div className="flex flex-col gap-3">
                 <label className="flex cursor-pointer items-center gap-2">
                   <input
                     type="checkbox"
-                    checked={form.dentroDoPrazo}
-                    onChange={(e) => setForm({ ...form, dentroDoPrazo: e.target.checked })}
-                    className="size-4 accent-[#4F46E5]"
+                    checked={form.dentroDosPrazo}
+                    onChange={(e) => setForm({ ...form, dentroDosPrazo: e.target.checked })}
+                    className="size-4 accent-[#0F172A]"
                   />
                   <span className="text-sm text-slate-600">Dentro do prazo</span>
                 </label>
@@ -228,7 +226,7 @@ export function OrderFilterModal({
                     type="checkbox"
                     checked={form.foraDoPrazo}
                     onChange={(e) => setForm({ ...form, foraDoPrazo: e.target.checked })}
-                    className="size-4 accent-[#4F46E5]"
+                    className="size-4 accent-[#0F172A]"
                   />
                   <span className="text-sm text-slate-600">Fora do prazo</span>
                 </label>

@@ -1,5 +1,6 @@
 import { useState } from "react"
 import { Check, ClipboardList, Trash2, X } from "lucide-react"
+import { toast } from "sonner"
 
 import type { OrderCreate, OrderUpdate } from "@/types/api"
 import { useProducts } from "@/hooks/useProducts"
@@ -46,7 +47,14 @@ export function OrderFormModal(props: Props) {
   const products = productsData?.items ?? []
 
   function handleSubmit() {
-    if (!form.id_produto || !form.data_pedido) return
+    if (!form.id_produto) {
+      toast.error("Selecione um produto para o pedido")
+      return
+    }
+    if (!form.data_pedido) {
+      toast.error("Informe a data do pedido")
+      return
+    }
     if (isEditing) {
       props.onSubmit({ ...form })
     } else {
@@ -107,8 +115,8 @@ export function OrderFormModal(props: Props) {
             <div className="grid gap-1.5">
               <Label className="text-sm font-semibold text-slate-700">Produto adquirido</Label>
               <Select
-                value={form.id_produto}
-                onValueChange={(v) => setForm({ ...form, id_produto: v })}
+                value={form.id_produto ?? ""}
+                onValueChange={(v) => setForm({ ...form, id_produto: v ?? "" })}
               >
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder="Selecione o produto" />

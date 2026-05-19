@@ -6,7 +6,9 @@ import type { OrderOut } from "@/types/api"
 import { orderStatusClasses } from "@/constants/badgeStyles"
 import type { OrderCreate, OrderUpdate } from "@/types/api"
 import { HttpError } from "@/services/api"
+import { toast } from "sonner"
 import { useAppContext } from "@/context/AppContext"
+import { exportOrdersToCSV } from "@/helpers/export"
 import { useOrders, useOrderMutations } from "@/hooks/useOrders"
 import { useDebounce } from "@/hooks/useDebounce"
 import { OrderFormModal } from "@/components/shared/OrderFormModal"
@@ -20,7 +22,7 @@ import { EmptyTableState, TableHead, TableBody, TableHeader, TableRow, TableCell
 import { TableToolbar } from "@/components/shared/TableToolbar"
 import { CircleDollarSign, Heart, Smile, Tag } from "lucide-react"
 
-const PAGE_SIZE = 5
+const PAGE_SIZE = 6
 
 function formatBRL(value: number | null | undefined): string {
   if (value == null) return "—"
@@ -36,16 +38,22 @@ function OrdersTable({
   filteredCount,
   onEditOrder,
   onPageChange,
+  onSort,
   pageCount,
   rows,
+  sortBy,
+  sortOrder,
   totalCount,
 }: {
   currentPage: number
   filteredCount: number
   onEditOrder: (id: string) => void
   onPageChange: (page: number) => void
+  onSort: (key: string) => void
   pageCount: number
   rows: OrderOut[]
+  sortBy?: string
+  sortOrder?: "asc" | "desc"
   totalCount: number
 }) {
   return (
@@ -54,11 +62,11 @@ function OrdersTable({
         <TableHeader>
           <TableRow className="h-12 border-slate-200 text-sm text-slate-950 hover:bg-transparent">
             <TableHead className="w-27.5 pl-5">Pedido</TableHead>
-            <TableHead sortable className="w-40">Produto</TableHead>
-            <TableHead className="w-25">Quantidade</TableHead>
+            <TableHead sortKey="nome_produto" currentSortKey={sortBy} currentSortOrder={sortOrder} onSort={onSort} className="w-40">Produto</TableHead>
+            <TableHead className="w-25 text-center">Quantidade</TableHead>
             <TableHead className="w-40">Cliente</TableHead>
-            <TableHead sortable className="w-32.5">Valor</TableHead>
-            <TableHead sortable className="w-30">Data</TableHead>
+            <TableHead sortKey="valor_total" currentSortKey={sortBy} currentSortOrder={sortOrder} onSort={onSort} className="w-32.5">Valor</TableHead>
+            <TableHead sortKey="data_pedido" currentSortKey={sortBy} currentSortOrder={sortOrder} onSort={onSort} className="w-30">Data</TableHead>
             <TableHead className="w-32.5">Status</TableHead>
             <TableHead className="w-14" />
           </TableRow>
@@ -72,7 +80,7 @@ function OrdersTable({
                 </span>
               </TableCell>
               <TableCell className="font-semibold text-slate-800">{row.nome_produto}</TableCell>
-              <TableCell>{row.quantidade}</TableCell>
+              <TableCell className="text-center">{row.quantidade}</TableCell>
               <TableCell className="max-w-0"><span className="block truncate">{row.nome_cliente}</span></TableCell>
               <TableCell className="font-medium">{formatBRL(row.valor_total)}</TableCell>
               <TableCell>{formatDate(row.data_pedido)}</TableCell>
@@ -85,7 +93,7 @@ function OrdersTable({
                   onClick={() => onEditOrder(row.id_pedido)}
                   type="button"
                 >
-                  <Pencil className="size-4 text-[#0A0A0A]" />
+                  <Pencil className="size-4 text-[#6366F1]" />
                 </button>
               </TableCell>
             </TableRow>
@@ -112,17 +120,28 @@ export function OrdersPage() {
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false)
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
+  const [sortBy, setSortBy] = useState<string | undefined>(undefined)
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc")
 
   const { create, update, remove } = useOrderMutations()
 
+  const dentroPrazo =
+    orderFilters.dentroDosPrazo && !orderFilters.foraDoPrazo ? true :
+    orderFilters.foraDoPrazo && !orderFilters.dentroDosPrazo ? false :
+    undefined
+
   const debouncedSearch = useDebounce(search, 400)
-  const status = orderFilters.statuses[0]
   const { data, isPending } = useOrders(
     {
-      status,
+      statuses: orderFilters.statuses.length > 0 ? orderFilters.statuses : undefined,
       data_inicio: orderFilters.date || undefined,
       data_fim: orderFilters.date || undefined,
       nome: debouncedSearch || undefined,
+      valor_min: orderFilters.priceMin > 0 ? orderFilters.priceMin : undefined,
+      valor_max: orderFilters.priceMax < 100000 ? orderFilters.priceMax : undefined,
+      sort_by: sortBy,
+      order: sortBy ? sortOrder : undefined,
+      dentro_prazo: dentroPrazo,
     },
     currentPage,
     PAGE_SIZE,
@@ -143,8 +162,19 @@ export function OrdersPage() {
     orderFilters.statuses.length > 0 ||
     orderFilters.priceMin > 0 ||
     orderFilters.priceMax < 100000 ||
-    orderFilters.dentroDoPrazo ||
+    orderFilters.dentroDosPrazo ||
     orderFilters.foraDoPrazo
+
+  function handleSort(key: string) {
+    if (sortBy === key) {
+      if (sortOrder === "asc") { setSortOrder("desc") }
+      else { setSortBy(undefined) }
+    } else {
+      setSortBy(key)
+      setSortOrder("asc")
+    }
+    setCurrentPage(1)
+  }
 
   function handleSearchChange(value: string) {
     setSearch(value)
@@ -197,10 +227,10 @@ export function OrdersPage() {
   return (
     <PageShell title="Pedidos">
       <DataGrid>
-        <DataCard label="Pedidos pendentes"  value={String(processando)} helper="Em processamento"    tone="indigo" icon={Tag} />
-        <DataCard label="Total de pedidos"   value={total.toLocaleString("pt-BR")} helper="Pedidos processados" tone="indigo" icon={Smile} />
-        <DataCard label="Receita (página)"   value={formatBRL(receitaTotal)} helper="+20% vs mês anterior" tone="rose" icon={CircleDollarSign} />
-        <DataCard label="Pedidos aprovados"  value={String(aprovados)} helper="+47% vs último mês"   tone="emerald" icon={Heart} />
+        <DataCard label="Pedidos pendentes"  value={String(processando)} helper="Nesta página"    tone="indigo" icon={Tag} />
+        <DataCard label="Total de pedidos"   value={total.toLocaleString("pt-BR")} helper="Resultado dos filtros" tone="indigo" icon={Smile} />
+        <DataCard label="Receita (página)"   value={formatBRL(receitaTotal)} helper="Soma dos pedidos exibidos" tone="rose" icon={CircleDollarSign} />
+        <DataCard label="Pedidos aprovados"  value={String(aprovados)} helper="Nesta página"   tone="emerald" icon={Heart} />
       </DataGrid>
 
       <DataPanel>
@@ -211,7 +241,11 @@ export function OrdersPage() {
           label="Pedidos solicitados"
           onAction={() => setIsAddModalOpen(true)}
           onAdvancedFilter={() => setIsFilterModalOpen(true)}
-          onExport={() => showNotice("Lista exportada!")}
+          onExport={() => {
+            if (!items.length) { toast.error("Nenhum dado para exportar."); return }
+            exportOrdersToCSV(items)
+            showNotice(`${items.length} pedidos exportados`)
+          }}
           onSearchChange={handleSearchChange}
           placeholder="Busque por produto, cliente ou número"
           searchValue={search}
@@ -221,11 +255,14 @@ export function OrdersPage() {
         ) : (
           <OrdersTable
             currentPage={currentPage}
-            filteredCount={filteredItems.length}
+            filteredCount={total}
             onEditOrder={setEditingId}
             onPageChange={setCurrentPage}
+            onSort={handleSort}
             pageCount={pageCount}
             rows={filteredItems}
+            sortBy={sortBy}
+            sortOrder={sortOrder}
             totalCount={total}
           />
         )}

@@ -3,16 +3,24 @@ import { api } from "@/services/api"
 import type { ProductCreate, ProductListResponse, ProductOut, ProductPerformance, ProductUpdate, ReviewListResponse } from "@/types/api"
 
 export type ProductFilters = {
-  categoria?: string
+  categorias?: string[]
   ativo?: boolean
   nome?: string
+  preco_min?: number
+  preco_max?: number
+  sort_by?: string
+  order?: string
 }
 
 export function useProducts(filters: ProductFilters = {}, page = 1, size = 20) {
   const params = new URLSearchParams({ page: String(page), size: String(size) })
-  if (filters.categoria) params.set("categoria", filters.categoria)
+  if (filters.categorias?.length) filters.categorias.forEach((c) => params.append("categoria", c))
   if (filters.ativo !== undefined) params.set("ativo", String(filters.ativo))
   if (filters.nome) params.set("nome", filters.nome)
+  if (filters.preco_min != null) params.set("preco_min", String(filters.preco_min))
+  if (filters.preco_max != null) params.set("preco_max", String(filters.preco_max))
+  if (filters.sort_by) params.set("sort_by", filters.sort_by)
+  if (filters.order) params.set("order", filters.order)
 
   return useQuery({
     queryKey: ["products", filters, page, size],

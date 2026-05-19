@@ -61,11 +61,11 @@ export function DataGrid({ children }: { children: React.ReactNode }) {
   )
 }
 
-const BADGE_COLORS: Record<string, { bg: string; text: string }> = {
-  rose:    { bg: "#FECDD3", text: "#F43F5E" },
-  emerald: { bg: "#BBF7D0", text: "#15803D" },
-  indigo:  { bg: "#E0E7FF", text: "#4F46E5" },
-  violet:  { bg: "#EDE9FE", text: "#7C3AED" },
+const BADGE_COLORS: Record<string, { bg: string; text: string; border: string }> = {
+  rose:    { bg: "#FFF1F2", text: "#F43F5E", border: "#FECDD3" },
+  emerald: { bg: "#F0FDF4", text: "#22C55E", border: "#BBF7D0" },
+  indigo:  { bg: "#EEF2FF", text: "#4F46E5", border: "#C7D2FE" },
+  violet:  { bg: "#F5F3FF", text: "#7C3AED", border: "#DDD6FE" },
 }
 
 interface InsightCardProps {
@@ -87,7 +87,7 @@ export function InsightCard({ label, value, helper = "", tone = "indigo" }: Insi
       {helper && (
         <span
           className="shrink-0 rounded-full px-3 py-1 text-xs font-medium whitespace-nowrap"
-          style={{ backgroundColor: badge.bg, color: badge.text }}
+          style={{ backgroundColor: badge.bg, color: badge.text, border: `1px solid ${badge.border}` }}
         >
           {helper}
         </span>

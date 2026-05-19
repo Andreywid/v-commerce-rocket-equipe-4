@@ -1,24 +1,49 @@
 from datetime import date
+from sqlalchemy import asc, desc, or_
 from app.database import SessionLocal
 from app.models.product import Product
 
+_SORTABLE = {
+    "qtd_vendida_total": Product.qtd_vendida_total,
+    "nota_media":        Product.nota_media,
+    "preco_atual":       Product.preco_atual,
+    "receita_total":     Product.receita_total,
+}
+_NULLABLE_SORT = {"nota_media"}
+
 def get_all(
-    categoria: str | None = None,
+    categorias: list[str] | None = None,
     ativo: bool | None = None,
     nome: str | None = None,
+    preco_min: float | None = None,
+    preco_max: float | None = None,
+    sort_by: str | None = None,
+    order: str | None = None,
     page: int = 1,
     size: int = 20,
 ) -> tuple[list[Product], int]:
     db = SessionLocal()
     try:
         query = db.query(Product)
-        if categoria:
-            query = query.filter(Product.categoria == categoria)
+        if categorias:
+            query = query.filter(Product.categoria.in_(categorias))
         if ativo is not None:
             query = query.filter(Product.ativo == ativo)
         if nome:
-            query = query.filter(Product.nome_produto.ilike(f"%{nome}%"))
-        
+            query = query.filter(or_(
+                Product.nome_produto.ilike(f"%{nome}%"),
+                Product.id_produto.ilike(f"%{nome}%"),
+            ))
+        if preco_min is not None:
+            query = query.filter(Product.preco_atual >= preco_min)
+        if preco_max is not None:
+            query = query.filter(Product.preco_atual <= preco_max)
+        if sort_by and sort_by in _SORTABLE:
+            col = _SORTABLE[sort_by]
+            if sort_by in _NULLABLE_SORT:
+                query = query.filter(col.isnot(None))
+            query = query.order_by(asc(col) if order == "asc" else desc(col))
+
         total = query.count()
         offset = (page - 1) * size
         items = query.offset(offset).limit(size).all()

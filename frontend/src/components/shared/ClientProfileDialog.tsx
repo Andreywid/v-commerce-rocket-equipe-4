@@ -34,7 +34,7 @@ function OrdersTab({ orders }: { orders: OrderOut[] }) {
     <table className="w-full table-fixed text-left text-sm">
       <thead className="text-slate-900">
         <tr className="h-12 border-b border-slate-100">
-          <th className="px-4 font-semibold">Pedido</th>
+          <th className="w-36 px-4 font-semibold">Pedido</th>
           <th className="font-semibold">Data</th>
           <th className="font-semibold">Status</th>
           <th className="font-semibold">Itens</th>
@@ -44,7 +44,7 @@ function OrdersTab({ orders }: { orders: OrderOut[] }) {
       <tbody>
         {orders.map((order) => (
           <tr className="h-16 border-t border-slate-100" key={order.id_pedido}>
-            <td className="px-4 font-medium text-slate-600">#{order.id_pedido}</td>
+            <td className="max-w-0 truncate px-4 font-medium text-slate-600">#{order.id_pedido}</td>
             <td>{formatDate(order.data_pedido)}</td>
             <td><StatusBadge className={orderStatusClasses[order.status]}>{order.status}</StatusBadge></td>
             <td>{order.quantidade}</td>
@@ -64,7 +64,7 @@ function TicketsTab({ tickets }: { tickets: TicketOut[] }) {
     <table className="w-full table-fixed text-left text-sm">
       <thead className="text-slate-900">
         <tr className="h-12 border-b border-slate-100">
-          <th className="px-4 font-semibold">Ticket</th>
+          <th className="w-36 px-4 font-semibold">Ticket</th>
           <th className="font-semibold">Data</th>
           <th className="font-semibold">Status</th>
           <th className="font-semibold">Satisfação</th>
@@ -73,7 +73,7 @@ function TicketsTab({ tickets }: { tickets: TicketOut[] }) {
       <tbody>
         {tickets.map((ticket) => (
           <tr className="h-16 border-t border-slate-100" key={ticket.id_ticket}>
-            <td className="px-4 font-medium text-slate-600">#{ticket.id_ticket}</td>
+            <td className="max-w-0 truncate px-4 font-medium text-slate-600">#{ticket.id_ticket}</td>
             <td>{formatDate(ticket.data_abertura)}</td>
             <td><StatusBadge className={supportStatusClasses[ticket.status_ticket]}>{ticket.status_ticket}</StatusBadge></td>
             <td className="capitalize">{ticket.satisfacao_atendimento.replace("_", " ")}</td>
@@ -83,6 +83,7 @@ function TicketsTab({ tickets }: { tickets: TicketOut[] }) {
     </table>
   )
 }
+
 
 export function ClientProfileDialog({
   customerId,
@@ -209,11 +210,8 @@ export function ClientProfileDialog({
               </Button>
             </div>
 
-            {tab === "orders" ? (
-              <OrdersTab orders={orders} />
-            ) : (
-              <TicketsTab tickets={tickets} />
-            )}
+            {tab === "orders" && <OrdersTab orders={orders} />}
+            {tab === "tickets" && <TicketsTab tickets={tickets} />}
           </section>
         </div>
       </DialogContent>

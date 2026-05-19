@@ -3,24 +3,34 @@ import { api } from "@/services/api"
 import type { OrderCreate, OrderUpdate, OrderListResponse, OrderOut } from "@/types/api"
 
 export type OrderFilters = {
-  status?: string
+  statuses?: string[]
   categoria?: string
   estado?: string
   id_cliente?: string
   data_inicio?: string
   data_fim?: string
   nome?: string
+  valor_min?: number
+  valor_max?: number
+  sort_by?: string
+  order?: string
+  dentro_prazo?: boolean
 }
 
 export function useOrders(filters: OrderFilters = {}, page = 1, size = 20) {
   const params = new URLSearchParams({ page: String(page), size: String(size) })
-  if (filters.status) params.set("status", filters.status)
+  if (filters.statuses?.length) filters.statuses.forEach((s) => params.append("status", s))
   if (filters.categoria) params.set("categoria", filters.categoria)
   if (filters.estado) params.set("estado", filters.estado)
   if (filters.id_cliente) params.set("id_cliente", filters.id_cliente)
   if (filters.data_inicio) params.set("data_inicio", filters.data_inicio)
   if (filters.data_fim) params.set("data_fim", filters.data_fim)
   if (filters.nome) params.set("nome", filters.nome)
+  if (filters.valor_min != null) params.set("valor_min", String(filters.valor_min))
+  if (filters.valor_max != null) params.set("valor_max", String(filters.valor_max))
+  if (filters.sort_by) params.set("sort_by", filters.sort_by)
+  if (filters.order) params.set("order", filters.order)
+  if (filters.dentro_prazo !== undefined) params.set("dentro_prazo", String(filters.dentro_prazo))
 
   return useQuery({
     queryKey: ["orders", filters, page, size],

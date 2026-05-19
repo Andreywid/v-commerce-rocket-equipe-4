@@ -1,4 +1,9 @@
-import type { ClientSegmento, OrderStatus, ProductCategory, ProductClassificacao, SupportStatus, SupportType } from "@/types"
+import type { ClienteStatus, ClientSegmento, OrderStatus, ProductCategory, ProductClassificacao, ReviewSentimento, SupportStatus, SupportType } from "@/types"
+
+export const clienteStatusClasses: Record<ClienteStatus, string> = {
+  "Novo":       "bg-indigo-50 text-indigo-600 border-indigo-200",
+  "Recorrente": "bg-emerald-50 text-emerald-600 border-emerald-200",
+}
 
 export const segmentoClasses: Record<ClientSegmento, string> = {
   "Alto":  "bg-emerald-50 text-emerald-600 border-emerald-200",
@@ -42,4 +47,10 @@ export const classificacaoClasses: Record<ProductClassificacao, string> = {
   "Estável":      "bg-sky-50 text-sky-600 border-sky-200",
   "Problemático": "bg-amber-50 text-amber-600 border-amber-200",
   "Encalhado":    "bg-rose-50 text-rose-600 border-rose-200",
+}
+
+export const sentimentoClasses: Record<ReviewSentimento, string> = {
+  "positivo": "bg-emerald-50 text-emerald-600 border-emerald-200",
+  "neutro":   "bg-amber-50 text-amber-600 border-amber-200",
+  "negativo": "bg-rose-50 text-rose-600 border-rose-200",
 }

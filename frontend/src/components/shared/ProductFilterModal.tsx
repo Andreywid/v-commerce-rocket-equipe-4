@@ -157,7 +157,7 @@ function PriceRange({
             max={max}
             value={min === 0 ? "" : min}
             placeholder="0"
-            onChange={(e) => onChange(Math.min(Number(e.target.value) || 0, max - 1000), max)}
+            onChange={(e) => onChange(Math.min(Number(e.target.value) || 0, max), max)}
             className="w-full text-sm text-slate-700 outline-none"
           />
         </label>
@@ -169,7 +169,7 @@ function PriceRange({
             max={PRICE_MAX}
             value={max === PRICE_MAX ? "" : max}
             placeholder="100.000"
-            onChange={(e) => onChange(min, Math.max(Number(e.target.value) || PRICE_MAX, min + 1000))}
+            onChange={(e) => onChange(min, Math.max(Number(e.target.value) || PRICE_MAX, min))}
             className="w-full text-sm text-slate-700 outline-none"
           />
         </label>
@@ -181,12 +181,12 @@ function PriceRange({
         />
         <input
           type="range" min={0} max={PRICE_MAX} step={1000} value={min}
-          onChange={(e) => onChange(Math.min(Number(e.target.value), max - 1000), max)}
+          onChange={(e) => onChange(Math.min(Number(e.target.value), max), max)}
           className={RANGE_THUMB_CLASSES}
         />
         <input
           type="range" min={0} max={PRICE_MAX} step={1000} value={max}
-          onChange={(e) => onChange(min, Math.max(Number(e.target.value), min + 1000))}
+          onChange={(e) => onChange(min, Math.max(Number(e.target.value), min))}
           className={RANGE_THUMB_CLASSES}
         />
       </div>
@@ -223,7 +223,7 @@ export function ProductFilterModal({ open, onClose, onSave, initial }: ProductFi
         <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4">
           <div className="flex items-center gap-2">
             <SlidersHorizontal className="size-4 text-[#0F172A]" />
-            <span className="font-semibold text-[#0F172A]">Filtro avançado</span>
+            <span className="font-semibold text-[#0F172A]">Filtros avançados</span>
           </div>
           <button
             type="button"

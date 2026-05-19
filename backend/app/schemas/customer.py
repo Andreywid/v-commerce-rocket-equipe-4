@@ -1,6 +1,6 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, EmailStr
 from datetime import date
-from typing import Optional
+from typing import Literal, Optional
 
 
 class CustomerOut(BaseModel):
@@ -13,15 +13,37 @@ class CustomerOut(BaseModel):
     estado: Optional[str] = None
     origem: Optional[str] = None
     qtd_pedidos_total: int = 0
-    valor_total_gasto: float = 0.0
-    ticket_medio: float = 0.0
+    valor_total_gasto: Optional[float] = None
+    ticket_medio: Optional[float] = None
     data_ultimo_pedido: Optional[date] = None
     qtd_tickets_abertos: int = 0
     segmento_ltv: Optional[str] = None
-    is_ativo_90d: bool = True
+    is_ativo_90d: Optional[bool] = None
     is_em_risco: bool = False
 
     model_config = {"from_attributes": True}
+
+
+class CustomerCreate(BaseModel):
+    nome: str
+    email: EmailStr
+    telefone: Optional[str] = None
+    data_cadastro: Optional[date] = None
+    cidade: Optional[str] = None
+    estado: Optional[str] = None
+    origem: Optional[Literal["App", "Web", "Indicacao"]] = None
+
+
+class CustomerUpdate(BaseModel):
+    nome: Optional[str] = None
+    email: Optional[EmailStr] = None
+    telefone: Optional[str] = None
+    cidade: Optional[str] = None
+    estado: Optional[str] = None
+    origem: Optional[Literal["App", "Web", "Indicacao"]] = None
+    segmento_ltv: Optional[Literal["Alto", "Medio", "Baixo"]] = None
+    is_ativo_90d: Optional[bool] = None
+    is_em_risco: Optional[bool] = None
 
 
 class Customer360(CustomerOut):
@@ -32,7 +54,7 @@ class Customer360(CustomerOut):
     data_primeiro_pedido: Optional[date] = None
     qtd_tickets_total: int = 0
     qtd_tickets_resolvidos: int = 0
-    qtd_avaliacoes: int = 0
+    qtd_avaliacoes: Optional[int] = None
     nota_media_dada: Optional[float] = None
     nps_medio_avaliacoes_cliente: Optional[float] = None
     qtd_eventos_clickstream: int = 0
@@ -45,3 +67,14 @@ class CustomerListResponse(BaseModel):
     page: int
     size: int
     items: list[CustomerOut]
+
+
+class CustomerStats(BaseModel):
+    total_clientes: int
+    nps_medio: Optional[float] = None
+    nota_media: Optional[float] = None
+    top_estado: Optional[str] = None
+    top_estado_percentual: Optional[float] = None
+    clientes_em_risco: int
+    clientes_ativos_90d: int
+    segmentos: dict[str, int]

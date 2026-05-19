@@ -9,14 +9,23 @@ router = APIRouter(prefix="/products", tags=["products"])
 
 @router.get("", response_model=ProductListResponse)
 def list_products(
-    categoria: str | None = Query(None),
+    categoria: list[str] | None = Query(None),
     ativo: bool | None = Query(None),
     nome: str | None = Query(None),
+    preco_min: float | None = Query(None),
+    preco_max: float | None = Query(None),
+    sort_by: str | None = Query(None, description="qtd_vendida_total | nota_media | preco_atual | receita_total"),
+    order: str | None = Query(None, description="asc | desc"),
     page: int = Query(1, ge=1),
     size: int = Query(20, ge=1, le=100),
     current_user=Depends(get_current_user),
 ):
-    return product_service.get_products(categoria, ativo, nome, page, size)
+    return product_service.get_products(categoria, ativo, nome, preco_min, preco_max, sort_by, order, page, size)
+
+
+@router.get("/{id_produto}", response_model=ProductOut)
+def get_product(id_produto: str, current_user=Depends(get_current_user)):
+    return product_service.get_product(id_produto)
 
 
 @router.get("/{id_produto}/performance", response_model=ProductPerformance)

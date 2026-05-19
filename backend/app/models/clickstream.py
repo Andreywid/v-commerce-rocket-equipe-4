@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Date, Integer, String, UniqueConstraint
+from sqlalchemy import Column, Integer, String, UniqueConstraint
 from app.database import Base
 
 
@@ -8,7 +8,7 @@ class ClickstreamResumo(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     id_cliente = Column(String, index=True)
-    data = Column(Date)
+    data = Column(String)
 
     qtd_eventos = Column(Integer, default=0)
     qtd_sessoes = Column(Integer, default=0)
@@ -23,4 +23,4 @@ class ClickstreamResumo(Base):
     canal_principal = Column(String, nullable=True)        # Web | Mobile | App
     dispositivo_principal = Column(String, nullable=True)  # Desktop | Mobile | Tablet
     tempo_total_segundos = Column(Integer, default=0)
-    data_referencia_calculo = Column(Date, nullable=True)
+    data_referencia_calculo = Column(String, nullable=True)

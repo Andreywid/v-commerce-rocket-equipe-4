@@ -5,17 +5,28 @@ from app.schemas.review import ReviewOut, ReviewListResponse
 
 
 def get_products(
-    categoria: str | None,
+    categorias: list[str] | None,
     ativo: bool | None,
     nome: str | None,
+    preco_min: float | None,
+    preco_max: float | None,
+    sort_by: str | None,
+    order: str | None,
     page: int,
     size: int,
 ) -> ProductListResponse:
-    items, total = product_repository.get_all(categoria, ativo, nome, page, size)
+    items, total = product_repository.get_all(categorias, ativo, nome, preco_min, preco_max, sort_by, order, page, size)
     return ProductListResponse(
         total=total, page=page, size=size,
         items=[ProductOut.model_validate(p) for p in items],
     )
+
+
+def get_product(id_produto: str) -> ProductOut:
+    product = product_repository.get_by_id(id_produto)
+    if not product:
+        raise HTTPException(status_code=404, detail="Produto não encontrado")
+    return ProductOut.model_validate(product)
 
 
 def get_product_performance(id_produto: str) -> ProductPerformance:

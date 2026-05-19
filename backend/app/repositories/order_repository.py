@@ -1,25 +1,47 @@
 from datetime import date
 from app.database import SessionLocal
 from app.models.order import Order
-from sqlalchemy import desc, or_
+from sqlalchemy import asc, desc, or_
+
+_SORTABLE = {
+    "nome_produto": Order.nome_produto,
+    "valor_total":  Order.valor_total,
+    "data_pedido":  Order.data_pedido,
+}
+
+_DENTRO_PRAZO = ["Aprovado", "Processando"]
+_FORA_PRAZO   = ["Recusado", "Reembolsado"]
 
 def get_all(
-    status: str | None = None,
+    status: list[str] | None = None,
     categoria: str | None = None,
     estado: str | None = None,
     id_cliente: str | None = None,
     data_inicio: str | None = None,
     data_fim: str | None = None,
     nome: str | None = None,
+    valor_min: float | None = None,
+    valor_max: float | None = None,
     page: int = 1,
     size: int = 20,
+    sort_by: str | None = None,
+    order: str | None = None,
+    dentro_prazo: bool | None = None,
 ) -> tuple[list[Order], int]:
     db = SessionLocal()
     try:
         query = db.query(Order)
 
         if status:
-            query = query.filter(Order.status == status)
+            query = query.filter(Order.status.in_(status))
+        if dentro_prazo is True:
+            query = query.filter(Order.status.in_(_DENTRO_PRAZO))
+        elif dentro_prazo is False:
+            query = query.filter(Order.status.in_(_FORA_PRAZO))
+        if valor_min is not None:
+            query = query.filter(Order.valor_total >= valor_min)
+        if valor_max is not None:
+            query = query.filter(Order.valor_total <= valor_max)
         if categoria:
             query = query.filter(Order.categoria_produto == categoria)
         if estado:
@@ -40,9 +62,15 @@ def get_all(
                 )
             )
             
+        col = _SORTABLE.get(sort_by) if sort_by else None
+        if col is not None:
+            query = query.order_by(asc(col) if order != "desc" else desc(col))
+        else:
+            query = query.order_by(desc(Order.data_pedido))
+
         total = query.count()
         offset = (page - 1) * size
-        items = query.order_by(desc(Order.data_pedido)).offset(offset).limit(size).all()
+        items = query.offset(offset).limit(size).all()
         
         return items, total
     finally:

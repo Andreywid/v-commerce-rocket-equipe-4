@@ -24,12 +24,12 @@ export function AppLayout({ email, name, onLogout }: { email: string; name: stri
         </div>
       </div>
 
-      {!isAssistantOpen && (
-        <FloatingAssistant onClick={() => setIsAssistantOpen(true)} />
-      )}
-      {isAssistantOpen && (
-        <AssistantPanel onClose={() => setIsAssistantOpen(false)} />
-      )}
+      <FloatingAssistant onClick={() => setIsAssistantOpen((o) => !o)} isOpen={isAssistantOpen} />
+      <AssistantPanel
+        isVisible={isAssistantOpen}
+        onClose={() => setIsAssistantOpen(false)}
+        onMinimize={() => setIsAssistantOpen(false)}
+      />
     </main>
   )
 }
