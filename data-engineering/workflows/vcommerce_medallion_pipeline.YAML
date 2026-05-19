@@ -1,0 +1,93 @@
+resources:
+  jobs:
+    vcommerce_medallion_pipeline:
+      name: vcommerce_medallion_pipeline
+      schedule:
+        quartz_cron_expression: 48 0 12 * * ?
+        timezone_id: America/Sao_Paulo
+        pause_status: UNPAUSED
+      tasks:
+        - task_key: bronze_ingestion
+          notebook_task:
+            notebook_path: /Repos/andreywid@gmail.com/v-commerce-rocket-equipe-4/data-engineering/notebooks/01_bronze_ingestion
+            source: WORKSPACE
+        - task_key: silver_avaliacoes_clickstream
+          depends_on:
+            - task_key: bronze_ingestion
+          notebook_task:
+            notebook_path: /Repos/andreywid@gmail.com/v-commerce-rocket-equipe-4/data-engineering/notebooks/02_silver_transformation/02_silver_avaliacoes_clickstream
+            source: WORKSPACE
+        - task_key: silver_clientes
+          depends_on:
+            - task_key: bronze_ingestion
+          notebook_task:
+            notebook_path: /Repos/andreywid@gmail.com/v-commerce-rocket-equipe-4/data-engineering/notebooks/02_silver_transformation/02_silver_tb_clientes
+            source: WORKSPACE
+        - task_key: silver_pedidos_produtos
+          depends_on:
+            - task_key: bronze_ingestion
+          notebook_task:
+            notebook_path: /Repos/andreywid@gmail.com/v-commerce-rocket-equipe-4/data-engineering/notebooks/02_silver_transformation/02_silver_pedidos_produtos
+            source: WORKSPACE
+        - task_key: gold_avaliacoes_clickstream
+          depends_on:
+            - task_key: silver_clientes
+            - task_key: silver_pedidos_produtos
+            - task_key: silver_avaliacoes_clickstream
+          notebook_task:
+            notebook_path: /Repos/andreywid@gmail.com/v-commerce-rocket-equipe-4/data-engineering/notebooks/03_gold/03_gold_avaliações_clickstream_resumo
+            source: WORKSPACE
+        - task_key: silver_tickets
+          depends_on:
+            - task_key: bronze_ingestion
+          notebook_task:
+            notebook_path: /Repos/andreywid@gmail.com/v-commerce-rocket-equipe-4/data-engineering/notebooks/02_silver_transformation/02_silver_tickets
+            source: WORKSPACE
+        - task_key: gold_cliente_360
+          depends_on:
+            - task_key: silver_avaliacoes_clickstream
+            - task_key: silver_clientes
+            - task_key: silver_pedidos_produtos
+            - task_key: silver_tickets
+          notebook_task:
+            notebook_path: /Repos/andreywid@gmail.com/v-commerce-rocket-equipe-4/data-engineering/notebooks/03_gold/gold_cliente_360
+            source: WORKSPACE
+        - task_key: gold_pedidos_produtos_kpi
+          depends_on:
+            - task_key: silver_avaliacoes_clickstream
+            - task_key: silver_clientes
+            - task_key: silver_pedidos_produtos
+            - task_key: silver_tickets
+          notebook_task:
+            notebook_path: /Repos/andreywid@gmail.com/v-commerce-rocket-equipe-4/data-engineering/notebooks/03_gold/03_gold_pedidos_produtos_kpi
+            source: WORKSPACE
+          environment_key: Default
+        - task_key: gold_tickets
+          depends_on:
+            - task_key: silver_clientes
+            - task_key: silver_pedidos_produtos
+            - task_key: silver_tickets
+          notebook_task:
+            notebook_path: /Repos/andreywid@gmail.com/v-commerce-rocket-equipe-4/data-engineering/notebooks/03_gold/gold_tickets
+            source: WORKSPACE
+        - task_key: export_gold_csv
+          depends_on:
+            - task_key: gold_pedidos_produtos_kpi
+            - task_key: gold_cliente_360
+            - task_key: gold_tickets
+            - task_key: gold_avaliacoes_clickstream
+          notebook_task:
+            notebook_path: /Repos/andreywid@gmail.com/v-commerce-rocket-equipe-4/data-engineering/notebooks/04_export_gold_csv
+            source: WORKSPACE
+      queue:
+        enabled: true
+      parameters:
+        - name: catalogo
+          default: workspace
+        - name: data_referencia_calculo
+          default: 2026-05-22
+      environments:
+        - environment_key: Default
+          spec:
+            environment_version: "5"
+      performance_target: PERFORMANCE_OPTIMIZED
