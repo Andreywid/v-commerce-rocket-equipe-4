@@ -2,6 +2,7 @@ import type { ProductCategory, ProductClassificacao } from "@/types"
 import type { ProductOut } from "@/types/api"
 import { categoryClasses, classificacaoClasses } from "@/constants/badgeStyles"
 import { formatCategoryLabel, getCategoryIcon } from "@/helpers/dictionary"
+import { useProductPerformance } from "@/hooks/useProducts"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { RatingBadge } from "@/components/shared/RatingBadge"
@@ -10,6 +11,15 @@ import { StatusBadge } from "@/components/shared/StatusBadge"
 function formatBRL(value: number | null | undefined): string {
   if (value == null) return "—"
   return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
+}
+
+function Stat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-md border border-slate-100 bg-slate-50 px-3 py-2.5">
+      <p className="text-xs text-slate-500">{label}</p>
+      <p className="mt-0.5 text-sm font-semibold text-slate-800">{value}</p>
+    </div>
+  )
 }
 
 export function ProductDetailDialog({
@@ -21,9 +31,11 @@ export function ProductDetailDialog({
   onEdit: () => void
   product: ProductOut
 }) {
+  const { data: perf } = useProductPerformance(product.id_produto)
+
   return (
     <Dialog open onOpenChange={(open) => { if (!open) onClose() }}>
-      <DialogContent className="max-h-[82dvh] overflow-hidden sm:max-w-140">
+      <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-140">
         <DialogHeader>
           <DialogTitle className="text-indigo-600">Detalhes do produto</DialogTitle>
         </DialogHeader>
@@ -50,7 +62,6 @@ export function ProductDetailDialog({
                 <StatusBadge className={categoryClasses[product.categoria as ProductCategory]}>
                   {formatCategoryLabel(product.categoria)}
                 </StatusBadge>
-
                 <StatusBadge className={classificacaoClasses[product.classificacao as ProductClassificacao]}>
                   {product.classificacao}
                 </StatusBadge>
@@ -72,7 +83,20 @@ export function ProductDetailDialog({
           )}
         </div>
 
-        <div className="mt-1 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+        {/* Performance metrics */}
+        <div className="space-y-2">
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Desempenho</p>
+          <div className="grid grid-cols-3 gap-2">
+            <Stat label="Vendas (30d)"    value={perf?.qtd_vendida_30d?.toLocaleString("pt-BR") ?? "—"} />
+            <Stat label="Vendas (total)"  value={product.qtd_vendida_total.toLocaleString("pt-BR")} />
+            <Stat label="Receita (30d)"   value={formatBRL(perf?.receita_30d)} />
+            <Stat label="Tickets (30d)"   value={perf?.qtd_tickets_30d?.toLocaleString("pt-BR") ?? "—"} />
+            <Stat label="Taxa problema"   value={perf?.taxa_problema != null ? `${(perf.taxa_problema * 100).toFixed(1)}%` : "—"} />
+            <Stat label="% Recomendam"    value={perf?.pct_recomendam != null ? `${(perf.pct_recomendam * 100).toFixed(1)}%` : "—"} />
+          </div>
+        </div>
+
+        <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
           <Button variant="outline" onClick={onClose} type="button">Fechar</Button>
           <Button onClick={onEdit} type="button">Editar</Button>
         </div>

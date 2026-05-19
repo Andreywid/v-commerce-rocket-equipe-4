@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react"
+import { useState } from "react"
 import { Package, Pencil } from "lucide-react"
 
 import type { ProductCategory } from "@/types"
@@ -21,7 +21,7 @@ import { RatingBadge } from "@/components/shared/RatingBadge"
 import { EmptyTableState, TableHead, TableBody, TableHeader, TableRow, TableCell, TablePagination } from "@/components/shared/Table"
 import { TableToolbar } from "@/components/shared/TableToolbar"
 
-const PAGE_SIZE = 5
+const PAGE_SIZE = 6
 
 function formatBRL(value: number | null | undefined): string {
   if (value == null) return "—"
@@ -72,16 +72,15 @@ function ProductsTable({
 }) {
   return (
     <div className="overflow-x-auto">
-      <table className="min-w-225 w-full table-fixed text-left">
+      <table className="min-w-192 w-full table-fixed text-left">
         <TableHeader>
           <TableRow className="h-12 border-slate-200 text-sm text-slate-950 hover:bg-transparent">
-            <TableHead className="w-50 pl-5">Produto</TableHead>
-            <TableHead className="w-30">Código</TableHead>
-            <TableHead className="w-55">Categoria</TableHead>
-            <TableHead sortable className="w-35">Preço</TableHead>
-            <TableHead className="w-25">Estoque</TableHead>
-            <TableHead sortable className="w-37.5">Avaliação</TableHead>
-            <TableHead className="w-30" />
+            <TableHead className="w-52 pl-5">Produto</TableHead>
+            <TableHead className="w-28">Código</TableHead>
+            <TableHead className="w-36">Categoria</TableHead>
+            <TableHead sortable className="w-28">Preço</TableHead>
+            <TableHead sortable className="w-28">Avaliação</TableHead>
+            <TableHead className="w-20" />
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -94,7 +93,7 @@ function ProductsTable({
               <TableCell className="pl-5 font-semibold text-slate-800">
                 <div className="flex items-center gap-3 overflow-hidden">
                   <div className={cn(
-                    "flex size-10 shrink-0 items-center justify-center rounded-md border border-slate-200",
+                    "flex size-10 shrink-0 items-center justify-center rounded-full border border-slate-200",
                     "bg-slate-50 text-slate-400"
                   )}>
                     {(() => {
@@ -114,7 +113,6 @@ function ProductsTable({
                 </StatusBadge>
               </TableCell>
               <TableCell className="font-medium">{formatBRL(row.preco_atual)}</TableCell>
-              <TableCell>{row.estoque ?? "—"}</TableCell>
               <TableCell>
                 {row.nota_media != null ? <RatingBadge nota={row.nota_media} /> : "—"}
               </TableCell>
@@ -125,7 +123,7 @@ function ProductsTable({
                     onClick={(e) => { e.stopPropagation(); onEditProduct(row.id_produto) }}
                     type="button"
                   >
-                    <Pencil className="size-4 text-[#0A0A0A]" />
+                    <Pencil className="size-4 text-[#6366F1]" />
                   </button>
                 </div>
               </TableCell>
@@ -145,16 +143,6 @@ function ProductsTable({
   )
 }
 
-function useProductHighlights(items: ProductOut[]) {
-  return useMemo(() => {
-    if (items.length === 0) return null
-    const mostSold   = items.reduce((a, b) => (a.qtd_vendida_total > b.qtd_vendida_total ? a : b))
-    const leastSold  = items.reduce((a, b) => (a.qtd_vendida_total < b.qtd_vendida_total ? a : b))
-    const bestRated  = items.reduce((a, b) => ((a.nota_media ?? 0) > (b.nota_media ?? 0) ? a : b))
-    const worstRated = items.reduce((a, b) => ((a.nota_media ?? 0) < (b.nota_media ?? 0) ? a : b))
-    return { mostSold, leastSold, bestRated, worstRated }
-  }, [items])
-}
 
 export function ProductsPage() {
   const { showNotice } = useAppContext()
@@ -166,7 +154,6 @@ export function ProductsPage() {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [viewingId, setViewingId] = useState<string | null>(null)
 
-  const categoria = advancedFilter.categories[0]
   const rawSearch = search || advancedFilter.search
   const debouncedSearch = useDebounce(rawSearch, 400)
 
@@ -176,18 +163,35 @@ export function ProductsPage() {
     undefined
 
   const { data, isPending } = useProducts(
-    { categoria, nome: debouncedSearch || undefined, ativo },
+    {
+      categorias: advancedFilter.categories.length > 0 ? advancedFilter.categories : undefined,
+      nome: debouncedSearch || undefined,
+      ativo,
+      preco_min: advancedFilter.minPrice > 0 ? advancedFilter.minPrice : undefined,
+      preco_max: advancedFilter.maxPrice < 100_000 ? advancedFilter.maxPrice : undefined,
+    },
     currentPage,
     PAGE_SIZE,
   )
   const { create, update, remove } = useProductMutations()
+
+  const { data: topSold }    = useProducts({ sort_by: "qtd_vendida_total", order: "desc" }, 1, 1)
+  const { data: botSold }    = useProducts({ sort_by: "qtd_vendida_total", order: "asc"  }, 1, 1)
+  const { data: topRated }   = useProducts({ sort_by: "nota_media",        order: "desc" }, 1, 1)
+  const { data: botRated }   = useProducts({ sort_by: "nota_media",        order: "asc"  }, 1, 1)
+
+  const highlights = {
+    mostSold:   topSold?.items[0]  ?? null,
+    leastSold:  botSold?.items[0]  ?? null,
+    bestRated:  topRated?.items[0] ?? null,
+    worstRated: botRated?.items[0] ?? null,
+  }
 
   const items = data?.items ?? []
   const total = data?.total ?? 0
   const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE))
   const filteredItems = items
 
-  const highlights = useProductHighlights(items)
   const editingProduct = items.find((p) => p.id_produto === editingId) ?? null
   const viewingProduct = items.find((p) => p.id_produto === viewingId) ?? null
 
@@ -243,40 +247,38 @@ export function ProductsPage() {
 
   return (
     <PageShell title="Produtos">
-      {highlights && (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <ProductHighlightCard
-            label="Produto mais vendido"
-            metricLabel="Vendidos"
-            metricValue={highlights.mostSold.qtd_vendida_total.toLocaleString("pt-BR")}
-            productName={highlights.mostSold.nome_produto}
-            tone="emerald"
-          />
-          <ProductHighlightCard
-            label="Melhor avaliado"
-            metricLabel="Nota"
-            metricValue={highlights.bestRated.nota_media?.toFixed(1) ?? "—"}
-            productName={highlights.bestRated.nome_produto}
-            tone="emerald"
-          />
-          <ProductHighlightCard
-            label="Menos vendido"
-            metricLabel="Vendidos"
-            metricValue={highlights.leastSold.qtd_vendida_total.toLocaleString("pt-BR")}
-            productName={highlights.leastSold.nome_produto}
-            tone="amber"
-          />
-          <ProductHighlightCard
-            label="Menor avaliado"
-            metricLabel="Nota"
-            metricValue={highlights.worstRated.nota_media?.toFixed(1) ?? "—"}
-            productName={highlights.worstRated.nome_produto}
-            tone="rose"
-          />
-        </div>
-      )}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <ProductHighlightCard
+          label="Produto mais vendido"
+          metricLabel="Vendidos"
+          metricValue={highlights.mostSold?.qtd_vendida_total.toLocaleString("pt-BR") ?? "—"}
+          productName={highlights.mostSold?.nome_produto ?? "Carregando..."}
+          tone="emerald"
+        />
+        <ProductHighlightCard
+          label="Melhor avaliado"
+          metricLabel="Nota"
+          metricValue={highlights.bestRated?.nota_media?.toFixed(1) ?? "—"}
+          productName={highlights.bestRated?.nome_produto ?? "Carregando..."}
+          tone="emerald"
+        />
+        <ProductHighlightCard
+          label="Menos vendido"
+          metricLabel="Vendidos"
+          metricValue={highlights.leastSold?.qtd_vendida_total.toLocaleString("pt-BR") ?? "—"}
+          productName={highlights.leastSold?.nome_produto ?? "Carregando..."}
+          tone="amber"
+        />
+        <ProductHighlightCard
+          label="Menor avaliado"
+          metricLabel="Nota"
+          metricValue={highlights.worstRated?.nota_media?.toFixed(1) ?? "—"}
+          productName={highlights.worstRated?.nome_produto ?? "Carregando..."}
+          tone="rose"
+        />
+      </div>
 
-      <DataPanel>
+      <DataPanel className="h-[556px] overflow-hidden">
         <TableToolbar
           actionLabel="Adicionar produto"
           advancedFilterActive={isFilterActive(advancedFilter)}
