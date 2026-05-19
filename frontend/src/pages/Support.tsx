@@ -31,18 +31,24 @@ function SupportTable({
   filteredCount,
   onEditTicket,
   onPageChange,
+  onSort,
   onViewTicket,
   pageCount,
   rows,
+  sortBy,
+  sortOrder,
   totalCount,
 }: {
   currentPage: number
   filteredCount: number
   onEditTicket: (ticket: TicketOut) => void
   onPageChange: (page: number) => void
+  onSort: (key: string) => void
   onViewTicket: (ticket: TicketOut) => void
   pageCount: number
   rows: TicketOut[]
+  sortBy?: string
+  sortOrder?: "asc" | "desc"
   totalCount: number
 }) {
   return (
@@ -51,11 +57,11 @@ function SupportTable({
         <TableHeader>
           <TableRow className="h-12 border-slate-200 text-sm text-slate-950 hover:bg-transparent">
             <TableHead className="w-32 pl-5">Prazo</TableHead>
-            <TableHead sortable className="w-38">Ticket</TableHead>
+            <TableHead sortKey="id_ticket" currentSortKey={sortBy} currentSortOrder={sortOrder} onSort={onSort} className="w-38">Ticket</TableHead>
             <TableHead className="w-38">Cliente</TableHead>
             <TableHead className="w-28">Tipo</TableHead>
-            <TableHead sortable className="w-28">Data</TableHead>
-            <TableHead sortable className="w-28">Status</TableHead>
+            <TableHead sortKey="data_abertura" currentSortKey={sortBy} currentSortOrder={sortOrder} onSort={onSort} className="w-28">Data</TableHead>
+            <TableHead sortKey="status_ticket" currentSortKey={sortBy} currentSortOrder={sortOrder} onSort={onSort} className="w-28">Status</TableHead>
             <TableHead className="w-38">Sentimento</TableHead>
             <TableHead className="w-14" />
           </TableRow>
@@ -127,6 +133,8 @@ export function SupportPage() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
   const [viewingTicket, setViewingTicket] = useState<TicketOut | null>(null)
   const [editingTicket, setEditingTicket] = useState<TicketOut | null>(null)
+  const [sortBy, setSortBy] = useState<string | undefined>(undefined)
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc")
 
   const debouncedSearch = useDebounce(search, 400)
   const { data, isPending } = useSupport(
@@ -136,6 +144,8 @@ export function SupportPage() {
       satisfacoes: advancedFilters.satisfacoes.length > 0 ? advancedFilters.satisfacoes : undefined,
       data_abertura: advancedFilters.date || undefined,
       nome: debouncedSearch || undefined,
+      sort_by: sortBy,
+      order: sortBy ? sortOrder : undefined,
     },
     currentPage,
     PAGE_SIZE,
@@ -162,6 +172,17 @@ export function SupportPage() {
     advancedFilters.statuses.length > 0 ||
     advancedFilters.satisfacoes.length > 0
   )
+
+  function handleSort(key: string) {
+    if (sortBy === key) {
+      if (sortOrder === "asc") { setSortOrder("desc") }
+      else { setSortBy(undefined) }
+    } else {
+      setSortBy(key)
+      setSortOrder("asc")
+    }
+    setCurrentPage(1)
+  }
 
   function handleSearchChange(value: string) {
     setSearch(value)
@@ -198,9 +219,12 @@ export function SupportPage() {
             filteredCount={filteredItems.length}
             onEditTicket={setEditingTicket}
             onPageChange={setCurrentPage}
+            onSort={handleSort}
             onViewTicket={setViewingTicket}
             pageCount={pageCount}
             rows={filteredItems}
+            sortBy={sortBy}
+            sortOrder={sortOrder}
             totalCount={total}
           />
         )}

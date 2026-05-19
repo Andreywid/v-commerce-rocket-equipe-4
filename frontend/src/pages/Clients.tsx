@@ -4,7 +4,9 @@ import { Pencil, Users } from "lucide-react"
 import type { ClienteStatus } from "@/types"
 import type { CustomerOut } from "@/types/api"
 import { clienteStatusClasses } from "@/constants/badgeStyles"
+import { toast } from "sonner"
 import { useAppContext } from "@/context/AppContext"
+import { exportClientesToCSV } from "@/helpers/export"
 import { useCustomers, useCustomerStats } from "@/hooks/useCustomers"
 import { ClientAdvancedFilterDialog, emptyClientAdvancedFilters } from "@/components/shared/ClientAdvancedFilterDialog"
 import type { ClientAdvancedFilters } from "@/components/shared/ClientAdvancedFilterDialog"
@@ -46,18 +48,24 @@ function ClientsTable({
   filteredCount,
   onEditClient,
   onPageChange,
+  onSort,
   onViewProfile,
   pageCount,
   rows,
+  sortBy,
+  sortOrder,
   totalCount,
 }: {
   currentPage: number
   filteredCount: number
   onEditClient: (customer: CustomerOut) => void
   onPageChange: (page: number) => void
+  onSort: (key: string) => void
   onViewProfile: (id: string) => void
   pageCount: number
   rows: CustomerOut[]
+  sortBy?: string
+  sortOrder?: "asc" | "desc"
   totalCount: number
 }) {
   return (
@@ -65,12 +73,12 @@ function ClientsTable({
       <table className="min-w-[900px] w-full table-fixed text-left">
         <TableHeader>
           <TableRow className="h-12 border-slate-200 text-sm text-slate-950 hover:bg-transparent">
-            <TableHead sortable className="w-[220px] pl-5">Nome</TableHead>
+            <TableHead sortKey="nome" currentSortKey={sortBy} currentSortOrder={sortOrder} onSort={onSort} className="w-[220px] pl-5">Nome</TableHead>
             <TableHead className="w-[190px]">Localização</TableHead>
             <TableHead className="w-[130px]">Status</TableHead>
-            <TableHead sortable className="w-[160px]">Último pedido</TableHead>
+            <TableHead sortKey="data_ultimo_pedido" currentSortKey={sortBy} currentSortOrder={sortOrder} onSort={onSort} className="w-[160px]">Último pedido</TableHead>
             <TableHead className="w-[130px]">Qt de Pedidos</TableHead>
-            <TableHead sortable className="w-[140px]">Total</TableHead>
+            <TableHead sortKey="valor_total_gasto" currentSortKey={sortBy} currentSortOrder={sortOrder} onSort={onSort} className="w-[140px]">Total</TableHead>
             <TableHead className="w-14" />
           </TableRow>
         </TableHeader>
@@ -139,6 +147,8 @@ export function ClientsPage() {
   const [profileId, setProfileId] = useState<string | null>(null)
   const [editingClient, setEditingClient] = useState<CustomerOut | null>(null)
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
+  const [sortBy, setSortBy] = useState<string | undefined>(undefined)
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc")
 
   const segMap: Record<string, string> = { Excelente: "Alto", Ótimo: "Alto", Bom: "Medio", Crítico: "Baixo" }
   const segmentos = [...new Set(advancedFilters.avaliacoes.map((a) => segMap[a]).filter(Boolean))]
@@ -156,6 +166,8 @@ export function ClientsPage() {
       is_recorrente: isRecorrente,
       min_total: advancedFilters.minTotal > 0 ? advancedFilters.minTotal : undefined,
       max_total: advancedFilters.maxTotal < 100_000 ? advancedFilters.maxTotal : undefined,
+      sort_by: sortBy,
+      order: sortBy ? sortOrder : undefined,
     },
     currentPage,
     PAGE_SIZE,
@@ -185,6 +197,17 @@ export function ClientsPage() {
     },
   ]
 
+  function handleSort(key: string) {
+    if (sortBy === key) {
+      if (sortOrder === "asc") { setSortOrder("desc") }
+      else { setSortBy(undefined) }
+    } else {
+      setSortBy(key)
+      setSortOrder("asc")
+    }
+    setCurrentPage(1)
+  }
+
   function handleSearchChange(value: string) {
     setSearch(value)
     setCurrentPage(1)
@@ -202,7 +225,11 @@ export function ClientsPage() {
           label="Lista de clientes"
           onAction={() => setIsAddModalOpen(true)}
           onAdvancedFilter={() => setIsAdvancedFilterOpen(true)}
-          onExport={() => showNotice("Lista exportada!")}
+          onExport={() => {
+            if (!items.length) { toast.error("Nenhum dado para exportar."); return }
+            exportClientesToCSV(items)
+            showNotice(`${items.length} clientes exportados`)
+          }}
           onSearchChange={handleSearchChange}
           placeholder="Busque por um cliente ou código"
           searchValue={search}
@@ -215,9 +242,12 @@ export function ClientsPage() {
             filteredCount={filteredItems.length}
             onEditClient={setEditingClient}
             onPageChange={setCurrentPage}
+            onSort={handleSort}
             onViewProfile={setProfileId}
             pageCount={pageCount}
             rows={filteredItems}
+            sortBy={sortBy}
+            sortOrder={sortOrder}
             totalCount={total}
           />
         )}

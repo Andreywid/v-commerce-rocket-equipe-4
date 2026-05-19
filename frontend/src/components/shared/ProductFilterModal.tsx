@@ -223,7 +223,7 @@ export function ProductFilterModal({ open, onClose, onSave, initial }: ProductFi
         <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4">
           <div className="flex items-center gap-2">
             <SlidersHorizontal className="size-4 text-[#0F172A]" />
-            <span className="font-semibold text-[#0F172A]">Filtro avançado</span>
+            <span className="font-semibold text-[#0F172A]">Filtros avançados</span>
           </div>
           <button
             type="button"

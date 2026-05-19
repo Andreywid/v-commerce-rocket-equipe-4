@@ -6,7 +6,9 @@ import type { OrderOut } from "@/types/api"
 import { orderStatusClasses } from "@/constants/badgeStyles"
 import type { OrderCreate, OrderUpdate } from "@/types/api"
 import { HttpError } from "@/services/api"
+import { toast } from "sonner"
 import { useAppContext } from "@/context/AppContext"
+import { exportOrdersToCSV } from "@/helpers/export"
 import { useOrders, useOrderMutations } from "@/hooks/useOrders"
 import { useDebounce } from "@/hooks/useDebounce"
 import { OrderFormModal } from "@/components/shared/OrderFormModal"
@@ -36,16 +38,22 @@ function OrdersTable({
   filteredCount,
   onEditOrder,
   onPageChange,
+  onSort,
   pageCount,
   rows,
+  sortBy,
+  sortOrder,
   totalCount,
 }: {
   currentPage: number
   filteredCount: number
   onEditOrder: (id: string) => void
   onPageChange: (page: number) => void
+  onSort: (key: string) => void
   pageCount: number
   rows: OrderOut[]
+  sortBy?: string
+  sortOrder?: "asc" | "desc"
   totalCount: number
 }) {
   return (
@@ -54,11 +62,11 @@ function OrdersTable({
         <TableHeader>
           <TableRow className="h-12 border-slate-200 text-sm text-slate-950 hover:bg-transparent">
             <TableHead className="w-27.5 pl-5">Pedido</TableHead>
-            <TableHead sortable className="w-40">Produto</TableHead>
-            <TableHead className="w-25">Quantidade</TableHead>
+            <TableHead sortKey="nome_produto" currentSortKey={sortBy} currentSortOrder={sortOrder} onSort={onSort} className="w-40">Produto</TableHead>
+            <TableHead className="w-25 text-center">Quantidade</TableHead>
             <TableHead className="w-40">Cliente</TableHead>
-            <TableHead sortable className="w-32.5">Valor</TableHead>
-            <TableHead sortable className="w-30">Data</TableHead>
+            <TableHead sortKey="valor_total" currentSortKey={sortBy} currentSortOrder={sortOrder} onSort={onSort} className="w-32.5">Valor</TableHead>
+            <TableHead sortKey="data_pedido" currentSortKey={sortBy} currentSortOrder={sortOrder} onSort={onSort} className="w-30">Data</TableHead>
             <TableHead className="w-32.5">Status</TableHead>
             <TableHead className="w-14" />
           </TableRow>
@@ -72,7 +80,7 @@ function OrdersTable({
                 </span>
               </TableCell>
               <TableCell className="font-semibold text-slate-800">{row.nome_produto}</TableCell>
-              <TableCell>{row.quantidade}</TableCell>
+              <TableCell className="text-center">{row.quantidade}</TableCell>
               <TableCell className="max-w-0"><span className="block truncate">{row.nome_cliente}</span></TableCell>
               <TableCell className="font-medium">{formatBRL(row.valor_total)}</TableCell>
               <TableCell>{formatDate(row.data_pedido)}</TableCell>
@@ -112,6 +120,8 @@ export function OrdersPage() {
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false)
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
+  const [sortBy, setSortBy] = useState<string | undefined>(undefined)
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc")
 
   const { create, update, remove } = useOrderMutations()
 
@@ -124,6 +134,8 @@ export function OrdersPage() {
       nome: debouncedSearch || undefined,
       valor_min: orderFilters.priceMin > 0 ? orderFilters.priceMin : undefined,
       valor_max: orderFilters.priceMax < 100000 ? orderFilters.priceMax : undefined,
+      sort_by: sortBy,
+      order: sortBy ? sortOrder : undefined,
     },
     currentPage,
     PAGE_SIZE,
@@ -144,6 +156,17 @@ export function OrdersPage() {
     orderFilters.statuses.length > 0 ||
     orderFilters.priceMin > 0 ||
     orderFilters.priceMax < 100000
+
+  function handleSort(key: string) {
+    if (sortBy === key) {
+      if (sortOrder === "asc") { setSortOrder("desc") }
+      else { setSortBy(undefined) }
+    } else {
+      setSortBy(key)
+      setSortOrder("asc")
+    }
+    setCurrentPage(1)
+  }
 
   function handleSearchChange(value: string) {
     setSearch(value)
@@ -210,7 +233,11 @@ export function OrdersPage() {
           label="Pedidos solicitados"
           onAction={() => setIsAddModalOpen(true)}
           onAdvancedFilter={() => setIsFilterModalOpen(true)}
-          onExport={() => showNotice("Lista exportada!")}
+          onExport={() => {
+            if (!items.length) { toast.error("Nenhum dado para exportar."); return }
+            exportOrdersToCSV(items)
+            showNotice(`${items.length} pedidos exportados`)
+          }}
           onSearchChange={handleSearchChange}
           placeholder="Busque por produto, cliente ou número"
           searchValue={search}
@@ -223,8 +250,11 @@ export function OrdersPage() {
             filteredCount={filteredItems.length}
             onEditOrder={setEditingId}
             onPageChange={setCurrentPage}
+            onSort={handleSort}
             pageCount={pageCount}
             rows={filteredItems}
+            sortBy={sortBy}
+            sortOrder={sortOrder}
             totalCount={total}
           />
         )}

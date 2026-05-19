@@ -181,7 +181,7 @@ export function ClientAdvancedFilterDialog({
         <DialogHeader className="shrink-0 pb-4 border-b border-slate-100">
           <DialogTitle className="flex items-center gap-2 text-[#4F46E5] text-base font-medium">
             <Filter className="size-4" />
-            Filtro avançado
+            Filtros avançados
           </DialogTitle>
         </DialogHeader>
 

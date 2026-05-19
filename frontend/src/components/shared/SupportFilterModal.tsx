@@ -84,7 +84,7 @@ export function SupportFilterModal({
         <DialogHeader className="border-b border-slate-100 pb-4">
           <DialogTitle className="flex items-center gap-2 text-base font-medium text-[#4F46E5]">
             <Filter className="size-4" />
-            Filtro avançado
+            Filtros avançados
           </DialogTitle>
         </DialogHeader>
 

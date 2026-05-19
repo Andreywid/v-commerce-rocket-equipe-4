@@ -78,7 +78,7 @@ export function TableToolbar({
             type="button"
           >
             <SlidersHorizontal className="size-4" />
-            Filtro
+            Filtros
           </Button>
 
           {onExport && (

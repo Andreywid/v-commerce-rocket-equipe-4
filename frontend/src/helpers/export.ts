@@ -1,3 +1,5 @@
+import type { CustomerOut, OrderOut } from "@/types/api"
+
 /**
  * Utility to export data to CSV format and trigger a browser download.
  */
@@ -77,4 +79,57 @@ export function exportKpiToCSV(data: any[]): void {
   const filename = `vcommerce_dashboard_kpi_${new Date().toISOString().slice(0, 10)}.csv`;
   
   downloadFile(csvContent, filename, "text/csv;charset=utf-8;");
+}
+
+export function exportClientesToCSV(data: CustomerOut[]): void {
+  const headers = [
+    "ID Cliente", "Nome", "Email", "Telefone", "Cidade", "Estado", "Origem",
+    "Data Cadastro", "Pedidos Total", "Valor Total (R$)", "Ticket Médio (R$)",
+    "Último Pedido", "Tickets Abertos", "Segmento LTV", "Ativo 90d", "Em Risco",
+  ]
+  const rows = data.map((c) => [
+    c.id_cliente,
+    c.nome,
+    c.email,
+    c.telefone,
+    c.cidade,
+    c.estado,
+    c.origem,
+    c.data_cadastro,
+    c.qtd_pedidos_total,
+    c.valor_total_gasto?.toFixed(2) ?? "",
+    c.ticket_medio?.toFixed(2) ?? "",
+    c.data_ultimo_pedido ?? "",
+    c.qtd_tickets_abertos,
+    c.segmento_ltv,
+    c.is_ativo_90d ? "Sim" : "Não",
+    c.is_em_risco ? "Sim" : "Não",
+  ])
+  const filename = `vcommerce_clientes_${new Date().toISOString().slice(0, 10)}.csv`
+  downloadFile(generateCSV(headers, rows), filename, "text/csv;charset=utf-8;")
+}
+
+export function exportOrdersToCSV(data: OrderOut[]): void {
+  const headers = [
+    "ID Pedido", "ID Cliente", "Nome Cliente", "ID Produto", "Nome Produto",
+    "Categoria", "Data Pedido", "Quantidade", "Valor Unitário (R$)",
+    "Valor Total (R$)", "Status", "Pagamento", "Estado Cliente",
+  ]
+  const rows = data.map((o) => [
+    o.id_pedido,
+    o.id_cliente,
+    o.nome_cliente,
+    o.id_produto,
+    o.nome_produto,
+    o.categoria_produto,
+    o.data_pedido,
+    o.quantidade,
+    o.valor_unitario.toFixed(2),
+    o.valor_total.toFixed(2),
+    o.status,
+    o.metodo_pagamento,
+    o.estado_cliente,
+  ])
+  const filename = `vcommerce_pedidos_${new Date().toISOString().slice(0, 10)}.csv`
+  downloadFile(generateCSV(headers, rows), filename, "text/csv;charset=utf-8;")
 }

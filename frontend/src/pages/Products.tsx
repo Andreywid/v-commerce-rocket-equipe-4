@@ -57,8 +57,11 @@ function ProductsTable({
   onEditProduct,
   onPageChange,
   onViewProduct,
+  onSort,
   pageCount,
   rows,
+  sortBy,
+  sortOrder,
   totalCount,
 }: {
   currentPage: number
@@ -66,8 +69,11 @@ function ProductsTable({
   onEditProduct: (id: string) => void
   onPageChange: (page: number) => void
   onViewProduct: (id: string) => void
+  onSort: (key: string) => void
   pageCount: number
   rows: ProductOut[]
+  sortBy?: string
+  sortOrder?: "asc" | "desc"
   totalCount: number
 }) {
   return (
@@ -78,8 +84,8 @@ function ProductsTable({
             <TableHead className="w-52 pl-5">Produto</TableHead>
             <TableHead className="w-28">Código</TableHead>
             <TableHead className="w-36">Categoria</TableHead>
-            <TableHead sortable className="w-28">Preço</TableHead>
-            <TableHead sortable className="w-28">Avaliação</TableHead>
+            <TableHead sortKey="preco_atual" currentSortKey={sortBy} currentSortOrder={sortOrder} onSort={onSort} className="w-28">Preço</TableHead>
+            <TableHead sortKey="nota_media" currentSortKey={sortBy} currentSortOrder={sortOrder} onSort={onSort} className="w-28">Avaliação</TableHead>
             <TableHead className="w-20" />
           </TableRow>
         </TableHeader>
@@ -153,6 +159,8 @@ export function ProductsPage() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [viewingId, setViewingId] = useState<string | null>(null)
+  const [sortBy, setSortBy] = useState<string | undefined>(undefined)
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc")
 
   const rawSearch = search || advancedFilter.search
   const debouncedSearch = useDebounce(rawSearch, 400)
@@ -169,6 +177,8 @@ export function ProductsPage() {
       ativo,
       preco_min: advancedFilter.minPrice > 0 ? advancedFilter.minPrice : undefined,
       preco_max: advancedFilter.maxPrice < 100_000 ? advancedFilter.maxPrice : undefined,
+      sort_by: sortBy,
+      order: sortBy ? sortOrder : undefined,
     },
     currentPage,
     PAGE_SIZE,
@@ -194,6 +204,17 @@ export function ProductsPage() {
 
   const editingProduct = items.find((p) => p.id_produto === editingId) ?? null
   const viewingProduct = items.find((p) => p.id_produto === viewingId) ?? null
+
+  function handleSort(key: string) {
+    if (sortBy === key) {
+      if (sortOrder === "asc") { setSortOrder("desc") }
+      else { setSortBy(undefined) }
+    } else {
+      setSortBy(key)
+      setSortOrder("asc")
+    }
+    setCurrentPage(1)
+  }
 
   function handleSearchChange(value: string) {
     setSearch(value)
@@ -260,7 +281,7 @@ export function ProductsPage() {
           metricLabel="Nota"
           metricValue={highlights.bestRated?.nota_media?.toFixed(1) ?? "—"}
           productName={highlights.bestRated?.nome_produto ?? "Carregando..."}
-          tone="emerald"
+          tone="indigo"
         />
         <ProductHighlightCard
           label="Menos vendido"
@@ -299,8 +320,11 @@ export function ProductsPage() {
             onEditProduct={setEditingId}
             onPageChange={setCurrentPage}
             onViewProduct={setViewingId}
+            onSort={handleSort}
             pageCount={pageCount}
             rows={filteredItems}
+            sortBy={sortBy}
+            sortOrder={sortOrder}
             totalCount={total}
           />
         )}
@@ -336,10 +360,6 @@ export function ProductsPage() {
         <ProductDetailDialog
           product={viewingProduct}
           onClose={() => setViewingId(null)}
-          onEdit={() => {
-            setEditingId(viewingId)
-            setViewingId(null)
-          }}
         />
       )}
     </PageShell>

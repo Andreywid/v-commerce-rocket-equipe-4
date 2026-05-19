@@ -80,7 +80,7 @@ export function OrderFilterModal({
         <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4">
           <div className="flex items-center gap-2">
             <SlidersHorizontal className="size-4 text-[#4F46E5]" />
-            <span className="font-semibold text-[#4F46E5]">Filtro avançado</span>
+            <span className="font-semibold text-[#4F46E5]">Filtros avançados</span>
           </div>
           <button
             type="button"

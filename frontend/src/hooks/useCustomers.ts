@@ -10,6 +10,8 @@ export type CustomerFilters = {
   is_recorrente?: boolean
   min_total?: number
   max_total?: number
+  sort_by?: string
+  order?: string
 }
 
 export function useCustomers(filters: CustomerFilters = {}, page = 1, size = 20) {
@@ -21,6 +23,8 @@ export function useCustomers(filters: CustomerFilters = {}, page = 1, size = 20)
   if (filters.is_recorrente !== undefined) params.set("is_recorrente", String(filters.is_recorrente))
   if (filters.min_total !== undefined) params.set("min_total", String(filters.min_total))
   if (filters.max_total !== undefined) params.set("max_total", String(filters.max_total))
+  if (filters.sort_by) params.set("sort_by", filters.sort_by)
+  if (filters.order) params.set("order", filters.order)
 
   return useQuery({
     queryKey: ["customers", filters, page, size],

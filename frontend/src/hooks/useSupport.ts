@@ -10,6 +10,8 @@ export type SupportFilters = {
   data_abertura?: string
   nome?: string
   satisfacoes?: string[]
+  sort_by?: string
+  order?: string
 }
 
 export function useSupport(filters: SupportFilters = {}, page = 1, size = 20) {
@@ -21,6 +23,8 @@ export function useSupport(filters: SupportFilters = {}, page = 1, size = 20) {
   if (filters.sla_estourado !== undefined) params.set("sla_estourado", String(filters.sla_estourado))
   if (filters.data_abertura) params.set("data_abertura", filters.data_abertura)
   if (filters.nome) params.set("nome", filters.nome)
+  if (filters.sort_by) params.set("sort_by", filters.sort_by)
+  if (filters.order) params.set("order", filters.order)
 
   return useQuery({
     queryKey: ["support", filters, page, size],
