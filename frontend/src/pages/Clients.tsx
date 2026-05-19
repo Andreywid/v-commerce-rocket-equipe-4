@@ -1,13 +1,14 @@
-import { useMemo, useState } from "react"
-import { Users } from "lucide-react"
+import { useState } from "react"
+import { Pencil, Users } from "lucide-react"
 
-import type { ClientSegmento } from "@/types"
+import type { ClienteStatus } from "@/types"
 import type { CustomerOut } from "@/types/api"
-import { segmentoClasses } from "@/constants/badgeStyles"
+import { clienteStatusClasses } from "@/constants/badgeStyles"
 import { useAppContext } from "@/context/AppContext"
-import { useCustomers } from "@/hooks/useCustomers"
+import { useCustomers, useCustomerStats } from "@/hooks/useCustomers"
 import { ClientAdvancedFilterDialog, emptyClientAdvancedFilters } from "@/components/shared/ClientAdvancedFilterDialog"
 import type { ClientAdvancedFilters } from "@/components/shared/ClientAdvancedFilterDialog"
+import { ClientFormModal } from "@/components/shared/ClientFormModal"
 import { ClientProfileDialog } from "@/components/shared/ClientProfileDialog"
 import { DataPanel } from "@/components/shared/DataPanel"
 import { MetricGrid } from "@/components/shared/MetricCard"
@@ -18,7 +19,7 @@ import { TableToolbar } from "@/components/shared/TableToolbar"
 import { MapPin, Smile, Tag } from "lucide-react"
 import type { Metric } from "@/types"
 
-const PAGE_SIZE = 5
+const PAGE_SIZE = 6
 
 function getInitials(name: string): string {
   const parts = name.trim().split(" ")
@@ -37,12 +38,13 @@ function formatDate(iso: string | null): string {
 }
 
 function isFilterActive(f: ClientAdvancedFilters): boolean {
-  return f.name !== "" || f.locations.length > 0 || f.segmentos.length > 0 || f.minTotal > 0 || f.maxTotal < 100_000
+  return f.name !== "" || f.locations.length > 0 || f.avaliacoes.length > 0 || f.statuses.length > 0 || f.minTotal > 0 || f.maxTotal < 100_000
 }
 
 function ClientsTable({
   currentPage,
   filteredCount,
+  onEditClient,
   onPageChange,
   onViewProfile,
   pageCount,
@@ -51,6 +53,7 @@ function ClientsTable({
 }: {
   currentPage: number
   filteredCount: number
+  onEditClient: (customer: CustomerOut) => void
   onPageChange: (page: number) => void
   onViewProfile: (id: string) => void
   pageCount: number
@@ -64,10 +67,11 @@ function ClientsTable({
           <TableRow className="h-12 border-slate-200 text-sm text-slate-950 hover:bg-transparent">
             <TableHead sortable className="w-[220px] pl-5">Nome</TableHead>
             <TableHead className="w-[190px]">Localização</TableHead>
-            <TableHead className="w-[130px]">Segmento</TableHead>
+            <TableHead className="w-[130px]">Status</TableHead>
             <TableHead sortable className="w-[160px]">Último pedido</TableHead>
             <TableHead className="w-[130px]">Qt de Pedidos</TableHead>
             <TableHead sortable className="w-[140px]">Total</TableHead>
+            <TableHead className="w-14" />
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -75,7 +79,7 @@ function ClientsTable({
             <TableRow key={row.id_cliente} className="h-19 border-slate-200 text-sm text-slate-700">
               <TableCell className="pl-5">
                 <div className="flex items-center gap-3">
-                  <span className="grid size-8 shrink-0 place-items-center rounded-full bg-indigo-100 text-xs font-bold text-indigo-600">
+                  <span className="grid size-10 shrink-0 place-items-center rounded-full border border-slate-200 bg-white text-xs font-bold text-[#0A0A0A]">
                     {getInitials(row.nome)}
                   </span>
                   <button
@@ -89,13 +93,27 @@ function ClientsTable({
               </TableCell>
               <TableCell className="text-slate-400">{row.cidade}, {row.estado}</TableCell>
               <TableCell>
-                <StatusBadge className={segmentoClasses[row.segmento_ltv as ClientSegmento]}>
-                  {row.segmento_ltv}
-                </StatusBadge>
+                {(() => {
+                  const status: ClienteStatus = row.qtd_pedidos_total >= 2 ? "Recorrente" : "Novo"
+                  return (
+                    <StatusBadge className={clienteStatusClasses[status]}>
+                      {status}
+                    </StatusBadge>
+                  )
+                })()}
               </TableCell>
               <TableCell className="font-medium">{formatDate(row.data_ultimo_pedido)}</TableCell>
               <TableCell>{row.qtd_pedidos_total}</TableCell>
               <TableCell className="font-medium">{formatBRL(row.valor_total_gasto)}</TableCell>
+              <TableCell>
+                <button
+                  className="grid place-items-center rounded-md p-1 transition hover:bg-slate-100"
+                  onClick={() => onEditClient(row)}
+                  type="button"
+                >
+                  <Pencil className="size-4 text-[#6366F1]" />
+                </button>
+              </TableCell>
             </TableRow>
           ))}
         </TableBody>
@@ -119,11 +137,26 @@ export function ClientsPage() {
   const [currentPage, setCurrentPage] = useState(1)
   const [isAdvancedFilterOpen, setIsAdvancedFilterOpen] = useState(false)
   const [profileId, setProfileId] = useState<string | null>(null)
+  const [editingClient, setEditingClient] = useState<CustomerOut | null>(null)
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false)
 
-  const segmento = advancedFilters.segmentos[0]
-  const estado = advancedFilters.locations[0]
+  const segMap: Record<string, string> = { Excelente: "Alto", Ótimo: "Alto", Bom: "Medio", Crítico: "Baixo" }
+  const segmentos = [...new Set(advancedFilters.avaliacoes.map((a) => segMap[a]).filter(Boolean))]
+  const isRecorrente =
+    advancedFilters.statuses.length === 1
+      ? advancedFilters.statuses[0] === "Recorrente"
+      : undefined
+
+  const { data: stats } = useCustomerStats()
   const { data, isPending } = useCustomers(
-    { nome: advancedFilters.name || search || undefined, estado, segmento },
+    {
+      nome: advancedFilters.name || search || undefined,
+      estados: advancedFilters.locations.length > 0 ? advancedFilters.locations : undefined,
+      segmentos: segmentos.length > 0 ? segmentos : undefined,
+      is_recorrente: isRecorrente,
+      min_total: advancedFilters.minTotal > 0 ? advancedFilters.minTotal : undefined,
+      max_total: advancedFilters.maxTotal < 100_000 ? advancedFilters.maxTotal : undefined,
+    },
     currentPage,
     PAGE_SIZE,
   )
@@ -131,19 +164,26 @@ export function ClientsPage() {
   const items = data?.items ?? []
   const total = data?.total ?? 0
   const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE))
+  const filteredItems = items
 
-  const filteredItems = useMemo(() => {
-    const q = search.toLowerCase()
-    if (!q) return items
-    return items.filter((c) => c.nome.toLowerCase().includes(q) || String(c.id_cliente).includes(q))
-  }, [items, search])
-
-  const metrics = useMemo((): Metric[] => [
+  const metrics: Metric[] = [
     { label: "Total de clientes", value: total.toLocaleString("pt-BR"), helper: "Cadastrados", tone: "emerald", icon: Users },
     { label: "Segmento Alto",      value: String(items.filter((c) => c.segmento_ltv === "Alto").length), helper: "Na página atual", tone: "indigo",  icon: Tag },
-    { label: "Taxa de satisfação", value: "4.6/5.0", helper: "+12% NPS médio",     tone: "emerald", icon: Smile },
-    { label: "Top região",         value: "São Paulo, SP", helper: "28% da fatura total", tone: "indigo",  icon: MapPin },
-  ], [total, items])
+    {
+      label: "Nota média",
+      value: stats?.nota_media != null ? `${stats.nota_media.toFixed(1)}/5.0` : "—",
+      helper: stats?.nps_medio != null ? `NPS médio ${stats.nps_medio.toFixed(1)}` : "Carregando...",
+      tone: "emerald",
+      icon: Smile,
+    },
+    {
+      label: "Top região",
+      value: stats?.top_estado ?? "—",
+      helper: stats?.top_estado_percentual != null ? `${stats.top_estado_percentual}% dos clientes` : "Carregando...",
+      tone: "indigo",
+      icon: MapPin,
+    },
+  ]
 
   function handleSearchChange(value: string) {
     setSearch(value)
@@ -156,10 +196,13 @@ export function ClientsPage() {
 
       <DataPanel>
         <TableToolbar
+          actionLabel="Adicionar cliente"
           advancedFilterActive={isFilterActive(advancedFilters)}
           icon={Users}
           label="Lista de clientes"
+          onAction={() => setIsAddModalOpen(true)}
           onAdvancedFilter={() => setIsAdvancedFilterOpen(true)}
+          onExport={() => showNotice("Lista exportada!")}
           onSearchChange={handleSearchChange}
           placeholder="Busque por um cliente ou código"
           searchValue={search}
@@ -170,6 +213,7 @@ export function ClientsPage() {
           <ClientsTable
             currentPage={currentPage}
             filteredCount={filteredItems.length}
+            onEditClient={setEditingClient}
             onPageChange={setCurrentPage}
             onViewProfile={setProfileId}
             pageCount={pageCount}
@@ -195,6 +239,22 @@ export function ClientsPage() {
         <ClientProfileDialog
           customerId={profileId}
           onClose={() => setProfileId(null)}
+        />
+      )}
+      {isAddModalOpen && (
+        <ClientFormModal
+          mode="add"
+          onClose={() => setIsAddModalOpen(false)}
+          onSubmit={() => { setIsAddModalOpen(false); showNotice("Cliente adicionado") }}
+        />
+      )}
+      {editingClient !== null && (
+        <ClientFormModal
+          mode="edit"
+          customer={editingClient}
+          onClose={() => setEditingClient(null)}
+          onDelete={() => { setEditingClient(null); showNotice("Cliente excluído") }}
+          onSubmit={() => { setEditingClient(null); showNotice("Cliente atualizado") }}
         />
       )}
     </PageShell>
