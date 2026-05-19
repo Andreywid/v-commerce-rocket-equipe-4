@@ -4,13 +4,15 @@ from app.models.order import Order
 from sqlalchemy import desc, or_
 
 def get_all(
-    status: str | None = None,
+    status: list[str] | None = None,
     categoria: str | None = None,
     estado: str | None = None,
     id_cliente: str | None = None,
     data_inicio: str | None = None,
     data_fim: str | None = None,
     nome: str | None = None,
+    valor_min: float | None = None,
+    valor_max: float | None = None,
     page: int = 1,
     size: int = 20,
 ) -> tuple[list[Order], int]:
@@ -19,7 +21,11 @@ def get_all(
         query = db.query(Order)
 
         if status:
-            query = query.filter(Order.status == status)
+            query = query.filter(Order.status.in_(status))
+        if valor_min is not None:
+            query = query.filter(Order.valor_total >= valor_min)
+        if valor_max is not None:
+            query = query.filter(Order.valor_total <= valor_max)
         if categoria:
             query = query.filter(Order.categoria_produto == categoria)
         if estado:

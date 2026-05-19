@@ -8,18 +8,20 @@ router = APIRouter(prefix="/orders", tags=["orders"])
 
 @router.get("", response_model=OrderListResponse)
 def list_orders(
-    status: str | None = Query(None, description="Aprovado | Recusado | Reembolsado | Processando"),
+    status: list[str] | None = Query(None, description="Aprovado | Recusado | Reembolsado | Processando"),
     categoria: str | None = Query(None),
     estado: str | None = Query(None, description="UF do cliente, ex: SP"),
     id_cliente: str | None = Query(None),
     data_inicio: str | None = Query(None, description="YYYY-MM-DD"),
     data_fim: str | None = Query(None, description="YYYY-MM-DD"),
     nome: str | None = Query(None, description="Busca por produto, cliente ou número do pedido"),
+    valor_min: float | None = Query(None, description="Valor mínimo do pedido"),
+    valor_max: float | None = Query(None, description="Valor máximo do pedido"),
     page: int = Query(1, ge=1),
     size: int = Query(20, ge=1, le=100),
     current_user=Depends(get_current_user),
 ):
-    return order_service.get_orders(status, categoria, estado, id_cliente, data_inicio, data_fim, nome, page, size)
+    return order_service.get_orders(status, categoria, estado, id_cliente, data_inicio, data_fim, nome, valor_min, valor_max, page, size)
 
 
 @router.get("/{id_pedido}", response_model=OrderOut)
