@@ -126,7 +126,7 @@ export function Dashboard() {
               ))}
         </DataGrid>
 
-        <div className="mt-6 grid gap-4 lg:grid-cols-[1fr_272px]">
+        <div className="mt-7 grid gap-4 lg:grid-cols-[1fr_272px]">
           <RevenueChart
             data={chartData}
             onExport={handleExport}
@@ -136,7 +136,7 @@ export function Dashboard() {
           <OrderSummary data={orderSummary} />
         </div>
 
-        <div className="mt-6 grid gap-4 sm:grid-cols-3">
+        <div className="mt-7 grid gap-4 sm:grid-cols-3">
           {isPending
             ? Array.from({ length: 3 }).map((_, i) => <CardSkeleton key={i} />)
             : insights.map((insight) => (
