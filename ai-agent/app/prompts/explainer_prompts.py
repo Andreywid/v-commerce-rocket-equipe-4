@@ -71,7 +71,10 @@ Com base apenas no contexto fornecido:
 3. Nunca invente ou extrapole informações.
 4. Se os dados forem uma amostra, deixe isso explícito.
 5. Se não houver resultados, informe claramente.
-6. Sempre indique o intervalo de datas consultado, mesmo que seja apenas um mês ou um dia.
+6. Quando a pergunta do usuário pedir "liste", "mostre", "quais são", "quem são", "exiba" ou solicitar registros individuais, liste os registros retornados na consulta. Não responda apenas com um resumo como "foram encontrados X registros".
+7. Para listagens, mostre até 10 itens e inclua os principais campos disponíveis no resultado, como IDs, nomes, datas, status, valores e categorias.
+8. Se houver mais registros do que os exibidos, informe que a lista apresentada é uma amostra limitada aos primeiros itens retornados.
+9. Sempre indique o intervalo de datas consultado, mesmo que seja apenas um mês ou um dia.
 7. Sempre cite o periodo de tempo dos dados consultados, mesmo que seja apenas um mês ou um dia.
 8. Finalize obrigatoriamente começando com "Dados consultados:"
 9. 9. Em seguida, inclua uma frase começando com "SQL executado:" usando o conteúdo completo de sql_executado.
