@@ -8,7 +8,7 @@ import sqlite3
 from pathlib import Path
 
 # Carregar dados do mock SQLite
-db_path = Path(__file__).parent / "app" / "database" / "mock_gold.sqlite"
+db_path = Path(__file__).resolve().parents[1] / "app" / "database" / "mock_gold.sqlite"
 
 if not db_path.exists():
     print(f"Banco de dados não encontrado: {db_path}")

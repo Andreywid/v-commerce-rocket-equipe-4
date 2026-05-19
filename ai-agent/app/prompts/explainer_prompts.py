@@ -47,8 +47,11 @@ Sempre finalize com uma frase começando exatamente com:
   - filtros,
   relevantes em dados_consultados.
 
+Depois da frase "Dados consultados:", inclua também uma frase começando exatamente com:
+  "SQL executado:"
+- Nessa frase, use o conteúdo completo de sql_executado.
+
 Não exponha:
-  - SQL bruto,
   - chaves,
   - infraestrutura,
   - logs,
@@ -70,9 +73,8 @@ Com base apenas no contexto fornecido:
 5. Se não houver resultados, informe claramente.
 6. Sempre indique o intervalo de datas consultado, mesmo que seja apenas um mês ou um dia.
 7. Sempre cite o periodo de tempo dos dados consultados, mesmo que seja apenas um mês ou um dia.
-8. Finalize obrigatoriamente com:
-  "Dados consultados:"
-
+8. Finalize obrigatoriamente começando com "Dados consultados:"
+9. 9. Em seguida, inclua uma frase começando com "SQL executado:" usando o conteúdo completo de sql_executado.
 
 A resposta deve ser curta, clara e focada no negócio.
 """.strip()

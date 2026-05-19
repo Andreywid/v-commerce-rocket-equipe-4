@@ -4,38 +4,39 @@ Test runner para validar todas as perguntas contra o AI Agent.
 
 Uso:
     cd ai-agent
-    python test_runner.py                  # Testa tudo
-    python test_runner.py --category "KPIs de vendas"  # Testa uma categoria
-    python test_runner.py --limit 5        # Testa primeiras 5 perguntas
+    python test_suite/test_runner.py
+    python test_suite/test_runner.py --category "KPIs de vendas"
+    python test_suite/test_runner.py --limit 5
 """
 
+import argparse
 import asyncio
 import json
 import sys
-from pathlib import Path
 from datetime import datetime
+from pathlib import Path
 from typing import Optional
-import argparse
 
-# Adiciona ai-agent ao path
 _TEST_SUITE_ROOT = Path(__file__).resolve().parent
 _AI_AGENT_ROOT = _TEST_SUITE_ROOT.parent
+
 if str(_AI_AGENT_ROOT) not in sys.path:
     sys.path.insert(0, str(_AI_AGENT_ROOT))
 
 from dotenv import load_dotenv
+
 load_dotenv(_AI_AGENT_ROOT / ".env")
 
 from app.agents.orchestrator import AgentOrchestrator
 from app.cli.context import CliRunContext
-from app.models.responses import InvalidRequest, Success
+from app.models.responses import InvalidRequest, OrchestratorResult, Success
 
 
 class TestResult:
     def __init__(self, category: str, question: str):
         self.category = category
         self.question = question
-        self.status = "pending"  # pending, success, error, blocked
+        self.status = "pending"
         self.sql = None
         self.error_message = None
         self.execution_time = 0
@@ -61,9 +62,7 @@ class TestRunner:
         self.orchestrator = None
 
     async def setup(self):
-        """Inicializa o orquestrador."""
         try:
-            # Contexto padrão sem restrições
             ctx = CliRunContext(
                 conversation_id="test_session",
                 user_id="test_user",
@@ -74,36 +73,60 @@ class TestRunner:
                 allow_all_schema_access=True,
                 allow_sensitive_pii=False,
                 require_tenant=False,
-                debug_memory=debug,
+                debug_memory=self.debug,
             )
-            self.orchestrator = AgentOrchestrator(ctx)
-            print("✓ Orquestrador inicializado com sucesso")
+
+            self.orchestrator = AgentOrchestrator(ctx, debug=self.debug)
+            print("OK - Orquestrador inicializado com sucesso")
+
         except Exception as e:
-            print(f"✗ Erro ao inicializar orquestrador: {e}")
+            print(f"ERRO - Falha ao inicializar orquestrador: {e}")
             sys.exit(1)
 
     async def test_question(self, category: str, question: str) -> TestResult:
-        """Testa uma pergunta individual."""
         result = TestResult(category, question)
-        
+
         try:
             start_time = datetime.now()
-            
-            # Chama o orquestrador
             response = await self.orchestrator.run(question)
-            
             result.execution_time = (datetime.now() - start_time).total_seconds()
-            
+
+            if isinstance(response, OrchestratorResult):
+                result.sql = response.sql
+
+                if response.error:
+                    result.error_message = response.error
+
+                    if response.error_kind in {
+                        "question_policy",
+                        "sql_policy",
+                        "invalid_request",
+                    }:
+                        result.status = "blocked"
+                    else:
+                        result.status = "error"
+                else:
+                    result.status = "success"
+
+                return result
+
             if isinstance(response, Success):
                 result.status = "success"
                 result.sql = response.sql
-            elif isinstance(response, InvalidRequest):
+                return result
+
+            if isinstance(response, InvalidRequest):
                 result.status = "blocked"
-                result.error_message = response.rejection_reason
-            else:
-                result.status = "error"
-                result.error_message = str(response)
-                
+                result.error_message = getattr(
+                    response,
+                    "rejection_reason",
+                    getattr(response, "error_message", str(response)),
+                )
+                return result
+
+            result.status = "error"
+            result.error_message = str(response)
+
         except Exception as e:
             result.status = "error"
             result.error_message = str(e)
@@ -112,14 +135,13 @@ class TestRunner:
         return result
 
     async def run_tests(self, category_filter: Optional[str] = None):
-        """Executa todos os testes."""
         questions_file = _TEST_SUITE_ROOT / "test_questions.json"
-        
+
         if not questions_file.exists():
-            print(f"✗ Arquivo não encontrado: {questions_file}")
+            print(f"ERRO - Arquivo não encontrado: {questions_file}")
             sys.exit(1)
 
-        with open(questions_file) as f:
+        with open(questions_file, encoding="utf-8") as f:
             all_questions = json.load(f)
 
         await self.setup()
@@ -131,8 +153,8 @@ class TestRunner:
             if category_filter and category.lower() != category_filter.lower():
                 continue
 
-            print(f"\n📋 {category}")
-            print("─" * 70)
+            print(f"\nCategoria: {category}")
+            print("-" * 70)
 
             for question in questions:
                 if self.limit and tested_count >= self.limit:
@@ -140,22 +162,25 @@ class TestRunner:
 
                 total_tests += 1
                 tested_count += 1
-                
-                print(f"  [{tested_count:3d}] Testing: {question[:60]}...", end=" ", flush=True)
-                
+
+                print(
+                    f"  [{tested_count:3d}] Testing: {question[:60]}...",
+                    end=" ",
+                    flush=True,
+                )
+
                 result = await self.test_question(category, question)
                 self.results.append(result)
 
-                # Mostra status compacto
                 if result.status == "success":
-                    print(f"✓ ({result.execution_time:.2f}s)")
+                    print(f"OK ({result.execution_time:.2f}s)")
                 elif result.status == "blocked":
-                    print(f"🚫 (Bloqueado)")
+                    print("BLOQUEADO")
                 else:
-                    print(f"✗ (Erro)")
+                    print("ERRO")
 
                 if self.debug and result.error_message:
-                    print(f"    └─ {result.error_message[:100]}")
+                    print(f"    -> {result.error_message[:200]}")
 
             if self.limit and tested_count >= self.limit:
                 break
@@ -164,13 +189,12 @@ class TestRunner:
         return self.results
 
     def print_summary(self):
-        """Imprime resumo dos testes."""
         if not self.results:
             print("Nenhum teste foi executado.")
             return
 
         print("\n" + "=" * 70)
-        print("📊 RESUMO DOS TESTES")
+        print("RESUMO DOS TESTES")
         print("=" * 70)
 
         success_count = sum(1 for r in self.results if r.status == "success")
@@ -179,44 +203,51 @@ class TestRunner:
         total = len(self.results)
 
         print(f"\nTotal de testes: {total}")
-        print(f"✓ Sucesso:      {success_count} ({success_count/total*100:.1f}%)")
-        print(f"✗ Erro:         {error_count} ({error_count/total*100:.1f}%)")
-        print(f"🚫 Bloqueado:   {blocked_count} ({blocked_count/total*100:.1f}%)")
+        print(f"Sucesso:    {success_count} ({success_count / total * 100:.1f}%)")
+        print(f"Erro:       {error_count} ({error_count / total * 100:.1f}%)")
+        print(f"Bloqueado:  {blocked_count} ({blocked_count / total * 100:.1f}%)")
 
-        # Agrupa por categoria
         by_category = {}
-        for result in self.results:
-            if result.category not in by_category:
-                by_category[result.category] = {"success": 0, "error": 0, "blocked": 0}
-            by_category[result.category][result.status] += 1
+        for item in self.results:
+            if item.category not in by_category:
+                by_category[item.category] = {
+                    "success": 0,
+                    "error": 0,
+                    "blocked": 0,
+                }
+            by_category[item.category][item.status] += 1
 
-        print("\n📈 Por Categoria:")
+        print("\nPor categoria:")
         for category in sorted(by_category.keys()):
             stats = by_category[category]
             total_cat = sum(stats.values())
-            print(f"  {category}: {stats['success']}/{total_cat} ✓")
+            print(
+                f"  {category}: "
+                f"{stats['success']}/{total_cat} sucesso, "
+                f"{stats['blocked']} bloqueado(s), "
+                f"{stats['error']} erro(s)"
+            )
 
-        # Erros encontrados
         errors = [r for r in self.results if r.status == "error"]
         if errors:
-            print(f"\n⚠️  Erros encontrados ({len(errors)}):")
-            for err in errors[:5]:  # Mostra primeiros 5
-                print(f"  • {err.question[:50]}...")
-                print(f"    → {err.error_message[:80]}")
+            print(f"\nErros encontrados ({len(errors)}):")
+            for err in errors[:5]:
+                print(f"  - {err.question[:70]}...")
+                print(f"    -> {str(err.error_message)[:200]}")
             if len(errors) > 5:
-                print(f"  ... e mais {len(errors) - 5} erros")
+                print(f"  ... e mais {len(errors) - 5} erro(s)")
 
-        # Bloqueados (validação de segurança)
         blocked = [r for r in self.results if r.status == "blocked"]
         if blocked:
-            print(f"\n🔒 Bloqueados por segurança ({len(blocked)}):")
+            print(f"\nBloqueados ({len(blocked)}):")
             for blk in blocked[:5]:
-                print(f"  • {blk.question[:50]}...")
+                print(f"  - {blk.question[:70]}...")
+                if blk.error_message:
+                    print(f"    -> {str(blk.error_message)[:200]}")
             if len(blocked) > 5:
-                print(f"  ... e mais {len(blocked) - 5}")
+                print(f"  ... e mais {len(blocked) - 5} bloqueado(s)")
 
     def save_report(self, filename: str = "test_report.json"):
-        """Salva relatório em JSON."""
         report = {
             "timestamp": datetime.now().isoformat(),
             "total_tests": len(self.results),
@@ -227,12 +258,12 @@ class TestRunner:
             },
             "results": [r.to_dict() for r in self.results],
         }
-        
+
         output_file = _TEST_SUITE_ROOT / filename
         with open(output_file, "w", encoding="utf-8") as f:
             json.dump(report, f, indent=2, ensure_ascii=False)
-        
-        print(f"\n💾 Relatório salvo em: {output_file}")
+
+        print(f"\nRelatório salvo em: {output_file}")
         return output_file
 
 

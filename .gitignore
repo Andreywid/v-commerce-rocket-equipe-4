@@ -27,3 +27,8 @@ Thumbs.db
 *.sqlite
 *.db
 *.csv
+
+app/database/data/*.csv
+app/database/mock_gold.sqlite
+test_report.json
+test_suite/test_report.json
