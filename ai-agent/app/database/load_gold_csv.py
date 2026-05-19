@@ -39,10 +39,8 @@ def build(output: Path | None = None) -> Path:
     try:
         cur = conn.cursor()
 
-        # Cria schema + semeia mock em todas as tabelas.
-        # Tabelas sem CSV vão ficar com esses dados de amostra.
+        # Cria schema apenas — os CSVs vão popular todas as tabelas a seguir.
         _create_tables(cur)
-        _seed(cur)
         conn.commit()
 
         loaded: list[tuple[str, int]] = []
