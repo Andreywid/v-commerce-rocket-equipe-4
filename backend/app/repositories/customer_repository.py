@@ -1,8 +1,14 @@
 import uuid
 from datetime import date
-from sqlalchemy import func, or_
+from sqlalchemy import asc, desc, func, or_
 from app.database import SessionLocal
 from app.models.customer import Customer
+
+_SORTABLE = {
+    "nome":               Customer.nome,
+    "data_ultimo_pedido": Customer.data_ultimo_pedido,
+    "valor_total_gasto":  Customer.valor_total_gasto,
+}
 
 def get_all(
     nome: str | None = None,
@@ -14,6 +20,8 @@ def get_all(
     max_total: float | None = None,
     page: int = 1,
     size: int = 20,
+    sort_by: str | None = None,
+    order: str | None = None,
 ) -> tuple[list[Customer], int]:
     db = SessionLocal()
     try:
@@ -37,7 +45,11 @@ def get_all(
             query = query.filter(Customer.valor_total_gasto >= min_total)
         if max_total is not None:
             query = query.filter(Customer.valor_total_gasto <= max_total)
-        
+
+        col = _SORTABLE.get(sort_by) if sort_by else None
+        if col is not None:
+            query = query.order_by(asc(col) if order != "desc" else desc(col))
+
         total = query.count()
         offset = (page - 1) * size
         items = query.offset(offset).limit(size).all()

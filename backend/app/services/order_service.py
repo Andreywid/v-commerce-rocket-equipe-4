@@ -15,9 +15,11 @@ def get_orders(
     valor_max: float | None,
     page: int,
     size: int,
+    sort_by: str | None = None,
+    order: str | None = None,
 ) -> OrderListResponse:
     items, total = order_repository.get_all(
-        status, categoria, estado, id_cliente, data_inicio, data_fim, nome, valor_min, valor_max, page, size
+        status, categoria, estado, id_cliente, data_inicio, data_fim, nome, valor_min, valor_max, page, size, sort_by, order
     )
     return OrderListResponse(
         total=total, page=page, size=size,

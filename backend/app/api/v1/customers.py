@@ -18,11 +18,13 @@ def list_customers(
     is_recorrente: bool | None = Query(None, description="true=Recorrente, false=Novo"),
     min_total: float | None = Query(None, description="Valor total mínimo"),
     max_total: float | None = Query(None, description="Valor total máximo"),
+    sort_by: str | None = Query(None, description="nome | data_ultimo_pedido | valor_total_gasto"),
+    order: str | None = Query(None, description="asc | desc"),
     page: int = Query(1, ge=1),
     size: int = Query(20, ge=1, le=100),
     current_user=Depends(get_current_user),
 ):
-    return customer_service.get_customers(nome, email, estado, segmento, is_recorrente, min_total, max_total, page, size)
+    return customer_service.get_customers(nome, email, estado, segmento, is_recorrente, min_total, max_total, page, size, sort_by, order)
 
 
 @router.get("/stats", response_model=CustomerStats)

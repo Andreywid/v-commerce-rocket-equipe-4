@@ -16,8 +16,10 @@ def get_customers(
     max_total: float | None,
     page: int,
     size: int,
+    sort_by: str | None = None,
+    order: str | None = None,
 ) -> CustomerListResponse:
-    items, total = customer_repository.get_all(nome, email, estados, segmentos, is_recorrente, min_total, max_total, page, size)
+    items, total = customer_repository.get_all(nome, email, estados, segmentos, is_recorrente, min_total, max_total, page, size, sort_by, order)
     return CustomerListResponse(
         total=total, page=page, size=size,
         items=[CustomerOut.model_validate(c) for c in items],

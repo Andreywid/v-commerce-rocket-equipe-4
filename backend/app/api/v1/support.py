@@ -15,11 +15,13 @@ def list_tickets(
     data_abertura: str | None = Query(None, description="YYYY-MM-DD — filtra tickets abertos a partir desta data"),
     nome: str | None = Query(None, description="Busca por cliente, ticket ou tipo"),
     satisfacao: list[str] | None = Query(None, description="alta | media | baixa | sem_avaliacao"),
+    sort_by: str | None = Query(None, description="id_ticket | data_abertura | status_ticket"),
+    order: str | None = Query(None, description="asc | desc"),
     page: int = Query(1, ge=1),
     size: int = Query(20, ge=1, le=100),
     current_user=Depends(get_current_user),
 ):
-    return support_service.get_tickets(id_cliente, tipo, status_ticket, sla_estourado, data_abertura, nome, satisfacao, page, size)
+    return support_service.get_tickets(id_cliente, tipo, status_ticket, sla_estourado, data_abertura, nome, satisfacao, page, size, sort_by, order)
 
 
 @router.get("/{id_ticket}", response_model=TicketOut)

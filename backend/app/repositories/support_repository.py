@@ -1,7 +1,14 @@
 import uuid
 from datetime import date
+from sqlalchemy import asc, desc
 from app.database import SessionLocal
 from app.models.support_ticket import SupportTicket
+
+_SORTABLE = {
+    "id_ticket":    SupportTicket.id_ticket,
+    "data_abertura": SupportTicket.data_abertura,
+    "status_ticket": SupportTicket.status_ticket,
+}
 
 def get_all(
     id_cliente: str | None = None,
@@ -13,6 +20,8 @@ def get_all(
     satisfacao: list[str] | None = None,
     page: int = 1,
     size: int = 20,
+    sort_by: str | None = None,
+    order: str | None = None,
 ) -> tuple[list[SupportTicket], int]:
     db = SessionLocal()
     try:
@@ -40,6 +49,10 @@ def get_all(
         if sla_estourado is not None:
             query = query.filter(SupportTicket.sla_estourado == sla_estourado)
         
+        col = _SORTABLE.get(sort_by) if sort_by else None
+        if col is not None:
+            query = query.order_by(asc(col) if order != "desc" else desc(col))
+
         total = query.count()
         offset = (page - 1) * size
         items = query.offset(offset).limit(size).all()
