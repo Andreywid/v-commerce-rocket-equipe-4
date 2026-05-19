@@ -618,14 +618,34 @@ def build_mock_sqlite(path: str | Path | None = None) -> Path:
     return out
 
 
-def ensure_mock_sqlite(path: str | Path | None = None) -> Path:
-    """Retorna o mock existente ou cria um novo quando o arquivo ainda não existe."""
+def _is_populated(db_path: Path) -> bool:
+    """Retorna True se o banco tem pelo menos um registro em gold_produto_performance."""
+    try:
+        conn = sqlite3.connect(str(db_path))
+        count = conn.execute("SELECT COUNT(*) FROM gold_produto_performance").fetchone()[0]
+        conn.close()
+        return count > 0
+    except Exception:
+        return False
 
+
+def ensure_mock_sqlite(path: str | Path | None = None) -> Path:
+    """Garante que o SQLite existe e está populado com os dados Gold.
+
+    Na primeira execução (ou se o banco estiver vazio), carrega os CSVs de
+    ``data/gold/`` via ``load_gold_csv.build()``. Isso elimina a necessidade
+    de rodar o script manualmente após clonar o repositório.
+    """
     base = Path(__file__).resolve().parent
     out = Path(path) if path is not None else base / "mock_gold.sqlite"
-    if out.exists():
+
+    if out.exists() and _is_populated(out):
         return out
-    return build_mock_sqlite(out)
+
+    # Banco ausente ou vazio — carrega dos CSVs Gold
+    from app.database.load_gold_csv import build as _build_from_csv
+    _build_from_csv(out)
+    return out
 
 
 __all__ = ["build_mock_sqlite", "ensure_mock_sqlite"]

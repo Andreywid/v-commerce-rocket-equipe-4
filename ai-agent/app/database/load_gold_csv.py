@@ -71,11 +71,11 @@ def build(output: Path | None = None) -> Path:
     finally:
         conn.close()
 
-    print("=== Gold SQLite reconstruído ===\n")
+    print("=== Gold SQLite reconstruido ===\n")
     for table, n in loaded:
-        print(f"  ✓ {table}: {n:,} linhas")
+        print(f"  OK {table}: {n:,} linhas")
     if mocked:
-        print(f"\n  ~ dados mock mantidos (CSV ausente):")
+        print("\n  ~ dados mock mantidos (CSV ausente):")
         for t in mocked:
             print(f"      {t}")
     print(f"\nArquivo: {out.resolve()}")
