@@ -10,7 +10,7 @@ Problema observado:
 Causa provável: O agente LLM não consegue conectar mudança de dimensão
 sem pronome demonstrativo, e tenta aplicar filtro de produto em consulta de região.
 """
-
+import pytest
 import asyncio
 import sqlite3
 from pathlib import Path
@@ -24,7 +24,7 @@ from app.memory.conversation_store import (
 )
 from app.models.conversation import ConversationTurn
 
-
+@pytest.mark.anyio
 async def test_dimension_change():
     """Reproduz o fluxo: produtos → regiões com mudança de dimensão."""
     

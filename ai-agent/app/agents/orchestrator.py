@@ -45,13 +45,21 @@ class AgentOrchestrator:
         policy: QueryPolicy | None = None,
         debug: bool = True,
         max_regenerations_on_exec_error: int = 2,
+        **kwargs,
     ) -> None:
+        legacy_context = None
+
+        if sql_client is not None and not hasattr(sql_client, "generate_sql_async"):
+            legacy_context = sql_client
+            sql_client = None
+
         self._sql = sql_client
         self._executor = executor or QueryExecutor()
         self._explainer = explainer
         self._policy = policy or QueryPolicy()
         self._debug = debug
         self._max_regenerations_on_exec_error = max(0, max_regenerations_on_exec_error)
+        self._legacy_context = legacy_context
 
     @property
     def _sql_client(self) -> AgentTextToSQLClient:
@@ -114,6 +122,61 @@ class AgentOrchestrator:
             failed_sql=failed_sql,
             validation_error=validation_error,
         )
+
+    async def run(
+        self,
+        question: str,
+        deps: Deps | None = None,
+        **kwargs,
+    ) -> OrchestratorResult:
+        """Compatibilidade com runners antigos que chamam AgentOrchestrator.run()."""
+
+        if deps is None:
+            deps = kwargs.get("deps")
+
+        legacy_context = kwargs.get("context") or getattr(self, "_legacy_context", None)
+
+        if deps is not None and not isinstance(deps, Deps):
+            legacy_context = deps
+            deps = None
+
+        if deps is None:
+            import sqlite3
+
+            from app.database.mock_gold import ensure_mock_sqlite
+
+            conn = sqlite3.connect(ensure_mock_sqlite())
+
+            try:
+                if legacy_context is not None:
+                    deps = Deps(
+                        conn=conn,
+                        conversation_id=getattr(legacy_context, "conversation_id", None),
+                        user_id=getattr(legacy_context, "user_id", None),
+                        tenant_id=getattr(legacy_context, "tenant_id", None),
+                        roles=getattr(legacy_context, "roles", frozenset()),
+                        allowed_tables=getattr(legacy_context, "allowed_tables", None),
+                        allowed_columns=getattr(legacy_context, "allowed_columns", None),
+                        allow_all_schema_access=getattr(
+                            legacy_context,
+                            "allow_all_schema_access",
+                            True,
+                        ),
+                        allow_sensitive_pii=getattr(
+                            legacy_context,
+                            "allow_sensitive_pii",
+                            False,
+                        ),
+                        require_tenant=getattr(legacy_context, "require_tenant", False),
+                    )
+                else:
+                    deps = Deps(conn=conn)
+
+                return await self.ask(question=question, deps=deps)
+            finally:
+                conn.close()
+
+        return await self.ask(question=question, deps=deps)
 
     async def ask(self, question: str, deps: Deps) -> OrchestratorResult:
         """Executa o fluxo completo de Text-to-SQL para uma pergunta do usuário."""

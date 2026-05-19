@@ -30,10 +30,10 @@ MEMORY_CONVERSATIONAL_PREFIX = (
     "recente e registre a premissa na resposta.\n\n"
     "# REFINAMENTO SOMENTE TEMPORAL\n"
     "- Se a # PERGUNTA ATUAL for **apenas** uma janela ou intervalo de tempo (ex.: "
-    '"últimos 3 meses", "no último trimestre", "nos últimos 30 dias") e existir turno anterior com uma '
-    "pergunta analítica completa (com ou sem SQL aprovado, inclusive com Erro), "
-    "interprete como **a mesma intenção de negócio** aplicada a esse período. "
-    "Use a pergunta (e interpretação, SQL, premissas) do turno anterior.\n"
+    '"últimos 3 meses", "no último trimestre", "nos últimos 30 dias") e existir turno anterior '
+    "com SQL aprovado e uma pergunta analítica completa, interprete como **a mesma intenção "
+    "de negócio** aplicada a esse período. Use a pergunta, interpretação, SQL e premissas "
+    "do turno anterior.\n"
     "- **CRÍTICO:** MANTENHA A MESMA MÉTRICA E LÓGICA DO TURNO ANTERIOR.\n"
     "  • Exemplo 1: Se pergunta anterior foi 'Quais regiões tiveram maior CRESCIMENTO de receita' "
     "(primeira vs última mês), não mude para 'contagem de vendas' ou outra métrica.\n"
@@ -44,10 +44,9 @@ MEMORY_CONVERSATIONAL_PREFIX = (
     "- PRESERVE TAMBÉM A PLURALIDADE: se era plural ('Quais', 'Todos'), retorne TODAS as entidades, "
     "não apenas TOP 1.\n"
     "- Não retorne InvalidRequest dizendo que a frase atual está incompleta ou "
-    "falta métrica: o contexto anterior fornece o tema.\n\n"
+    "falta métrica quando houver SQL anterior aprovado fornecendo o tema.\n\n"
 )
 
-# Texto curto após a pergunta quando há anafora/demonstrativo — reforço além das regras gerais.
 FOLLOWUP_DEMONSTRATIVE_PIPELINE = (
     "\n\n"
     "# RESOLUÇÃO OBRIGATÓRIA (PIPELINE)\n"
@@ -64,10 +63,9 @@ FOLLOWUP_TEMPORAL_PIPELINE = (
     "\n\n"
     "# RESOLUÇÃO OBRIGATÓRIA (PERÍODO)\n"
     "A pergunta atual foi classificada como **refinamento só de tempo**.\n"
-    "Reabra a intenção do **turno anterior mais recente** neste prompt (pergunta + "
-    "interpretação; ignore que não haja SQL se o motivo foi falta de período) e "
-    "incorpore o intervalo indicado pelo usuário (filtros em ano_mes ou data_pedido, "
-    "conforme a tabela e o motor).\n"
+    "Reabra a intenção do **turno anterior mais recente com SQL aprovado** neste prompt "
+    "(pergunta + interpretação + SQL) e incorpore o intervalo indicado pelo usuário "
+    "(filtros em ano_mes ou data_pedido, conforme a tabela e o motor).\n"
     "**MANDATÓRIO:** Use exatamente a MESMA MÉTRICA, LÓGICA e AGREGAÇÃO do turno anterior. "
     "Não troque para outra métrica, contagem, ou tipo de análise.\n"
     "**MANDATÓRIO:** Respeite pluralidade: se anterior era plural ('Quais...'), retorne "
@@ -142,8 +140,10 @@ def _looks_temporal_only_followup(question: str) -> bool:
     s = question.strip()
     if len(s) > 120:
         return False
+
     t = s.casefold()
     core_window = r"[uú]?lt(?:i)?m(?:o)?s?"
+
     patterns = (
         rf"^{core_window}\s+\d+\s*m(?:eses|ês|es)?\.?\s*$",
         rf"^(?:n[oa]s?\s+)?{core_window}\s+\d+\s*m(?:eses|ês|es)?\.?\s*$",
@@ -153,6 +153,7 @@ def _looks_temporal_only_followup(question: str) -> bool:
         rf"^(?:para\s+)?(?:(?:n[oa]s?|[oa]s)\s+)?{core_window}\s+\d+\s*semanas?\.?\s*$",
         rf"^(?:para\s+)?(?:(?:n[oa]s?|[oa]s)\s+)?{core_window}\s+\d+\s*anos?\.?\s*$",
     )
+
     return any(re.fullmatch(p, t) for p in patterns)
 
 
@@ -174,6 +175,7 @@ def _looks_implicit_context_operation_followup(question: str, context: str) -> b
         return False
 
     normalized_context = _normalize_text(context)
+
     has_previous_entity_context = any(
         token in normalized_context
         for token in (
@@ -192,6 +194,7 @@ def _looks_implicit_context_operation_followup(question: str, context: str) -> b
             "marca",
         )
     )
+
     if not has_previous_entity_context:
         return False
 
@@ -213,6 +216,7 @@ def _looks_implicit_context_operation_followup(question: str, context: str) -> b
         "pedido",
         "pedidos",
     )
+
     ranking_terms = (
         "melhor",
         "pior",
@@ -226,6 +230,7 @@ def _looks_implicit_context_operation_followup(question: str, context: str) -> b
         "recente",
         "antigo",
     )
+
     metric_terms = (
         "avaliado",
         "avaliada",
@@ -282,15 +287,28 @@ def _looks_implicit_context_operation_followup(question: str, context: str) -> b
     )
 
 
-def format_question_with_conversational_memory(*, context: str, question: str) -> str:
+def format_question_with_conversational_memory(
+    *,
+    context: str,
+    question: str,
+    allow_temporal_after_error: bool = False,
+) -> str:
     """Junta regras fixas, bloco serializado dos turnos e pergunta atual."""
 
     current = question.strip()
+    has_previous_sql = "SQL aprovado:" in context or "- SQL:" in context
+    has_previous_error = "- Erro:" in context
+
     if _looks_demonstrative_followup(current):
         current = current + FOLLOWUP_DEMONSTRATIVE_PIPELINE
-    elif context.strip() and _looks_temporal_only_followup(current):
-        # Refinamento temporal pode reaproveitar a intenção analítica mesmo quando
-        # o turno anterior não teve SQL aprovado (ex.: erro por falta de período).
+    elif (
+        context.strip()
+        and _looks_temporal_only_followup(current)
+        and (
+            has_previous_sql
+            or (allow_temporal_after_error and has_previous_error)
+        )
+    ):
         current = current + FOLLOWUP_TEMPORAL_PIPELINE
     elif _looks_implicit_context_operation_followup(current, context):
         current = current + FOLLOWUP_IMPLICIT_CONTEXT_OPERATION_PIPELINE
