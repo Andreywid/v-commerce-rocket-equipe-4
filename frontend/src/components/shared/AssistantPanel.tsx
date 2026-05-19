@@ -1,4 +1,4 @@
-import { useState } from "react"
+import React, { useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { Eye, Minus, Route, Send, X } from "lucide-react"
 
@@ -6,6 +6,13 @@ import type { ChatMessage } from "@/types"
 import { useAgentChat, useAgentSuggestions } from "@/hooks/useAgent"
 
 const FALLBACK_SUGGESTIONS = ["Qual minha renda mensal?", "Qual meu produto mais vendido?", "Quantos produtos foram vendidos esse mês?", "Qual minha renda mensal?"]
+
+function renderWithBold(text: string): React.ReactNode {
+  const parts = text.split(/\*\*/)
+  return parts.map((part, i) =>
+    i % 2 === 1 ? <strong key={i}>{part}</strong> : part
+  )
+}
 
 function formatSeparatorDate(date: Date): string {
   const today = new Date()
@@ -218,7 +225,7 @@ export function AssistantPanel({
                         <ErrorBlock />
                       ) : (
                         <>
-                          <p className="whitespace-pre-wrap text-sm leading-6 text-[#000000]">{message.content}</p>
+                          <p className="whitespace-pre-wrap text-sm leading-6 text-[#000000]">{renderWithBold(message.content)}</p>
                           {message.source && (
                             <SourceBlock
                               source={message.source}

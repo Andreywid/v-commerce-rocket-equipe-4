@@ -216,7 +216,7 @@ export function SupportPage() {
         ) : (
           <SupportTable
             currentPage={currentPage}
-            filteredCount={filteredItems.length}
+            filteredCount={total}
             onEditTicket={setEditingTicket}
             onPageChange={setCurrentPage}
             onSort={handleSort}
