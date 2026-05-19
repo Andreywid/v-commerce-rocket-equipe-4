@@ -10,6 +10,18 @@ _SORTABLE = {
     "valor_total_gasto":  Customer.valor_total_gasto,
 }
 
+_UF_TO_ESTADO = {
+    "AC": "Acre", "AL": "Alagoas", "AM": "Amazonas", "AP": "Amapá",
+    "BA": "Bahia", "CE": "Ceará", "DF": "Distrito Federal",
+    "ES": "Espírito Santo", "GO": "Goiás", "MA": "Maranhão",
+    "MG": "Minas Gerais", "MS": "Mato Grosso do Sul", "MT": "Mato Grosso",
+    "PA": "Pará", "PB": "Paraíba", "PE": "Pernambuco", "PI": "Piauí",
+    "PR": "Paraná", "RJ": "Rio de Janeiro", "RN": "Rio Grande do Norte",
+    "RO": "Rondônia", "RR": "Roraima", "RS": "Rio Grande do Sul",
+    "SC": "Santa Catarina", "SE": "Sergipe", "SP": "São Paulo",
+    "TO": "Tocantins",
+}
+
 def get_all(
     nome: str | None = None,
     email: str | None = None,
@@ -34,7 +46,8 @@ def get_all(
         if email:
             query = query.filter(Customer.email.ilike(f"%{email}%"))
         if estados:
-            query = query.filter(Customer.estado.in_([e.upper() for e in estados]))
+            nomes = [_UF_TO_ESTADO.get(e.upper(), e) for e in estados]
+            query = query.filter(Customer.estado.in_(nomes))
         if segmentos:
             query = query.filter(Customer.segmento_ltv.in_(segmentos))
         if is_recorrente is True:

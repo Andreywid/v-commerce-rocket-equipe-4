@@ -19,11 +19,12 @@ def list_orders(
     valor_max: float | None = Query(None, description="Valor máximo do pedido"),
     sort_by: str | None = Query(None, description="nome_produto | valor_total | data_pedido"),
     order: str | None = Query(None, description="asc | desc"),
+    dentro_prazo: bool | None = Query(None, description="true=Aprovado/Processando, false=Recusado/Reembolsado"),
     page: int = Query(1, ge=1),
     size: int = Query(20, ge=1, le=100),
     current_user=Depends(get_current_user),
 ):
-    return order_service.get_orders(status, categoria, estado, id_cliente, data_inicio, data_fim, nome, valor_min, valor_max, page, size, sort_by, order)
+    return order_service.get_orders(status, categoria, estado, id_cliente, data_inicio, data_fim, nome, valor_min, valor_max, page, size, sort_by, order, dentro_prazo)
 
 
 @router.get("/{id_pedido}", response_model=OrderOut)

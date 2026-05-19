@@ -1,10 +1,9 @@
 import { useState } from "react"
-import { Calendar, Check, Filter, X } from "lucide-react"
+import { Check, Filter, X } from "lucide-react"
 
 import type { SatisfacaoAtendimento, SupportStatus, SupportType } from "@/types"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
@@ -92,15 +91,12 @@ export function SupportFilterModal({
           {/* Data do ticket */}
           <div className="flex flex-col gap-2">
             <Label className="text-sm font-semibold text-slate-800">Data do ticket</Label>
-            <div className="relative">
-              <Calendar className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
-              <Input
-                className="h-9 rounded-lg pl-9"
-                placeholder="DD/MM/AAAA"
-                value={form.date}
-                onChange={(e) => setForm({ ...form, date: e.target.value })}
-              />
-            </div>
+            <input
+              type="date"
+              value={form.date}
+              onChange={(e) => setForm({ ...form, date: e.target.value })}
+              className="h-9 rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#4F46E5]/20"
+            />
           </div>
 
           {/* Tipo do ticket */}

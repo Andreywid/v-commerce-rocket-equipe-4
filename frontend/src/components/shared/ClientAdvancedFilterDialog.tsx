@@ -122,7 +122,7 @@ function TotalRange({ min, max, onChange }: { min: number; max: number; onChange
             type="number" min={0} max={max}
             value={min === 0 ? "" : min}
             placeholder="Min"
-            onChange={(e) => onChange(Math.min(Number(e.target.value) || 0, max - 1000), max)}
+            onChange={(e) => onChange(Math.min(Number(e.target.value) || 0, max), max)}
             className="w-full text-sm text-slate-700 outline-none"
           />
         </label>
@@ -132,7 +132,7 @@ function TotalRange({ min, max, onChange }: { min: number; max: number; onChange
             type="number" min={min} max={TOTAL_MAX}
             value={max === TOTAL_MAX ? "" : max}
             placeholder="Máx"
-            onChange={(e) => onChange(min, Math.max(Number(e.target.value) || TOTAL_MAX, min + 1000))}
+            onChange={(e) => onChange(min, Math.max(Number(e.target.value) || TOTAL_MAX, min))}
             className="w-full text-sm text-slate-700 outline-none"
           />
         </label>
@@ -143,10 +143,10 @@ function TotalRange({ min, max, onChange }: { min: number; max: number; onChange
           style={{ left: `${minPct}%`, right: `${100 - maxPct}%` }}
         />
         <input type="range" min={0} max={TOTAL_MAX} step={1000} value={min}
-          onChange={(e) => onChange(Math.min(Number(e.target.value), max - 1000), max)}
+          onChange={(e) => onChange(Math.min(Number(e.target.value), max), max)}
           className={THUMB} />
         <input type="range" min={0} max={TOTAL_MAX} step={1000} value={max}
-          onChange={(e) => onChange(min, Math.max(Number(e.target.value), min + 1000))}
+          onChange={(e) => onChange(min, Math.max(Number(e.target.value), min))}
           className={THUMB} />
       </div>
       <div className="mt-2 flex justify-between text-xs text-slate-400">

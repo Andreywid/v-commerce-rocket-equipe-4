@@ -58,6 +58,7 @@ def build_question_with_memory(
     return format_question_with_conversational_memory(
         context=context,
         question=question,
+        allow_temporal_after_error=True,
     )
 
 
@@ -101,6 +102,7 @@ def build_question_with_memory_and_context(
             return format_question_with_conversational_memory(
                 context="",
                 question=question,
+                allow_temporal_after_error=True,
             )
 
     for index, turn in enumerate(recent_turns, start=1):
@@ -113,7 +115,6 @@ def build_question_with_memory_and_context(
         if turn.sql:
             lines.append(f"- SQL aprovado: {turn.sql}")
 
-            # Extrai dados concretos se a conexão estiver disponível
             if extractor and conn:
                 entities = extractor.extract_referenced_entities(turn, conn)
                 if entities:
@@ -142,7 +143,6 @@ def build_question_with_memory_and_context(
 
     context = "\n\n".join(context_blocks)
 
-    # Adiciona instrução estruturada se há dados concretos a usar
     structured_instruction = ""
     if extractor and conn and recent_turns:
         if last_sql_turn is not None:
@@ -155,6 +155,7 @@ def build_question_with_memory_and_context(
     combined_prompt = format_question_with_conversational_memory(
         context=context,
         question=question,
+        allow_temporal_after_error=True,
     )
 
     return combined_prompt + structured_instruction

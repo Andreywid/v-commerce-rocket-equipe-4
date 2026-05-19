@@ -1,5 +1,6 @@
 import { useState } from "react"
 import { Check, Trash2, X } from "lucide-react"
+import { toast } from "sonner"
 
 import type { TicketOut } from "@/types/api"
 import { useSupportMutations } from "@/hooks/useSupport"
@@ -37,13 +38,20 @@ export function TicketFormModal({ mode, ticket, onClose, onDelete, onSubmit }: P
   }
 
   function handleSubmit() {
+    if (!isEditing && !cliente.trim()) {
+      toast.error("O nome do cliente é obrigatório")
+      return
+    }
+    if (!agente.trim()) {
+      toast.error("O nome do agente de suporte é obrigatório")
+      return
+    }
     if (isEditing) {
       update.mutate(
         { id: ticket.id_ticket, data: { tipo_problema: tipo, status_ticket: status, agente_suporte: agente || undefined } },
         { onSuccess: onSubmit },
       )
     } else {
-      if (!cliente.trim() || !agente.trim()) return
       create.mutate(
         {
           id_cliente: crypto.randomUUID(),
@@ -145,7 +153,7 @@ export function TicketFormModal({ mode, ticket, onClose, onDelete, onSubmit }: P
             </Button>
             <Button
               className="h-10 gap-2 rounded-full px-6 bg-[#0F172A] hover:bg-[#0F172A]/90 text-white disabled:opacity-60"
-              disabled={isPending || (!isEditing && (!cliente.trim() || !agente.trim()))}
+              disabled={isPending}
               type="submit"
             >
               <Check className="size-4" />

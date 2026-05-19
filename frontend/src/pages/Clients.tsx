@@ -239,7 +239,7 @@ export function ClientsPage() {
         ) : (
           <ClientsTable
             currentPage={currentPage}
-            filteredCount={filteredItems.length}
+            filteredCount={total}
             onEditClient={setEditingClient}
             onPageChange={setCurrentPage}
             onSort={handleSort}

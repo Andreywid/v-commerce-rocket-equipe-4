@@ -14,6 +14,7 @@ export type OrderFilters = {
   valor_max?: number
   sort_by?: string
   order?: string
+  dentro_prazo?: boolean
 }
 
 export function useOrders(filters: OrderFilters = {}, page = 1, size = 20) {
@@ -29,6 +30,7 @@ export function useOrders(filters: OrderFilters = {}, page = 1, size = 20) {
   if (filters.valor_max != null) params.set("valor_max", String(filters.valor_max))
   if (filters.sort_by) params.set("sort_by", filters.sort_by)
   if (filters.order) params.set("order", filters.order)
+  if (filters.dentro_prazo !== undefined) params.set("dentro_prazo", String(filters.dentro_prazo))
 
   return useQuery({
     queryKey: ["orders", filters, page, size],

@@ -125,6 +125,11 @@ export function OrdersPage() {
 
   const { create, update, remove } = useOrderMutations()
 
+  const dentroPrazo =
+    orderFilters.dentroDosPrazo && !orderFilters.foraDoPrazo ? true :
+    orderFilters.foraDoPrazo && !orderFilters.dentroDosPrazo ? false :
+    undefined
+
   const debouncedSearch = useDebounce(search, 400)
   const { data, isPending } = useOrders(
     {
@@ -136,6 +141,7 @@ export function OrdersPage() {
       valor_max: orderFilters.priceMax < 100000 ? orderFilters.priceMax : undefined,
       sort_by: sortBy,
       order: sortBy ? sortOrder : undefined,
+      dentro_prazo: dentroPrazo,
     },
     currentPage,
     PAGE_SIZE,
@@ -155,7 +161,9 @@ export function OrdersPage() {
     !!orderFilters.date ||
     orderFilters.statuses.length > 0 ||
     orderFilters.priceMin > 0 ||
-    orderFilters.priceMax < 100000
+    orderFilters.priceMax < 100000 ||
+    orderFilters.dentroDosPrazo ||
+    orderFilters.foraDoPrazo
 
   function handleSort(key: string) {
     if (sortBy === key) {
@@ -247,7 +255,7 @@ export function OrdersPage() {
         ) : (
           <OrdersTable
             currentPage={currentPage}
-            filteredCount={filteredItems.length}
+            filteredCount={total}
             onEditOrder={setEditingId}
             onPageChange={setCurrentPage}
             onSort={handleSort}
