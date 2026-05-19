@@ -107,8 +107,8 @@ export function OrderFormModal(props: Props) {
             <div className="grid gap-1.5">
               <Label className="text-sm font-semibold text-slate-700">Produto adquirido</Label>
               <Select
-                value={form.id_produto}
-                onValueChange={(v) => setForm({ ...form, id_produto: v })}
+                value={form.id_produto ?? ""}
+                onValueChange={(v) => setForm({ ...form, id_produto: v ?? "" })}
               >
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder="Selecione o produto" />
@@ -167,7 +167,7 @@ export function OrderFormModal(props: Props) {
               </Button>
               <Button
                 className="h-10 gap-2 rounded-full px-6 bg-[#1E293B] hover:bg-[#1E293B]/90 text-white disabled:opacity-60"
-                disabled={isSubmitting}
+                disabled={isSubmitting || !form.id_produto || !form.data_pedido}
                 type="button"
                 onClick={handleSubmit}
               >

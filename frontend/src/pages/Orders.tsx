@@ -20,7 +20,7 @@ import { EmptyTableState, TableHead, TableBody, TableHeader, TableRow, TableCell
 import { TableToolbar } from "@/components/shared/TableToolbar"
 import { CircleDollarSign, Heart, Smile, Tag } from "lucide-react"
 
-const PAGE_SIZE = 5
+const PAGE_SIZE = 6
 
 function formatBRL(value: number | null | undefined): string {
   if (value == null) return "—"
@@ -85,7 +85,7 @@ function OrdersTable({
                   onClick={() => onEditOrder(row.id_pedido)}
                   type="button"
                 >
-                  <Pencil className="size-4 text-[#0A0A0A]" />
+                  <Pencil className="size-4 text-[#6366F1]" />
                 </button>
               </TableCell>
             </TableRow>
@@ -116,13 +116,14 @@ export function OrdersPage() {
   const { create, update, remove } = useOrderMutations()
 
   const debouncedSearch = useDebounce(search, 400)
-  const status = orderFilters.statuses[0]
   const { data, isPending } = useOrders(
     {
-      status,
+      statuses: orderFilters.statuses.length > 0 ? orderFilters.statuses : undefined,
       data_inicio: orderFilters.date || undefined,
       data_fim: orderFilters.date || undefined,
       nome: debouncedSearch || undefined,
+      valor_min: orderFilters.priceMin > 0 ? orderFilters.priceMin : undefined,
+      valor_max: orderFilters.priceMax < 100000 ? orderFilters.priceMax : undefined,
     },
     currentPage,
     PAGE_SIZE,
@@ -142,9 +143,7 @@ export function OrdersPage() {
     !!orderFilters.date ||
     orderFilters.statuses.length > 0 ||
     orderFilters.priceMin > 0 ||
-    orderFilters.priceMax < 100000 ||
-    orderFilters.dentroDoPrazo ||
-    orderFilters.foraDoPrazo
+    orderFilters.priceMax < 100000
 
   function handleSearchChange(value: string) {
     setSearch(value)
@@ -197,10 +196,10 @@ export function OrdersPage() {
   return (
     <PageShell title="Pedidos">
       <DataGrid>
-        <DataCard label="Pedidos pendentes"  value={String(processando)} helper="Em processamento"    tone="indigo" icon={Tag} />
-        <DataCard label="Total de pedidos"   value={total.toLocaleString("pt-BR")} helper="Pedidos processados" tone="indigo" icon={Smile} />
-        <DataCard label="Receita (página)"   value={formatBRL(receitaTotal)} helper="+20% vs mês anterior" tone="rose" icon={CircleDollarSign} />
-        <DataCard label="Pedidos aprovados"  value={String(aprovados)} helper="+47% vs último mês"   tone="emerald" icon={Heart} />
+        <DataCard label="Pedidos pendentes"  value={String(processando)} helper="Nesta página"    tone="indigo" icon={Tag} />
+        <DataCard label="Total de pedidos"   value={total.toLocaleString("pt-BR")} helper="Resultado dos filtros" tone="indigo" icon={Smile} />
+        <DataCard label="Receita (página)"   value={formatBRL(receitaTotal)} helper="Soma dos pedidos exibidos" tone="rose" icon={CircleDollarSign} />
+        <DataCard label="Pedidos aprovados"  value={String(aprovados)} helper="Nesta página"   tone="emerald" icon={Heart} />
       </DataGrid>
 
       <DataPanel>
