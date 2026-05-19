@@ -65,14 +65,14 @@ class AgentTextToSQLClient:
                 example
                 for example in SQL_EXAMPLES
                 if not any(token in example.upper() for token in blocked_tokens)
-            ][:2]
+            ][:8]
 
         blocked_tokens = ("STRFTIME", "DATE('NOW'")
         return [
             example
             for example in SQL_EXAMPLES
             if not any(token in example.upper() for token in blocked_tokens)
-        ][:2]
+        ][:8]
 
     def generate_sql(
         self,

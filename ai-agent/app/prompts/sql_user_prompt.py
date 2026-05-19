@@ -63,6 +63,16 @@ SQL_TEXT_TO_SQL_USER_TEMPLATE = """
 - Ao derivar macro-região, use ELSE NULL para valores que não são estados válidos e
   filtre regiao IS NOT NULL antes de ordenar/ranquear; não retorne "Indefinida".
 
+# TEXT MATCHING & ACCENTS
+
+- No banco de dados, categorias (ex: 'Vestuario', 'Eletronicos', 'Moveis') estão sem acento.
+- Nomes de produtos podem conter acentos (ex: 'Drone com Câmera').
+- O usuário pode digitar com ou sem acento. Sempre gere filtros que sejam flexíveis:
+  - Para categorias, prefira remover o acento da busca ou usar o valor literal sem acento.
+  - Para nomes de produtos, use LIKE com curingas se o nome parecer incompleto.
+  - No SQLite, use `lower(coluna) LIKE lower('%termo%')` ou `LIKE ... COLLATE NOCASE`.
+  - No PostgreSQL, use `ILIKE`.
+
 # EXECUTION STRATEGY
 
 Antes de gerar SQL:
