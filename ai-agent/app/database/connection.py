@@ -1,23 +1,16 @@
 import os
 import sqlite3
 import asyncpg
+from pathlib import Path
 from typing import Union
 
-# Antes não existia escolha de tipo de banco.
-# Agora DB_TYPE define se o ambiente usa SQLite ou PostgreSQL.
-# O padrão é "sqlite", facilitando o uso local com mock.
 DB_TYPE = os.getenv("DB_TYPE", "sqlite")
+_SQLITE_PATH = Path(__file__).resolve().parent / "mock_gold.sqlite"
 
 
 async def get_connection():
-    """
-    Factory que retorna a conexão correta baseada no ambiente.
-    """
-
-    # Antes a função sempre conectava no PostgreSQL.
-    # Agora, se DB_TYPE for "sqlite", conecta no banco mock local.
     if DB_TYPE == "sqlite":
-        return sqlite3.connect("ai-agent/app/database/mock_gold.sqlite")
+        return sqlite3.connect(str(_SQLITE_PATH))
     
     else:
         return await asyncpg.connect(

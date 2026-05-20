@@ -1,172 +1,134 @@
+import uuid
 from datetime import date
+from sqlalchemy import asc, desc
+from app.database import SessionLocal
+from app.models.support_ticket import SupportTicket
 
-# When Gold CSVs arrive: replace MOCK_TICKETS with SQLAlchemy queries on gold_tickets.
-MOCK_TICKETS: list[dict] = [
-    {
-        "id_ticket": 1, "id_cliente": 1, "id_pedido": 3, "id_produto": 4,
-        "tipo_problema": "Reembolso", "satisfacao_atendimento": "alta",
-        "data_abertura": date(2025, 11, 7), "data_resolucao": date(2025, 11, 8),
-        "tempo_resolucao_horas": 18.0, "agente_suporte": "Marcos R.", "nota_avaliacao": 5,
-        "status_ticket": "Resolvido", "sla_estourado": False,
-        "nome_cliente": "Ana Silva", "nome_produto": "Camiseta Polo",
-        "data_referencia_calculo": date(2026, 5, 1),
-    },
-    {
-        "id_ticket": 2, "id_cliente": 1, "id_pedido": 2, "id_produto": 2,
-        "tipo_problema": "Entrega", "satisfacao_atendimento": "media",
-        "data_abertura": date(2026, 2, 15), "data_resolucao": date(2026, 2, 16),
-        "tempo_resolucao_horas": 30.0, "agente_suporte": "Júlia S.", "nota_avaliacao": 4,
-        "status_ticket": "Resolvido", "sla_estourado": False,
-        "nome_cliente": "Ana Silva", "nome_produto": "Fone Bluetooth",
-        "data_referencia_calculo": date(2026, 5, 1),
-    },
-    {
-        "id_ticket": 3, "id_cliente": 2, "id_pedido": 6, "id_produto": 5,
-        "tipo_problema": "Produto", "satisfacao_atendimento": "baixa",
-        "data_abertura": date(2025, 12, 5), "data_resolucao": date(2025, 12, 10),
-        "tempo_resolucao_horas": 120.0, "agente_suporte": "Carlos M.", "nota_avaliacao": 2,
-        "status_ticket": "Resolvido", "sla_estourado": True,
-        "nome_cliente": "Bruno Costa", "nome_produto": "Cafeteira Express",
-        "data_referencia_calculo": date(2026, 5, 1),
-    },
-    {
-        "id_ticket": 4, "id_cliente": 3, "id_pedido": 9, "id_produto": 2,
-        "tipo_problema": "Pagamento", "satisfacao_atendimento": "sem_avaliacao",
-        "data_abertura": date(2025, 10, 9), "data_resolucao": date(2025, 10, 11),
-        "tempo_resolucao_horas": 44.0, "agente_suporte": "Marcos R.", "nota_avaliacao": None,
-        "status_ticket": "Resolvido", "sla_estourado": False,
-        "nome_cliente": "Carla Mendes", "nome_produto": "Fone Bluetooth",
-        "data_referencia_calculo": date(2026, 5, 1),
-    },
-    {
-        "id_ticket": 5, "id_cliente": 3, "id_pedido": 7, "id_produto": 6,
-        "tipo_problema": "Entrega", "satisfacao_atendimento": "media",
-        "data_abertura": date(2026, 4, 8), "data_resolucao": date(2026, 4, 9),
-        "tempo_resolucao_horas": 24.0, "agente_suporte": "Júlia S.", "nota_avaliacao": 3,
-        "status_ticket": "Resolvido", "sla_estourado": False,
-        "nome_cliente": "Carla Mendes", "nome_produto": "Livro Python 101",
-        "data_referencia_calculo": date(2026, 5, 1),
-    },
-    {
-        "id_ticket": 6, "id_cliente": 3, "id_pedido": 8, "id_produto": 8,
-        "tipo_problema": "Produto", "satisfacao_atendimento": "sem_avaliacao",
-        "data_abertura": date(2026, 4, 25), "data_resolucao": None,
-        "tempo_resolucao_horas": None, "agente_suporte": "Carlos M.", "nota_avaliacao": None,
-        "status_ticket": "Aberto", "sla_estourado": True,
-        "nome_cliente": "Carla Mendes", "nome_produto": "Mochila Urbana",
-        "data_referencia_calculo": date(2026, 5, 1),
-    },
-    {
-        "id_ticket": 7, "id_cliente": 4, "id_pedido": 10, "id_produto": 3,
-        "tipo_problema": "Entrega", "satisfacao_atendimento": "baixa",
-        "data_abertura": date(2025, 10, 2), "data_resolucao": date(2025, 10, 6),
-        "tempo_resolucao_horas": 96.0, "agente_suporte": "Marcos R.", "nota_avaliacao": 1,
-        "status_ticket": "Resolvido", "sla_estourado": True,
-        "nome_cliente": "Diego Santos", "nome_produto": "Tênis Running",
-        "data_referencia_calculo": date(2026, 5, 1),
-    },
-    {
-        "id_ticket": 8, "id_cliente": 4, "id_pedido": 11, "id_produto": 4,
-        "tipo_problema": "Produto", "satisfacao_atendimento": "sem_avaliacao",
-        "data_abertura": date(2026, 1, 10), "data_resolucao": None,
-        "tempo_resolucao_horas": None, "agente_suporte": "Júlia S.", "nota_avaliacao": None,
-        "status_ticket": "Aberto", "sla_estourado": True,
-        "nome_cliente": "Diego Santos", "nome_produto": "Camiseta Polo",
-        "data_referencia_calculo": date(2026, 5, 1),
-    },
-    {
-        "id_ticket": 9, "id_cliente": 4, "id_pedido": None, "id_produto": None,
-        "tipo_problema": "Pagamento", "satisfacao_atendimento": "sem_avaliacao",
-        "data_abertura": date(2026, 3, 5), "data_resolucao": None,
-        "tempo_resolucao_horas": None, "agente_suporte": "Carlos M.", "nota_avaliacao": None,
-        "status_ticket": "Aberto", "sla_estourado": True,
-        "nome_cliente": "Diego Santos", "nome_produto": None,
-        "data_referencia_calculo": date(2026, 5, 1),
-    },
-    {
-        "id_ticket": 10, "id_cliente": 6, "id_pedido": 17, "id_produto": 5,
-        "tipo_problema": "Produto", "satisfacao_atendimento": "alta",
-        "data_abertura": date(2026, 1, 20), "data_resolucao": date(2026, 1, 21),
-        "tempo_resolucao_horas": 12.0, "agente_suporte": "Marcos R.", "nota_avaliacao": 5,
-        "status_ticket": "Resolvido", "sla_estourado": False,
-        "nome_cliente": "Felipe Oliveira", "nome_produto": "Cafeteira Express",
-        "data_referencia_calculo": date(2026, 5, 1),
-    },
-    {
-        "id_ticket": 11, "id_cliente": 6, "id_pedido": 16, "id_produto": 7,
-        "tipo_problema": "Entrega", "satisfacao_atendimento": "alta",
-        "data_abertura": date(2026, 4, 5), "data_resolucao": date(2026, 4, 6),
-        "tempo_resolucao_horas": 20.0, "agente_suporte": "Júlia S.", "nota_avaliacao": 5,
-        "status_ticket": "Resolvido", "sla_estourado": False,
-        "nome_cliente": "Felipe Oliveira", "nome_produto": "Smart TV 55\"",
-        "data_referencia_calculo": date(2026, 5, 1),
-    },
-    {
-        "id_ticket": 12, "id_cliente": 7, "id_pedido": 19, "id_produto": 4,
-        "tipo_problema": "Reembolso", "satisfacao_atendimento": "sem_avaliacao",
-        "data_abertura": date(2026, 4, 30), "data_resolucao": None,
-        "tempo_resolucao_horas": None, "agente_suporte": "Carlos M.", "nota_avaliacao": None,
-        "status_ticket": "Aberto", "sla_estourado": False,
-        "nome_cliente": "Gabriela Lima", "nome_produto": "Camiseta Polo",
-        "data_referencia_calculo": date(2026, 5, 1),
-    },
-    {
-        "id_ticket": 13, "id_cliente": 8, "id_pedido": 20, "id_produto": 2,
-        "tipo_problema": "Entrega", "satisfacao_atendimento": "media",
-        "data_abertura": date(2025, 7, 12), "data_resolucao": date(2025, 7, 14),
-        "tempo_resolucao_horas": 48.0, "agente_suporte": "Marcos R.", "nota_avaliacao": 3,
-        "status_ticket": "Resolvido", "sla_estourado": False,
-        "nome_cliente": "Henrique Ferreira", "nome_produto": "Fone Bluetooth",
-        "data_referencia_calculo": date(2026, 5, 1),
-    },
-    {
-        "id_ticket": 14, "id_cliente": 9, "id_pedido": 24, "id_produto": 3,
-        "tipo_problema": "Reembolso", "satisfacao_atendimento": "alta",
-        "data_abertura": date(2025, 12, 10), "data_resolucao": date(2025, 12, 11),
-        "tempo_resolucao_horas": 16.0, "agente_suporte": "Júlia S.", "nota_avaliacao": 5,
-        "status_ticket": "Resolvido", "sla_estourado": False,
-        "nome_cliente": "Isabela Martins", "nome_produto": "Tênis Running",
-        "data_referencia_calculo": date(2026, 5, 1),
-    },
-    {
-        "id_ticket": 15, "id_cliente": 10, "id_pedido": 27, "id_produto": 6,
-        "tipo_problema": "Entrega", "satisfacao_atendimento": "alta",
-        "data_abertura": date(2026, 3, 2), "data_resolucao": date(2026, 3, 3),
-        "tempo_resolucao_horas": 22.0, "agente_suporte": "Carlos M.", "nota_avaliacao": 4,
-        "status_ticket": "Resolvido", "sla_estourado": False,
-        "nome_cliente": "João Pires", "nome_produto": "Livro Python 101",
-        "data_referencia_calculo": date(2026, 5, 1),
-    },
-]
-
+_SORTABLE = {
+    "id_ticket":    SupportTicket.id_ticket,
+    "data_abertura": SupportTicket.data_abertura,
+    "status_ticket": SupportTicket.status_ticket,
+}
 
 def get_all(
-    id_cliente: int | None = None,
-    tipo: str | None = None,
-    status: str | None = None,
+    id_cliente: str | None = None,
+    tipo: list[str] | None = None,
+    status: list[str] | None = None,
     sla_estourado: bool | None = None,
+    data_abertura: str | None = None,
+    nome: str | None = None,
+    satisfacao: list[str] | None = None,
     page: int = 1,
     size: int = 20,
-) -> tuple[list[dict], int]:
-    # When Gold CSVs arrive: replace body with SQLAlchemy query on gold_tickets.
-    items = MOCK_TICKETS
-    if id_cliente:
-        items = [t for t in items if t["id_cliente"] == id_cliente]
-    if tipo:
-        items = [t for t in items if t["tipo_problema"] == tipo]
-    if status:
-        items = [t for t in items if t["status_ticket"] == status]
-    if sla_estourado is not None:
-        items = [t for t in items if t["sla_estourado"] == sla_estourado]
-    total = len(items)
-    offset = (page - 1) * size
-    return items[offset: offset + size], total
+    sort_by: str | None = None,
+    order: str | None = None,
+) -> tuple[list[SupportTicket], int]:
+    db = SessionLocal()
+    try:
+        query = db.query(SupportTicket)
+        if id_cliente:
+            query = query.filter(SupportTicket.id_cliente == id_cliente)
+        if tipo:
+            query = query.filter(SupportTicket.tipo_problema.in_(tipo))
+        if status:
+            query = query.filter(SupportTicket.status_ticket.in_(status))
+        if satisfacao:
+            query = query.filter(SupportTicket.satisfacao_atendimento.in_(satisfacao))
+        if data_abertura:
+            query = query.filter(SupportTicket.data_abertura >= data_abertura)
+        if nome:
+            from sqlalchemy import or_
+            pattern = f"%{nome}%"
+            query = query.filter(
+                or_(
+                    SupportTicket.nome_cliente.ilike(pattern),
+                    SupportTicket.id_ticket.ilike(pattern),
+                    SupportTicket.tipo_problema.ilike(pattern),
+                )
+            )
+        if sla_estourado is not None:
+            query = query.filter(SupportTicket.sla_estourado == sla_estourado)
+        
+        col = _SORTABLE.get(sort_by) if sort_by else None
+        if col is not None:
+            query = query.order_by(asc(col) if order != "desc" else desc(col))
+
+        total = query.count()
+        offset = (page - 1) * size
+        items = query.offset(offset).limit(size).all()
+        return items, total
+    finally:
+        db.close()
 
 
-def get_by_id(id_ticket: int) -> dict | None:
-    # When Gold CSVs arrive: replace with db.query(SupportTicket).filter_by(id_ticket=id_ticket).first()
-    return next((t for t in MOCK_TICKETS if t["id_ticket"] == id_ticket), None)
+def get_by_id(id_ticket: str) -> SupportTicket | None:
+    db = SessionLocal()
+    try:
+        return db.query(SupportTicket).filter(SupportTicket.id_ticket == id_ticket).first()
+    finally:
+        db.close()
 
 
-def get_by_customer(id_cliente: int) -> list[dict]:
-    return [t for t in MOCK_TICKETS if t["id_cliente"] == id_cliente]
+def get_by_customer(id_cliente: str) -> list[SupportTicket]:
+    db = SessionLocal()
+    try:
+        return db.query(SupportTicket).filter(SupportTicket.id_cliente == id_cliente).all()
+    finally:
+        db.close()
+
+
+def create(data: dict) -> SupportTicket:
+    db = SessionLocal()
+    try:
+        ticket = SupportTicket(
+            id_ticket=f"TKT-{uuid.uuid4().hex[:8].upper()}",
+            id_cliente=data["id_cliente"],
+            id_pedido=data.get("id_pedido"),
+            id_produto=data.get("id_produto"),
+            tipo_problema=data["tipo_problema"],
+            satisfacao_atendimento="sem_avaliacao",
+            data_abertura=data.get("data_abertura") or date.today(),
+            data_resolucao=None,
+            tempo_resolucao_horas=None,
+            agente_suporte=data["agente_suporte"],
+            nota_avaliacao=None,
+            status_ticket="Aberto",
+            sla_estourado=False,
+            nome_cliente=data["nome_cliente"],
+            nome_produto=data.get("nome_produto"),
+        )
+        db.add(ticket)
+        db.commit()
+        db.refresh(ticket)
+        return ticket
+    finally:
+        db.close()
+
+
+def update(id_ticket: str, data: dict) -> SupportTicket | None:
+    db = SessionLocal()
+    try:
+        ticket = db.query(SupportTicket).filter(SupportTicket.id_ticket == id_ticket).first()
+        if not ticket:
+            return None
+        for field, value in data.items():
+            if value is not None:
+                setattr(ticket, field, value)
+        db.commit()
+        db.refresh(ticket)
+        return ticket
+    finally:
+        db.close()
+
+
+def delete(id_ticket: str) -> bool:
+    db = SessionLocal()
+    try:
+        ticket = db.query(SupportTicket).filter(SupportTicket.id_ticket == id_ticket).first()
+        if not ticket:
+            return False
+        db.delete(ticket)
+        db.commit()
+        return True
+    finally:
+        db.close()

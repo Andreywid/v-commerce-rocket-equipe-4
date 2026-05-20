@@ -1,97 +1,26 @@
-/* eslint-disable react-refresh/only-export-components, react-hooks/set-state-in-effect */
-import { useState, useRef, useEffect } from "react"
-import { SlidersHorizontal, X, Check, Calendar, ChevronDown } from "lucide-react"
+import { useState, useEffect } from "react"
+import { SlidersHorizontal, X, Check } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { cn } from "@/lib/utils"
 
-export const MONTHS = [
+const MONTH_NAMES = [
   "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
   "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
 ]
-const YEARS = ["2023", "2024", "2025", "2026"]
+
+export function formatMesAnoLabel(mesAno: string): string {
+  const [ano, mes] = mesAno.split("-")
+  return `${MONTH_NAMES[parseInt(mes) - 1]} de ${ano}`
+}
 
 export type FilterState = {
-  comparisonDate: string
-  months: string[]
-  years: string[]
+  mesAno: string   // "YYYY-MM" ou "" (auto = mais recente)
+  pairKey: string  // "YYYY-YYYY" ex: "2025-2024", ou "" (auto)
 }
 
-const DEFAULT_FILTER: FilterState = { comparisonDate: "", months: [], years: [] }
+export const DEFAULT_FILTER: FilterState = { mesAno: "", pairKey: "" }
 
-type MultiSelectProps = {
-  label: string
-  options: string[]
-  selected: string[]
-  onChange: (value: string[]) => void
-  placeholder: string
-}
-
-function MultiSelect({ label, options, selected, onChange, placeholder }: MultiSelectProps) {
-  const [open, setOpen] = useState(false)
-  const ref = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    function onClickOutside(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
-    }
-    document.addEventListener("mousedown", onClickOutside)
-    return () => document.removeEventListener("mousedown", onClickOutside)
-  }, [])
-
-  function toggle(option: string) {
-    onChange(selected.includes(option) ? selected.filter((s) => s !== option) : [...selected, option])
-  }
-
-  return (
-    <div className="flex-1" ref={ref}>
-      <label className="mb-2 block text-sm font-medium text-slate-700">{label}</label>
-      <div className="relative">
-        <button
-          type="button"
-          onClick={() => setOpen((o) => !o)}
-          className="flex w-full items-center justify-between rounded-md border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-400 hover:border-slate-300 focus:outline-none"
-        >
-          <span>{placeholder}</span>
-          <ChevronDown className={cn("size-4 transition-transform", open && "rotate-180")} />
-        </button>
-        {open && (
-          <ul className="absolute z-50 mt-1 max-h-52 w-full overflow-auto rounded-md border border-slate-200 bg-white py-1 shadow-lg">
-            {options.map((opt) => (
-              <li key={opt}>
-                <button
-                  type="button"
-                  onClick={() => toggle(opt)}
-                  className="flex w-full items-center justify-between px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"
-                >
-                  {opt}
-                  {selected.includes(opt) && <Check className="size-3.5 text-indigo-600" />}
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
-      {selected.length > 0 && (
-        <div className="mt-2 flex flex-wrap gap-1.5">
-          {selected.map((s) => (
-            <span
-              key={s}
-              className="flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-0.5 text-xs text-slate-600"
-            >
-              {s}
-              <button
-                type="button"
-                onClick={() => onChange(selected.filter((item) => item !== s))}
-                className="text-slate-400 hover:text-slate-600"
-              >
-                <X className="size-3" />
-              </button>
-            </span>
-          ))}
-        </div>
-      )}
-    </div>
-  )
+export function hasAnyFilter(f: FilterState): boolean {
+  return f.mesAno !== "" || f.pairKey !== ""
 }
 
 type FilterModalProps = {
@@ -99,9 +28,18 @@ type FilterModalProps = {
   onClose: () => void
   onSave: (filters: FilterState) => void
   initial?: FilterState
+  availableMeses: string[]  // ["2026-05", "2026-04", ...] desc
+  availablePairs: string[]  // ["2026-2025", "2025-2024", "2024-2023"] — só pares com dados
 }
 
-export function FilterModal({ open, onClose, onSave, initial }: FilterModalProps) {
+export function FilterModal({
+  open,
+  onClose,
+  onSave,
+  initial,
+  availableMeses,
+  availablePairs,
+}: FilterModalProps) {
   const [state, setState] = useState<FilterState>(initial ?? DEFAULT_FILTER)
 
   useEffect(() => {
@@ -110,75 +48,97 @@ export function FilterModal({ open, onClose, onSave, initial }: FilterModalProps
 
   if (!open) return null
 
+  function handleSave() {
+    onSave(state)
+    onClose()
+  }
+
+  function handleReset() {
+    onSave(DEFAULT_FILTER)
+    onClose()
+  }
+
+  function formatPairLabel(pair: string): string {
+    const [atual, anterior] = pair.split("-")
+    return `${atual} vs ${anterior}`
+  }
+
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      aria-modal="true"
-      role="dialog"
-    >
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" aria-modal="true" role="dialog">
       <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative flex w-full max-w-200 flex-col rounded-lg bg-white shadow-xl">
+
+      <div className="relative flex w-full max-w-md flex-col rounded-lg bg-white shadow-xl">
+
+        {/* Header */}
         <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4">
           <div className="flex items-center gap-2">
             <SlidersHorizontal className="size-4 text-indigo-600" />
-            <span className="font-semibold text-indigo-600">Filtro avançado</span>
+            <span className="font-semibold text-indigo-600">Filtros avançados</span>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="grid size-7 place-items-center rounded-full text-slate-400 hover:bg-slate-100 hover:text-slate-600"
-          >
+          <button type="button" onClick={onClose}
+            className="grid size-7 place-items-center rounded-full text-slate-400 hover:bg-slate-100 hover:text-slate-600">
             <X className="size-4" />
           </button>
         </div>
 
+        {/* Body */}
         <div className="flex flex-col gap-5 px-6 py-5">
+
+          {/* Mês de referência dos KPIs */}
           <div>
-            <label className="mb-2 block text-sm font-medium text-slate-700">
-              Data de comparação
+            <label className="mb-1 block text-sm font-medium text-slate-700">
+              Mês de referência
             </label>
-            <div className="relative w-full sm:w-56">
-              <Calendar className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
-              <input
-                type="date"
-                value={state.comparisonDate}
-                onChange={(e) => setState((s) => ({ ...s, comparisonDate: e.target.value }))}
-                className="w-full rounded-md border border-slate-200 bg-white py-2.5 pl-9 pr-3 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              />
-            </div>
+            <p className="mb-2 text-xs text-slate-400">Controla os KPI cards e os insights abaixo do gráfico.</p>
+            <select
+              value={state.mesAno}
+              onChange={(e) => setState((s) => ({ ...s, mesAno: e.target.value }))}
+              className="w-full rounded-md border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            >
+              <option value="">Mais recente (padrão)</option>
+              {availableMeses.map((m) => (
+                <option key={m} value={m}>{formatMesAnoLabel(m)}</option>
+              ))}
+            </select>
           </div>
 
-          <div className="flex flex-col gap-4 sm:flex-row">
-            <MultiSelect
-              label="Mês"
-              options={MONTHS}
-              selected={state.months}
-              onChange={(months) => setState((s) => ({ ...s, months }))}
-              placeholder="Selecione o mês para comparar"
-            />
-            <MultiSelect
-              label="Ano"
-              options={YEARS}
-              selected={state.years}
-              onChange={(years) => setState((s) => ({ ...s, years }))}
-              placeholder="Selecione o ano para comparar"
-            />
+          {/* Par de anos do gráfico */}
+          <div>
+            <label className="mb-1 block text-sm font-medium text-slate-700">
+              Comparativo do gráfico
+            </label>
+            <p className="mb-2 text-xs text-slate-400">Apenas anos com dados disponíveis são exibidos.</p>
+            <select
+              value={state.pairKey}
+              onChange={(e) => setState((s) => ({ ...s, pairKey: e.target.value }))}
+              className="w-full rounded-md border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            >
+              <option value="">Automático (mais recente)</option>
+              {availablePairs.map((p) => (
+                <option key={p} value={p}>{formatPairLabel(p)}</option>
+              ))}
+            </select>
           </div>
         </div>
 
-        <div className="flex justify-end gap-3 border-t border-slate-100 px-6 py-4">
-          <Button variant="outline" size="sm" className="h-9 gap-1.5 rounded-full px-5" onClick={onClose}>
-            <X className="size-3.5" /> Cancelar
+        {/* Footer */}
+        <div className="flex justify-between gap-3 border-t border-slate-100 px-6 py-4">
+          <Button variant="outline" size="sm" className="h-9 rounded-full px-5 text-slate-500" onClick={handleReset}>
+            Limpar filtros
           </Button>
-          <Button
-            size="sm"
-            className="h-9 gap-1.5 rounded-full bg-slate-900 px-5 hover:bg-slate-800"
-            onClick={() => { onSave(state); onClose() }}
-          >
-            <Check className="size-3.5" /> Salvar alterações
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" className="h-9 gap-1.5 rounded-full px-5" onClick={onClose}>
+              <X className="size-3.5" /> Cancelar
+            </Button>
+            <Button size="sm" className="h-9 gap-1.5 rounded-full bg-slate-900 px-5 hover:bg-slate-800" onClick={handleSave}>
+              <Check className="size-3.5" /> Aplicar
+            </Button>
+          </div>
         </div>
       </div>
     </div>
   )
 }
+
+// Re-export para compatibilidade
+export const MONTHS = MONTH_NAMES

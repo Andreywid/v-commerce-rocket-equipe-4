@@ -2,7 +2,7 @@ from fastapi import HTTPException
 from app.repositories import dashboard_repository
 from app.schemas.dashboard import KPIsResponse, VendasKPIMes
 
-_PERIODOS_VALIDOS = {"3m", "6m", "12m"}
+_PERIODOS_VALIDOS = {"3m", "6m", "12m", "all"}
 
 
 def get_kpis(periodo: str = "12m") -> KPIsResponse:

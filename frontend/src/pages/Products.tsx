@@ -1,123 +1,135 @@
-import { useMemo, useState } from "react"
-import { Eye, Package, Pencil, Trash2 } from "lucide-react"
+import { useState } from "react"
+import { Package, Pencil } from "lucide-react"
 
-import type { ProductCategory, ProductFormValues, ProductRow, RatingLabel } from "@/types"
-import { getProductImage } from "@/mocks/productImages"
+import type { ProductCategory } from "@/types"
+import type { ProductCreate, ProductOut } from "@/types/api"
 import { categoryClasses } from "@/constants/badgeStyles"
 import { useAppContext } from "@/context/AppContext"
-import { rowIncludes } from "@/helpers/storage"
-import { Button } from "@/components/ui/button"
+import { HttpError } from "@/services/api"
+import { useProducts, useProductMutations } from "@/hooks/useProducts"
+import { useDebounce } from "@/hooks/useDebounce"
+import { formatCategoryLabel, getCategoryIcon } from "@/helpers/dictionary"
+import { cn } from "@/lib/utils"
 import { DataPanel } from "@/components/shared/DataPanel"
 import { PageShell } from "@/components/shared/PageShell"
 import { ProductDetailDialog } from "@/components/shared/ProductDetailDialog"
 import { ProductFormModal } from "@/components/shared/ProductFormModal"
 import { ProductFilterModal, type ProductFilterState, DEFAULT_PRODUCT_FILTER } from "@/components/shared/ProductFilterModal"
 import { ProductHighlightCard } from "@/components/shared/ProductHighlightCard"
-import { RatingBadge, StatusBadge } from "@/components/shared/StatusBadge"
+import { StatusBadge } from "@/components/shared/StatusBadge"
+import { RatingBadge } from "@/components/shared/RatingBadge"
 import { EmptyTableState, TableHead, TableBody, TableHeader, TableRow, TableCell, TablePagination } from "@/components/shared/Table"
 import { TableToolbar } from "@/components/shared/TableToolbar"
 
-const PAGE_SIZE = 5
+const PAGE_SIZE = 6
 
-function parsePrice(price: string): number {
-  return parseFloat(price.replace(/[R$\s.]/g, "").replace(",", ".")) || 0
+function formatBRL(value: number | null | undefined): string {
+  if (value == null) return "—"
+  return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
 }
 
 function isFilterActive(filter: ProductFilterState): boolean {
-  return filter.search !== "" || filter.categories.length > 0 || filter.ratings.length > 0 || filter.minPrice > 0 || filter.maxPrice < 100_000
+  return (
+    filter.search !== "" ||
+    filter.categories.length > 0 ||
+    filter.minPrice > 0 ||
+    filter.maxPrice < 100_000 ||
+    filter.apenasAtivo ||
+    filter.apenasInativo
+  )
 }
 
-type FilteredProduct = { product: ProductRow; index: number }
+function toProductCreate(p: ProductOut): ProductCreate {
+  return {
+    nome_produto: p.nome_produto,
+    categoria: p.categoria,
+    preco_atual: p.preco_atual,
+    ativo: p.ativo,
+    estoque: p.estoque,
+    descricao: p.descricao,
+    imagem_url: p.imagem_url,
+  }
+}
 
 function ProductsTable({
   currentPage,
   filteredCount,
-  onDeleteProduct,
   onEditProduct,
   onPageChange,
   onViewProduct,
+  onSort,
   pageCount,
   rows,
+  sortBy,
+  sortOrder,
   totalCount,
 }: {
   currentPage: number
   filteredCount: number
-  onDeleteProduct: (index: number) => void
-  onEditProduct: (index: number) => void
+  onEditProduct: (id: string) => void
   onPageChange: (page: number) => void
-  onViewProduct: (index: number) => void
+  onViewProduct: (id: string) => void
+  onSort: (key: string) => void
   pageCount: number
-  rows: FilteredProduct[]
+  rows: ProductOut[]
+  sortBy?: string
+  sortOrder?: "asc" | "desc"
   totalCount: number
 }) {
   return (
     <div className="overflow-x-auto">
-      <table className="min-w-225 w-full table-fixed text-left">
+      <table className="min-w-192 w-full table-fixed text-left">
         <TableHeader>
           <TableRow className="h-12 border-slate-200 text-sm text-slate-950 hover:bg-transparent">
-            <TableHead className="w-50 pl-5">Produto</TableHead>
-            <TableHead className="w-30">Código</TableHead>
-            <TableHead className="w-55">Categoria</TableHead>
-            <TableHead sortable className="w-35">Preço</TableHead>
-            <TableHead className="w-25">Estoque</TableHead>
-            <TableHead sortable className="w-37.5">Avaliação</TableHead>
-            <TableHead className="w-30" />
+            <TableHead className="w-52 pl-5">Produto</TableHead>
+            <TableHead className="w-28">Código</TableHead>
+            <TableHead className="w-36">Categoria</TableHead>
+            <TableHead sortKey="preco_atual" currentSortKey={sortBy} currentSortOrder={sortOrder} onSort={onSort} className="w-28">Preço</TableHead>
+            <TableHead sortKey="nota_media" currentSortKey={sortBy} currentSortOrder={sortOrder} onSort={onSort} className="w-28">Avaliação</TableHead>
+            <TableHead className="w-20" />
           </TableRow>
         </TableHeader>
         <TableBody>
-          {rows.map(({ product: row, index }) => (
-            <TableRow key={row.id} className="h-14.5 border-slate-100 text-sm text-slate-700">
+          {rows.map((row) => (
+            <TableRow
+              key={row.id_produto}
+              className="h-14.5 border-slate-100 text-sm text-slate-700 cursor-pointer"
+              onClick={() => onViewProduct(row.id_produto)}
+            >
               <TableCell className="pl-5 font-semibold text-slate-800">
-                <div className="flex items-center gap-3">
-                  {getProductImage(row) ? (
-                    <img
-                      alt={row.name}
-                      className="size-10 rounded-md border border-slate-200 object-cover"
-                      src={getProductImage(row)}
-                    />
-                  ) : (
-                    <div className="size-10 rounded-md border border-slate-200 bg-slate-100" />
-                  )}
-                  <span>{row.name}</span>
+                <div className="flex items-center gap-3 overflow-hidden">
+                  <div className={cn(
+                    "flex size-10 shrink-0 items-center justify-center rounded-full border border-slate-200",
+                    "bg-slate-50 text-slate-400"
+                  )}>
+                    {(() => {
+                      const Icon = getCategoryIcon(row.categoria)
+                      return <Icon className="size-5" />
+                    })()}
+                  </div>
+                  <span className="truncate" title={row.nome_produto}>
+                    {row.nome_produto}
+                  </span>
                 </div>
               </TableCell>
-              <TableCell className="font-medium text-slate-400">{row.id}</TableCell>
+              <TableCell className="font-medium text-slate-400">#{row.id_produto}</TableCell>
               <TableCell>
-                <div className="flex flex-wrap gap-1">
-                  {row.categories.map((cat) => (
-                    <StatusBadge key={cat} className={categoryClasses[cat as ProductCategory]}>
-                      {cat}
-                    </StatusBadge>
-                  ))}
-                </div>
+                <StatusBadge className={categoryClasses[row.categoria as ProductCategory]}>
+                  {formatCategoryLabel(row.categoria)}
+                </StatusBadge>
               </TableCell>
-              <TableCell className="font-medium">{row.price}</TableCell>
-              <TableCell>{row.stock}</TableCell>
+              <TableCell className="font-medium">{formatBRL(row.preco_atual)}</TableCell>
               <TableCell>
-                <RatingBadge rating={row.rating} label={row.ratingLabel} />
+                {row.nota_media != null ? <RatingBadge nota={row.nota_media} /> : "—"}
               </TableCell>
               <TableCell>
                 <div className="flex items-center gap-1">
                   <button
-                    className="grid place-items-center rounded-md p-1 transition hover:bg-indigo-50"
-                    onClick={() => onViewProduct(index)}
+                    className="grid place-items-center rounded-md p-1 transition hover:bg-slate-100"
+                    onClick={(e) => { e.stopPropagation(); onEditProduct(row.id_produto) }}
                     type="button"
                   >
-                    <Eye className="size-4 text-[#4F46E5]" />
-                  </button>
-                  <button
-                    className="grid place-items-center rounded-md p-1 transition hover:bg-indigo-50"
-                    onClick={() => onEditProduct(index)}
-                    type="button"
-                  >
-                    <Pencil className="size-4 text-[#4F46E5]" />
-                  </button>
-                  <button
-                    className="grid place-items-center rounded-md p-1 transition hover:bg-rose-50"
-                    onClick={() => onDeleteProduct(index)}
-                    type="button"
-                  >
-                    <Trash2 className="size-4 text-[#F43F5E]" />
+                    <Pencil className="size-4 text-[#6366F1]" />
                   </button>
                 </div>
               </TableCell>
@@ -137,60 +149,72 @@ function ProductsTable({
   )
 }
 
-function useProductHighlights(products: ProductRow[]) {
-  return useMemo(() => {
-    if (products.length === 0) return null
-    const mostSold   = products.reduce((a, b) => (a.sold > b.sold ? a : b))
-    const leastSold  = products.reduce((a, b) => (a.sold < b.sold ? a : b))
-    const bestRated  = products.reduce((a, b) => (parseFloat(a.rating) > parseFloat(b.rating) ? a : b))
-    const worstRated = products.reduce((a, b) => (parseFloat(a.rating) < parseFloat(b.rating) ? a : b))
-    return { mostSold, leastSold, bestRated, worstRated }
-  }, [products])
-}
-
-function useFilteredProducts(toolbarSearch: string, filter: ProductFilterState) {
-  const { products } = useAppContext()
-  return useMemo(
-    () =>
-      products
-        .map((product, index) => ({ product, index }))
-        .filter(({ product }) => {
-          const searchTarget = {
-            name: product.name,
-            id: product.id,
-            price: product.price,
-            rating: product.rating,
-            ratingLabel: product.ratingLabel,
-            categories: product.categories.join(" "),
-          }
-          if (toolbarSearch && !rowIncludes(searchTarget, toolbarSearch)) return false
-          if (filter.search && !rowIncludes(searchTarget, filter.search)) return false
-          if (filter.categories.length > 0 && !product.categories.some((c) => filter.categories.includes(c))) return false
-          if (filter.ratings.length > 0 && !(filter.ratings as RatingLabel[]).includes(product.ratingLabel)) return false
-          const price = parsePrice(product.price)
-          if (price < filter.minPrice || price > filter.maxPrice) return false
-          return true
-        }),
-    [products, toolbarSearch, filter],
-  )
-}
 
 export function ProductsPage() {
-  const { products, addProduct, updateProduct, deleteProduct, showNotice } = useAppContext()
+  const { showNotice } = useAppContext()
   const [search, setSearch] = useState("")
   const [advancedFilter, setAdvancedFilter] = useState<ProductFilterState>(DEFAULT_PRODUCT_FILTER)
   const [filterOpen, setFilterOpen] = useState(false)
   const [currentPage, setCurrentPage] = useState(1)
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
-  const [editingIndex, setEditingIndex] = useState<number | null>(null)
-  const [viewingIndex, setViewingIndex] = useState<number | null>(null)
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [viewingId, setViewingId] = useState<string | null>(null)
+  const [sortBy, setSortBy] = useState<string | undefined>(undefined)
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc")
 
-  const filteredProducts = useFilteredProducts(search, advancedFilter)
-  const highlights = useProductHighlights(products)
+  const rawSearch = search || advancedFilter.search
+  const debouncedSearch = useDebounce(rawSearch, 400)
 
-  const pageCount = Math.max(1, Math.ceil(filteredProducts.length / PAGE_SIZE))
-  const safePage = Math.min(currentPage, pageCount)
-  const paginatedProducts = filteredProducts.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE)
+  const ativo =
+    advancedFilter.apenasAtivo && !advancedFilter.apenasInativo ? true :
+    advancedFilter.apenasInativo && !advancedFilter.apenasAtivo ? false :
+    undefined
+
+  const { data, isPending } = useProducts(
+    {
+      categorias: advancedFilter.categories.length > 0 ? advancedFilter.categories : undefined,
+      nome: debouncedSearch || undefined,
+      ativo,
+      preco_min: advancedFilter.minPrice > 0 ? advancedFilter.minPrice : undefined,
+      preco_max: advancedFilter.maxPrice < 100_000 ? advancedFilter.maxPrice : undefined,
+      sort_by: sortBy,
+      order: sortBy ? sortOrder : undefined,
+    },
+    currentPage,
+    PAGE_SIZE,
+  )
+  const { create, update, remove } = useProductMutations()
+
+  const { data: topSold }    = useProducts({ sort_by: "qtd_vendida_total", order: "desc" }, 1, 1)
+  const { data: botSold }    = useProducts({ sort_by: "qtd_vendida_total", order: "asc"  }, 1, 1)
+  const { data: topRated }   = useProducts({ sort_by: "nota_media",        order: "desc" }, 1, 1)
+  const { data: botRated }   = useProducts({ sort_by: "nota_media",        order: "asc"  }, 1, 1)
+
+  const highlights = {
+    mostSold:   topSold?.items[0]  ?? null,
+    leastSold:  botSold?.items[0]  ?? null,
+    bestRated:  topRated?.items[0] ?? null,
+    worstRated: botRated?.items[0] ?? null,
+  }
+
+  const items = data?.items ?? []
+  const total = data?.total ?? 0
+  const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE))
+  const filteredItems = items
+
+  const editingProduct = items.find((p) => p.id_produto === editingId) ?? null
+  const viewingProduct = items.find((p) => p.id_produto === viewingId) ?? null
+
+  function handleSort(key: string) {
+    if (sortBy === key) {
+      if (sortOrder === "asc") { setSortOrder("desc") }
+      else { setSortBy(undefined) }
+    } else {
+      setSortBy(key)
+      setSortOrder("asc")
+    }
+    setCurrentPage(1)
+  }
 
   function handleSearchChange(value: string) {
     setSearch(value)
@@ -203,72 +227,79 @@ export function ProductsPage() {
     if (isFilterActive(filters)) showNotice("Filtros aplicados")
   }
 
-  function handleAdd(values: ProductFormValues) {
-    addProduct(values)
-    setIsAddModalOpen(false)
-    showNotice("Produto adicionado")
+  function notifyError(err: unknown, fallback: string) {
+    const msg = err instanceof HttpError
+      ? `Erro ${err.status}: ${err.detail}`
+      : fallback
+    showNotice(msg)
   }
 
-  function handleUpdate(values: ProductFormValues) {
-    if (editingIndex === null) return
-    updateProduct(editingIndex, values)
-    setEditingIndex(null)
-    showNotice("Produto atualizado")
+  async function handleAdd(values: ProductCreate) {
+    try {
+      await create.mutateAsync(values)
+      setIsAddModalOpen(false)
+      showNotice("Produto adicionado")
+    } catch (err) {
+      notifyError(err, "Erro ao adicionar produto")
+    }
   }
 
-  function handleDelete(index: number) {
-    const product = products[index]
-    if (!product) return
-    if (!window.confirm(`Apagar ${product.name}?`)) return
-    deleteProduct(index)
-    if (editingIndex === index) setEditingIndex(null)
-    if (viewingIndex === index) setViewingIndex(null)
-    showNotice("Produto apagado")
+  async function handleUpdate(values: ProductCreate) {
+    if (editingId === null) return
+    try {
+      await update.mutateAsync({ id: editingId, data: values })
+      setEditingId(null)
+      showNotice("Produto atualizado")
+    } catch (err) {
+      notifyError(err, "Erro ao atualizar produto")
+    }
   }
 
-  function handleDeleteFromModal() {
-    if (editingIndex === null) return
-    deleteProduct(editingIndex)
-    setEditingIndex(null)
-    showNotice("Produto apagado")
+  async function handleDeleteFromModal() {
+    if (editingId === null) return
+    try {
+      await remove.mutateAsync(editingId)
+      setEditingId(null)
+      showNotice("Produto apagado")
+    } catch (err) {
+      notifyError(err, "Erro ao apagar produto")
+    }
   }
 
   return (
     <PageShell title="Produtos">
-      {highlights && (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <ProductHighlightCard
-            label="Produto mais vendido"
-            metricLabel="Vendidos"
-            metricValue={highlights.mostSold.sold.toLocaleString("pt-BR")}
-            productName={highlights.mostSold.name}
-            tone="emerald"
-          />
-          <ProductHighlightCard
-            label="Melhor avaliado"
-            metricLabel="NPS"
-            metricValue={highlights.bestRated.rating}
-            productName={highlights.bestRated.name}
-            tone="emerald"
-          />
-          <ProductHighlightCard
-            label="Menos vendido"
-            metricLabel="Vendidos"
-            metricValue={highlights.leastSold.sold.toLocaleString("pt-BR")}
-            productName={highlights.leastSold.name}
-            tone="amber"
-          />
-          <ProductHighlightCard
-            label="Menor avaliado"
-            metricLabel="NPS"
-            metricValue={highlights.worstRated.rating}
-            productName={highlights.worstRated.name}
-            tone="rose"
-          />
-        </div>
-      )}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <ProductHighlightCard
+          label="Produto mais vendido"
+          metricLabel="Vendidos"
+          metricValue={highlights.mostSold?.qtd_vendida_total.toLocaleString("pt-BR") ?? "—"}
+          productName={highlights.mostSold?.nome_produto ?? "Carregando..."}
+          tone="emerald"
+        />
+        <ProductHighlightCard
+          label="Melhor avaliado"
+          metricLabel="Nota"
+          metricValue={highlights.bestRated?.nota_media?.toFixed(1) ?? "—"}
+          productName={highlights.bestRated?.nome_produto ?? "Carregando..."}
+          tone="indigo"
+        />
+        <ProductHighlightCard
+          label="Menos vendido"
+          metricLabel="Vendidos"
+          metricValue={highlights.leastSold?.qtd_vendida_total.toLocaleString("pt-BR") ?? "—"}
+          productName={highlights.leastSold?.nome_produto ?? "Carregando..."}
+          tone="amber"
+        />
+        <ProductHighlightCard
+          label="Menor avaliado"
+          metricLabel="Nota"
+          metricValue={highlights.worstRated?.nota_media?.toFixed(1) ?? "—"}
+          productName={highlights.worstRated?.nome_produto ?? "Carregando..."}
+          tone="rose"
+        />
+      </div>
 
-      <DataPanel>
+      <DataPanel className="h-[556px] overflow-hidden">
         <TableToolbar
           actionLabel="Adicionar produto"
           advancedFilterActive={isFilterActive(advancedFilter)}
@@ -277,20 +308,26 @@ export function ProductsPage() {
           onAction={() => setIsAddModalOpen(true)}
           onAdvancedFilter={() => setFilterOpen(true)}
           onSearchChange={handleSearchChange}
-          placeholder="Busque por um produto, código ou categoria"
+          placeholder="Busque por um produto ou código"
           searchValue={search}
         />
-        <ProductsTable
-          currentPage={safePage}
-          filteredCount={filteredProducts.length}
-          onDeleteProduct={handleDelete}
-          onEditProduct={setEditingIndex}
-          onPageChange={setCurrentPage}
-          onViewProduct={setViewingIndex}
-          pageCount={pageCount}
-          rows={paginatedProducts}
-          totalCount={products.length}
-        />
+        {isPending ? (
+          <div className="flex h-40 items-center justify-center text-sm text-slate-400">Carregando...</div>
+        ) : (
+          <ProductsTable
+            currentPage={currentPage}
+            filteredCount={total}
+            onEditProduct={setEditingId}
+            onPageChange={setCurrentPage}
+            onViewProduct={setViewingId}
+            onSort={handleSort}
+            pageCount={pageCount}
+            rows={filteredItems}
+            sortBy={sortBy}
+            sortOrder={sortOrder}
+            totalCount={total}
+          />
+        )}
       </DataPanel>
 
       <ProductFilterModal
@@ -301,26 +338,28 @@ export function ProductsPage() {
       />
 
       {isAddModalOpen && (
-        <ProductFormModal onClose={() => setIsAddModalOpen(false)} onSubmit={handleAdd} title="Adicionar produto" />
-      )}
-      {editingIndex !== null && (
         <ProductFormModal
-          initialValues={products[editingIndex]}
-          onClose={() => setEditingIndex(null)}
+          isSubmitting={create.isPending}
+          onClose={() => setIsAddModalOpen(false)}
+          onSubmit={handleAdd}
+          title="Adicionar produto"
+        />
+      )}
+      {editingId !== null && editingProduct && (
+        <ProductFormModal
+          initialValues={toProductCreate(editingProduct)}
+          isSubmitting={update.isPending}
+          onClose={() => setEditingId(null)}
           onDelete={handleDeleteFromModal}
           onSubmit={handleUpdate}
-          productId={products[editingIndex].id}
+          productId={editingId}
           title="Editar produto"
         />
       )}
-      {viewingIndex !== null && (
+      {viewingId !== null && viewingProduct && (
         <ProductDetailDialog
-          product={products[viewingIndex]}
-          onClose={() => setViewingIndex(null)}
-          onEdit={() => {
-            setEditingIndex(viewingIndex)
-            setViewingIndex(null)
-          }}
+          product={viewingProduct}
+          onClose={() => setViewingId(null)}
         />
       )}
     </PageShell>

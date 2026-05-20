@@ -27,6 +27,7 @@ Thumbs.db
 *.sqlite
 *.db
 *.csv
+!data/gold/*.csv
 
 app/database/data/*.csv
 app/database/mock_gold.sqlite

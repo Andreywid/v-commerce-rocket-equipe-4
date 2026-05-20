@@ -1,4 +1,4 @@
-import { ArrowUpDown } from "lucide-react"
+import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 import {
@@ -15,17 +15,36 @@ import {
 export function TableHead({
   children,
   className = "",
-  sortable = false,
+  sortKey,
+  currentSortKey,
+  currentSortOrder,
+  onSort,
 }: {
   children?: React.ReactNode
   className?: string
-  sortable?: boolean
+  sortKey?: string
+  currentSortKey?: string
+  currentSortOrder?: "asc" | "desc"
+  onSort?: (key: string) => void
 }) {
+  const isSorted = sortKey !== undefined && sortKey === currentSortKey
+
   return (
-    <ShadcnTableHead className={`font-semibold ${className}`}>
-      <span className="inline-flex items-center gap-1">
+    <ShadcnTableHead
+      className={`font-semibold ${className}`}
+      onClick={sortKey ? () => onSort?.(sortKey) : undefined}
+    >
+      <span className={cn("inline-flex items-center gap-1", sortKey && "cursor-pointer select-none")}>
         {children}
-        {sortable && <ArrowUpDown className="size-3 text-slate-400" />}
+        {sortKey && (
+          isSorted ? (
+            currentSortOrder === "asc"
+              ? <ArrowUp className="size-3 text-indigo-500" />
+              : <ArrowDown className="size-3 text-indigo-500" />
+          ) : (
+            <ArrowUpDown className="size-3 text-slate-400" />
+          )
+        )}
       </span>
     </ShadcnTableHead>
   )

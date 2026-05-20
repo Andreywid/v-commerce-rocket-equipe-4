@@ -2,45 +2,23 @@
 import { useState, useRef, useEffect } from "react"
 import { SlidersHorizontal, X, Check, ChevronDown } from "lucide-react"
 
-import type { ProductCategory, RatingLabel } from "@/types"
-import { productCategoryOptions, ratingLabelOptions } from "@/mocks/products"
+import type { ProductCategory } from "@/types"
+import { formatCategoryLabel } from "@/helpers/dictionary"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 
-export type ProductFilterState = {
-  search: string
-  categories: ProductCategory[]
-  ratings: RatingLabel[]
-  minPrice: number
-  maxPrice: number
-}
-
-export const DEFAULT_PRODUCT_FILTER: ProductFilterState = {
-  search: "",
-  categories: [],
-  ratings: [],
-  minPrice: 0,
-  maxPrice: 100_000,
-}
-
-const PRICE_MAX = 100_000
+const CATEGORIES: ProductCategory[] = ["Eletronicos", "Vestuario", "Casa", "Esportes", "Beleza", "Automotivo", "Brinquedos", "Moveis", "Sem categoria"]
 
 const CATEGORY_TAG_CLASS: Record<ProductCategory, string> = {
-  Perfumaria: "bg-indigo-50 text-indigo-600 border-indigo-200",
-  Artes: "bg-sky-50 text-sky-600 border-sky-200",
-  Esporte: "bg-emerald-50 text-emerald-600 border-emerald-200",
-  Lazer: "bg-amber-50 text-amber-600 border-amber-200",
-  Bebês: "bg-pink-50 text-pink-600 border-pink-200",
-  "Utilidades domésticas": "bg-orange-50 text-orange-600 border-orange-200",
-  "Instrumentos Musicais": "bg-slate-100 text-slate-500 border-slate-300",
-  Tecnologia: "bg-cyan-50 text-cyan-600 border-cyan-200",
-}
-
-const RATING_TAG_CLASS: Record<RatingLabel, string> = {
-  Ótimo: "bg-amber-50 text-amber-500 border-amber-200",
-  Bom: "bg-indigo-200 text-indigo-700 border-indigo-300",
-  Excelente: "bg-emerald-50 text-emerald-500 border-emerald-200",
-  Crítico: "bg-rose-50 text-rose-500 border-rose-200",
+  "Eletronicos":   "bg-[#C7D2FE]/30 text-[#6366F1] border-[#C7D2FE]",
+  "Vestuario":     "bg-[#FECDD3]/30 text-[#F43F5E] border-[#FECDD3]",
+  "Casa":          "bg-[#BBF7D0]/30 text-[#10B981] border-[#BBF7D0]",
+  "Esportes":      "bg-[#FDE68A]/30 text-[#F59E0B] border-[#FDE68A]",
+  "Beleza":        "bg-[#F5D0FE]/30 text-[#D946EF] border-[#F5D0FE]",
+  "Automotivo":    "bg-[#E2E8F0]/30 text-[#64748B] border-[#E2E8F0]",
+  "Brinquedos":    "bg-[#FFEDD5]/30 text-[#F97316] border-[#FFEDD5]",
+  "Moveis":        "bg-[#CFFAFE]/30 text-[#06B6D4] border-[#CFFAFE]",
+  "Sem categoria": "bg-[#CBD5E1]/30 text-[#94A3B8] border-[#CBD5E1]",
 }
 
 const RANGE_THUMB_CLASSES = [
@@ -52,27 +30,44 @@ const RANGE_THUMB_CLASSES = [
   "[&::-webkit-slider-thumb]:rounded-full",
   "[&::-webkit-slider-thumb]:bg-white",
   "[&::-webkit-slider-thumb]:border-2",
-  "[&::-webkit-slider-thumb]:border-indigo-500",
+  "[&::-webkit-slider-thumb]:border-[#0F172A]",
   "[&::-webkit-slider-thumb]:cursor-pointer",
   "[&::-webkit-slider-thumb]:shadow-sm",
   "[&::-moz-range-thumb]:size-4",
   "[&::-moz-range-thumb]:rounded-full",
   "[&::-moz-range-thumb]:bg-white",
   "[&::-moz-range-thumb]:border-2",
-  "[&::-moz-range-thumb]:border-indigo-500",
+  "[&::-moz-range-thumb]:border-[#0F172A]",
   "[&::-moz-range-thumb]:cursor-pointer",
 ].join(" ")
 
-type MultiSelectProps = {
-  label: string
-  options: readonly string[]
-  selected: string[]
-  onChange: (value: string[]) => void
-  placeholder: string
-  getTagClass: (option: string) => string
+export type ProductFilterState = {
+  search: string
+  categories: ProductCategory[]
+  minPrice: number
+  maxPrice: number
+  apenasAtivo: boolean
+  apenasInativo: boolean
 }
 
-function MultiSelect({ label, options, selected, onChange, placeholder, getTagClass }: MultiSelectProps) {
+export const DEFAULT_PRODUCT_FILTER: ProductFilterState = {
+  search: "",
+  categories: [],
+  minPrice: 0,
+  maxPrice: 100_000,
+  apenasAtivo: false,
+  apenasInativo: false,
+}
+
+const PRICE_MAX = 100_000
+
+function CategorySelect({
+  selected,
+  onChange,
+}: {
+  selected: ProductCategory[]
+  onChange: (v: ProductCategory[]) => void
+}) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
 
@@ -84,33 +79,32 @@ function MultiSelect({ label, options, selected, onChange, placeholder, getTagCl
     return () => document.removeEventListener("mousedown", onClickOutside)
   }, [])
 
-  function toggle(option: string) {
-    onChange(selected.includes(option) ? selected.filter((s) => s !== option) : [...selected, option])
+  function toggle(cat: ProductCategory) {
+    onChange(selected.includes(cat) ? selected.filter((s) => s !== cat) : [...selected, cat])
   }
 
   return (
-    <div className="flex-1" ref={ref}>
-      <label className="mb-2 block text-sm font-medium text-slate-700">{label}</label>
+    <div ref={ref}>
       <div className="relative">
         <button
           type="button"
           onClick={() => setOpen((o) => !o)}
           className="flex w-full items-center justify-between rounded-md border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-400 hover:border-slate-300 focus:outline-none"
         >
-          <span>{placeholder}</span>
+          <span>Selecione a categoria</span>
           <ChevronDown className={cn("size-4 transition-transform", open && "rotate-180")} />
         </button>
         {open && (
           <ul className="absolute z-50 mt-1 max-h-52 w-full overflow-auto rounded-md border border-slate-200 bg-white py-1 shadow-lg">
-            {options.map((opt) => (
-              <li key={opt}>
+            {CATEGORIES.map((cat) => (
+              <li key={cat}>
                 <button
                   type="button"
-                  onClick={() => toggle(opt)}
+                  onClick={() => toggle(cat)}
                   className="flex w-full items-center justify-between px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"
                 >
-                  {opt}
-                  {selected.includes(opt) && <Check className="size-3.5 text-indigo-600" />}
+                  {formatCategoryLabel(cat)}
+                  {selected.includes(cat) && <Check className="size-3.5 text-[#0F172A]" />}
                 </button>
               </li>
             ))}
@@ -119,15 +113,15 @@ function MultiSelect({ label, options, selected, onChange, placeholder, getTagCl
       </div>
       {selected.length > 0 && (
         <div className="mt-2 flex flex-wrap gap-1.5">
-          {selected.map((s) => (
+          {selected.map((cat) => (
             <span
-              key={s}
-              className={cn("flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs", getTagClass(s))}
+              key={cat}
+              className={cn("flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs", CATEGORY_TAG_CLASS[cat])}
             >
-              {s}
+              {formatCategoryLabel(cat)}
               <button
                 type="button"
-                onClick={() => onChange(selected.filter((item) => item !== s))}
+                onClick={() => onChange(selected.filter((s) => s !== cat))}
                 className="opacity-60 hover:opacity-100"
               >
                 <X className="size-3" />
@@ -156,51 +150,43 @@ function PriceRange({
     <div>
       <div className="mb-4 flex gap-3">
         <label className="flex flex-1 items-center gap-2 rounded-md border border-slate-200 px-3 py-2.5">
-          <span className="shrink-0 text-sm text-slate-400">R$</span>
+          <span className="shrink-0 text-sm text-slate-400">R$ Min</span>
           <input
             type="number"
             min={0}
             max={max}
             value={min === 0 ? "" : min}
-            placeholder="Min"
-            onChange={(e) => onChange(Math.min(Number(e.target.value) || 0, max - 1000), max)}
+            placeholder="0"
+            onChange={(e) => onChange(Math.min(Number(e.target.value) || 0, max), max)}
             className="w-full text-sm text-slate-700 outline-none"
           />
         </label>
         <label className="flex flex-1 items-center gap-2 rounded-md border border-slate-200 px-3 py-2.5">
-          <span className="shrink-0 text-sm text-slate-400">R$</span>
+          <span className="shrink-0 text-sm text-slate-400">R$ Máx</span>
           <input
             type="number"
             min={min}
             max={PRICE_MAX}
             value={max === PRICE_MAX ? "" : max}
-            placeholder="Max"
-            onChange={(e) => onChange(min, Math.max(Number(e.target.value) || PRICE_MAX, min + 1000))}
+            placeholder="100.000"
+            onChange={(e) => onChange(min, Math.max(Number(e.target.value) || PRICE_MAX, min))}
             className="w-full text-sm text-slate-700 outline-none"
           />
         </label>
       </div>
       <div className="relative h-1.5 rounded-full bg-slate-200">
         <div
-          className="absolute h-1.5 rounded-full bg-indigo-500"
+          className="absolute h-1.5 rounded-full bg-[#0F172A]"
           style={{ left: `${minPct}%`, right: `${100 - maxPct}%` }}
         />
         <input
-          type="range"
-          min={0}
-          max={PRICE_MAX}
-          step={1000}
-          value={min}
-          onChange={(e) => onChange(Math.min(Number(e.target.value), max - 1000), max)}
+          type="range" min={0} max={PRICE_MAX} step={1000} value={min}
+          onChange={(e) => onChange(Math.min(Number(e.target.value), max), max)}
           className={RANGE_THUMB_CLASSES}
         />
         <input
-          type="range"
-          min={0}
-          max={PRICE_MAX}
-          step={1000}
-          value={max}
-          onChange={(e) => onChange(min, Math.max(Number(e.target.value), min + 1000))}
+          type="range" min={0} max={PRICE_MAX} step={1000} value={max}
+          onChange={(e) => onChange(min, Math.max(Number(e.target.value), min))}
           className={RANGE_THUMB_CLASSES}
         />
       </div>
@@ -229,17 +215,15 @@ export function ProductFilterModal({ open, onClose, onSave, initial }: ProductFi
   if (!open) return null
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      aria-modal="true"
-      role="dialog"
-    >
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" aria-modal="true" role="dialog">
       <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative flex w-full max-w-200 flex-col rounded-lg bg-white shadow-xl">
+      <div className="relative flex w-full max-w-[800px] flex-col rounded-lg bg-white shadow-xl">
+
+        {/* Header */}
         <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4">
           <div className="flex items-center gap-2">
-            <SlidersHorizontal className="size-4 text-indigo-600" />
-            <span className="font-semibold text-indigo-600">Filtro avançado</span>
+            <SlidersHorizontal className="size-4 text-[#0F172A]" />
+            <span className="font-semibold text-[#0F172A]">Filtros avançados</span>
           </div>
           <button
             type="button"
@@ -250,7 +234,10 @@ export function ProductFilterModal({ open, onClose, onSave, initial }: ProductFi
           </button>
         </div>
 
+        {/* Body */}
         <div className="flex flex-col gap-5 px-6 py-5">
+
+          {/* Search */}
           <div>
             <label className="mb-2 block text-sm font-medium text-slate-700">
               Nome ou código do produto
@@ -260,49 +247,66 @@ export function ProductFilterModal({ open, onClose, onSave, initial }: ProductFi
               value={state.search}
               onChange={(e) => setState((s) => ({ ...s, search: e.target.value }))}
               placeholder="Insira o nome ou código do produto"
-              className="w-full rounded-md border border-slate-200 px-3 py-2.5 text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-full rounded-md border border-slate-200 px-3 py-2.5 text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0F172A]/20"
             />
           </div>
 
-          <div className="flex flex-col gap-4 sm:flex-row">
-            <MultiSelect
-              label="Categoria"
-              options={productCategoryOptions}
-              selected={state.categories}
-              onChange={(v) => setState((s) => ({ ...s, categories: v as ProductCategory[] }))}
-              placeholder="Selecione a categoria"
-              getTagClass={(cat) => CATEGORY_TAG_CLASS[cat as ProductCategory]}
-            />
-            <MultiSelect
-              label="Avaliação"
-              options={ratingLabelOptions}
-              selected={state.ratings}
-              onChange={(v) => setState((s) => ({ ...s, ratings: v as RatingLabel[] }))}
-              placeholder="Selecione a avaliação"
-              getTagClass={(r) => RATING_TAG_CLASS[r as RatingLabel]}
-            />
-          </div>
-
+          {/* Category multi-select */}
           <div>
-            <label className="mb-3 block text-sm font-medium text-slate-700">Faixa de preço</label>
-            <PriceRange
-              min={state.minPrice}
-              max={state.maxPrice}
-              onChange={(minPrice, maxPrice) => setState((s) => ({ ...s, minPrice, maxPrice }))}
+            <label className="mb-2 block text-sm font-medium text-slate-700">Categoria do produto</label>
+            <CategorySelect
+              selected={state.categories}
+              onChange={(v) => setState((s) => ({ ...s, categories: v }))}
             />
+          </div>
+
+          {/* Price range + Disponibilidade */}
+          <div className="grid grid-cols-2 gap-8">
+            <div>
+              <label className="mb-3 block text-sm font-medium text-slate-700">Faixa de preço</label>
+              <PriceRange
+                min={state.minPrice}
+                max={state.maxPrice}
+                onChange={(minPrice, maxPrice) => setState((s) => ({ ...s, minPrice, maxPrice }))}
+              />
+            </div>
+            <div>
+              <label className="mb-3 block text-sm font-medium text-slate-700">Disponibilidade</label>
+              <div className="flex flex-col gap-3">
+                <label className="flex cursor-pointer items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={state.apenasAtivo}
+                    onChange={(e) => setState((s) => ({ ...s, apenasAtivo: e.target.checked }))}
+                    className="size-4 accent-[#0F172A]"
+                  />
+                  <span className="text-sm text-slate-600">Ativo</span>
+                </label>
+                <label className="flex cursor-pointer items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={state.apenasInativo}
+                    onChange={(e) => setState((s) => ({ ...s, apenasInativo: e.target.checked }))}
+                    className="size-4 accent-[#0F172A]"
+                  />
+                  <span className="text-sm text-slate-600">Inativo</span>
+                </label>
+              </div>
+            </div>
           </div>
         </div>
 
+        {/* Footer */}
         <div className="flex justify-end gap-3 border-t border-slate-100 px-6 py-4">
-          <Button variant="outline" size="sm" className="h-9 gap-1.5 rounded-full px-5" onClick={onClose}>
-            <X className="size-3.5" /> Cancelar
+          <Button variant="outline" className="h-10 gap-2 rounded-full px-6" onClick={onClose} type="button">
+            <X className="size-4" /> Cancelar
           </Button>
           <Button
-            size="sm"
-            className="h-9 gap-1.5 rounded-full bg-slate-900 px-5 hover:bg-slate-800"
+            className="h-10 gap-2 rounded-full bg-[#1E293B] px-6 hover:bg-[#1E293B]/90 text-white"
             onClick={() => { onSave(state); onClose() }}
+            type="button"
           >
-            <Check className="size-3.5" /> Salvar alterações
+            <Check className="size-4" /> Salvar alterações
           </Button>
         </div>
       </div>

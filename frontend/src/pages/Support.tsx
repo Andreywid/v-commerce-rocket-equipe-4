@@ -1,95 +1,111 @@
-import { useMemo, useState } from "react"
+import { useState } from "react"
 import { ClipboardList, Pencil } from "lucide-react"
 
-import type { SupportFormValues, SupportRow, SupportType } from "@/types"
+import type { SupportType } from "@/types"
+import type { TicketOut } from "@/types/api"
+import { supportStatusClasses, supportTypeClasses } from "@/constants/badgeStyles"
 import { useAppContext } from "@/context/AppContext"
-import { getSupportMetrics } from "@/helpers/metrics"
-import { rowIncludes } from "@/helpers/storage"
+import { useSupport } from "@/hooks/useSupport"
+import { useDebounce } from "@/hooks/useDebounce"
 import { DataPanel } from "@/components/shared/DataPanel"
 import { MetricGrid } from "@/components/shared/MetricCard"
 import { PageShell } from "@/components/shared/PageShell"
-import { RatingBadge, StatusBadge } from "@/components/shared/StatusBadge"
-import { SupportFormModal } from "@/components/shared/SupportFormModal"
+import { StatusBadge } from "@/components/shared/StatusBadge"
 import { SupportFilterModal, emptySupportFilters, type SupportFilters } from "@/components/shared/SupportFilterModal"
 import { TicketDetailModal } from "@/components/shared/TicketDetailModal"
+import { TicketFormModal } from "@/components/shared/TicketFormModal"
+import { RatingBadge } from "@/components/shared/RatingBadge"
 import { EmptyTableState, TableHead, TableBody, TableHeader, TableRow, TableCell, TablePagination } from "@/components/shared/Table"
 import { TableToolbar } from "@/components/shared/TableToolbar"
+import { Heart, Smile, Users } from "lucide-react"
+import type { Metric } from "@/types"
 
-const PAGE_SIZE = 5
+const PAGE_SIZE = 6
 
-const supportTypeClasses: Record<SupportType, string> = {
-  Pagamento: "bg-indigo-50 text-indigo-500 border-indigo-200",
-  Atraso:    "bg-amber-50 text-amber-500 border-amber-200",
-  Reembolso: "bg-rose-50 text-rose-500 border-rose-200",
+function formatDate(iso: string): string {
+  return new Date(iso).toLocaleDateString("pt-BR")
 }
-
-
-type FilteredTicket = { ticket: SupportRow; index: number }
 
 function SupportTable({
   currentPage,
   filteredCount,
   onEditTicket,
   onPageChange,
+  onSort,
   onViewTicket,
   pageCount,
   rows,
+  sortBy,
+  sortOrder,
   totalCount,
 }: {
   currentPage: number
   filteredCount: number
-  onEditTicket: (index: number) => void
+  onEditTicket: (ticket: TicketOut) => void
   onPageChange: (page: number) => void
-  onViewTicket: (index: number) => void
+  onSort: (key: string) => void
+  onViewTicket: (ticket: TicketOut) => void
   pageCount: number
-  rows: FilteredTicket[]
+  rows: TicketOut[]
+  sortBy?: string
+  sortOrder?: "asc" | "desc"
   totalCount: number
 }) {
   return (
     <div className="overflow-x-auto">
-      <table className="min-w-225 w-full table-fixed text-left">
+      <table className="min-w-240 w-full table-fixed text-left">
         <TableHeader>
           <TableRow className="h-12 border-slate-200 text-sm text-slate-950 hover:bg-transparent">
-            <TableHead sortable className="w-42.5 pl-5">Ticket</TableHead>
-            <TableHead className="w-40">Cliente</TableHead>
-            <TableHead className="w-32.5">Tipo</TableHead>
-            <TableHead sortable className="w-42.5">Data de criação</TableHead>
-            <TableHead className="w-37.5">Data de resolução</TableHead>
-            <TableHead sortable className="w-35">Avaliação</TableHead>
-            <TableHead className="w-22.5" />
+            <TableHead className="w-32 pl-5">Prazo</TableHead>
+            <TableHead sortKey="id_ticket" currentSortKey={sortBy} currentSortOrder={sortOrder} onSort={onSort} className="w-38">Ticket</TableHead>
+            <TableHead className="w-38">Cliente</TableHead>
+            <TableHead className="w-28">Tipo</TableHead>
+            <TableHead sortKey="data_abertura" currentSortKey={sortBy} currentSortOrder={sortOrder} onSort={onSort} className="w-28">Data</TableHead>
+            <TableHead sortKey="status_ticket" currentSortKey={sortBy} currentSortOrder={sortOrder} onSort={onSort} className="w-28">Status</TableHead>
+            <TableHead className="w-38">Sentimento</TableHead>
+            <TableHead className="w-14" />
           </TableRow>
         </TableHeader>
         <TableBody>
-          {rows.map(({ ticket: row, index }) => (
-            <TableRow
-              key={`${row.ticket}-${index}`}
-              className="h-14.5 border-slate-100 text-sm text-slate-700"
-            >
+          {rows.map((row) => (
+            <TableRow key={row.id_ticket} className="h-14.5 border-slate-100 text-sm text-slate-700">
               <TableCell className="pl-5">
+                <StatusBadge className={row.sla_estourado ? "bg-rose-50 text-rose-600 border-rose-200" : "bg-indigo-50 text-indigo-600 border-indigo-200"}>
+                  {row.sla_estourado ? "Fora do prazo" : "No prazo"}
+                </StatusBadge>
+              </TableCell>
+              <TableCell>
                 <button
-                  className="font-semibold text-slate-800 transition hover:text-indigo-600"
-                  onClick={() => onViewTicket(index)}
+                  className="block w-full truncate text-left font-semibold text-slate-800 transition hover:text-indigo-600"
+                  onClick={() => onViewTicket(row)}
+                  title={`#${row.id_ticket}`}
                   type="button"
                 >
-                  {row.ticket}
+                  #{row.id_ticket.slice(0, 8)}...
                 </button>
               </TableCell>
-              <TableCell>{row.customer}</TableCell>
+              <TableCell className="max-w-0"><span className="block truncate">{row.nome_cliente}</span></TableCell>
               <TableCell>
-                <StatusBadge className={supportTypeClasses[row.type]}>{row.type}</StatusBadge>
+                <StatusBadge className={supportTypeClasses[row.tipo_problema as SupportType]}>
+                  {row.tipo_problema}
+                </StatusBadge>
               </TableCell>
-              <TableCell className="font-medium">{row.createdAt}</TableCell>
-              <TableCell>{row.resolvedIn}</TableCell>
+              <TableCell className="font-medium">{formatDate(row.data_abertura)}</TableCell>
               <TableCell>
-                <RatingBadge rating={row.rating} label={row.ratingLabel} />
+                <StatusBadge className={supportStatusClasses[row.status_ticket]}>
+                  {row.status_ticket}
+                </StatusBadge>
+              </TableCell>
+              <TableCell>
+                {row.nota_avaliacao != null ? <RatingBadge nota={row.nota_avaliacao} /> : <span className="text-slate-400">—</span>}
               </TableCell>
               <TableCell>
                 <button
-                  className="grid place-items-center rounded-md p-1 transition hover:bg-indigo-50"
-                  onClick={() => onEditTicket(index)}
+                  className="grid place-items-center rounded-md p-1 transition hover:bg-slate-100"
+                  onClick={() => onEditTicket(row)}
                   type="button"
                 >
-                  <Pencil className="size-4 text-[#4F46E5]" />
+                  <Pencil className="size-4 text-[#6366F1]" />
                 </button>
               </TableCell>
             </TableRow>
@@ -108,97 +124,110 @@ function SupportTable({
   )
 }
 
-function useFilteredTickets(search: string, filters: SupportFilters) {
-  const { tickets } = useAppContext()
-  return useMemo(
-    () =>
-      tickets
-        .map((ticket, index) => ({ ticket, index }))
-        .filter(({ ticket }) => {
-          const matchesSearch = rowIncludes(ticket, search)
-          const matchesDate = !filters.date || ticket.createdAt.includes(filters.date)
-          const matchesType = filters.types.length === 0 || filters.types.includes(ticket.type)
-          const matchesStatus = filters.statuses.length === 0 || filters.statuses.includes(ticket.status)
-          const matchesRating = filters.ratings.length === 0 || filters.ratings.includes(ticket.ratingLabel)
-          return matchesSearch && matchesDate && matchesType && matchesStatus && matchesRating
-        }),
-    [tickets, search, filters],
-  )
-}
-
 export function SupportPage() {
-  const { tickets, addTicket, updateTicket, clients, showNotice } = useAppContext()
-  const [ticketSearch, setTicketSearch] = useState("")
+  const { showNotice } = useAppContext()
+  const [search, setSearch] = useState("")
   const [advancedFilters, setAdvancedFilters] = useState<SupportFilters>(emptySupportFilters)
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false)
   const [currentPage, setCurrentPage] = useState(1)
-  const [isTicketModalOpen, setIsTicketModalOpen] = useState(false)
-  const [editingTicketIndex, setEditingTicketIndex] = useState<number | null>(null)
-  const [viewingTicketIndex, setViewingTicketIndex] = useState<number | null>(null)
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false)
+  const [viewingTicket, setViewingTicket] = useState<TicketOut | null>(null)
+  const [editingTicket, setEditingTicket] = useState<TicketOut | null>(null)
+  const [sortBy, setSortBy] = useState<string | undefined>(undefined)
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc")
 
-  const filteredTickets = useFilteredTickets(ticketSearch, advancedFilters)
-  const metrics = getSupportMetrics(tickets)
+  const debouncedSearch = useDebounce(search, 400)
+  const { data, isPending } = useSupport(
+    {
+      tipos: advancedFilters.types.length > 0 ? advancedFilters.types : undefined,
+      statuses: advancedFilters.statuses.length > 0 ? advancedFilters.statuses : undefined,
+      satisfacoes: advancedFilters.satisfacoes.length > 0 ? advancedFilters.satisfacoes : undefined,
+      data_abertura: advancedFilters.date || undefined,
+      nome: debouncedSearch || undefined,
+      sort_by: sortBy,
+      order: sortBy ? sortOrder : undefined,
+    },
+    currentPage,
+    PAGE_SIZE,
+  )
 
-  const pageCount = Math.max(1, Math.ceil(filteredTickets.length / PAGE_SIZE))
-  const safePage = Math.min(currentPage, pageCount)
-  const paginatedTickets = filteredTickets.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE)
+  const items = data?.items ?? []
+  const total = data?.total ?? 0
+  const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE))
+  const filteredItems = items
+
+  const resolvidos = items.filter((t) => t.status_ticket === "Resolvido").length
+  const abertos = items.filter((t) => t.status_ticket === "Aberto").length
+
+  const metrics: Metric[] = [
+    { label: "Tickets resolvidos", value: String(resolvidos),   helper: "Nesta página",       tone: "emerald", icon: Users },
+    { label: "Total de tickets",   value: total.toLocaleString("pt-BR"), helper: "Resultado dos filtros", tone: "emerald", icon: Smile },
+    { label: "Tickets em aberto",  value: String(abertos),      helper: "Nesta página",       tone: "rose",    icon: Users },
+    { label: "Total (página)",     value: String(items.length), helper: "Tickets exibidos",   tone: "violet",  icon: Heart },
+  ]
 
   const isAdvancedFilterActive = !!(
     advancedFilters.date ||
     advancedFilters.types.length > 0 ||
     advancedFilters.statuses.length > 0 ||
-    advancedFilters.ratings.length > 0
+    advancedFilters.satisfacoes.length > 0
   )
 
+  function handleSort(key: string) {
+    if (sortBy === key) {
+      if (sortOrder === "asc") { setSortOrder("desc") }
+      else { setSortBy(undefined) }
+    } else {
+      setSortBy(key)
+      setSortOrder("asc")
+    }
+    setCurrentPage(1)
+  }
+
   function handleSearchChange(value: string) {
-    setTicketSearch(value)
+    setSearch(value)
     setCurrentPage(1)
   }
 
   function handleApplyFilters(filters: SupportFilters) {
     setAdvancedFilters(filters)
     setCurrentPage(1)
-  }
-
-  function handleAddTicket(values: SupportFormValues) {
-    addTicket(values)
-    setIsTicketModalOpen(false)
-    showNotice("Ticket adicionado")
-  }
-
-  function handleUpdateTicket(values: SupportFormValues) {
-    if (editingTicketIndex === null) return
-    updateTicket(editingTicketIndex, values)
-    setEditingTicketIndex(null)
-    showNotice("Ticket atualizado")
+    if (filters.types.length > 0 || filters.statuses.length > 0 || filters.satisfacoes.length > 0) showNotice("Filtros aplicados")
   }
 
   return (
     <PageShell title="Suporte">
       <MetricGrid metrics={metrics} />
 
-      <DataPanel>
+      <DataPanel className="h-[556px] overflow-hidden">
         <TableToolbar
-          actionLabel="Adicionar ticket"
+          actionLabel="Registrar novo ticket"
           advancedFilterActive={isAdvancedFilterActive}
           icon={ClipboardList}
           label="Tickets de suporte"
-          onAction={() => setIsTicketModalOpen(true)}
+          onAction={() => setIsAddModalOpen(true)}
           onAdvancedFilter={() => setIsFilterModalOpen(true)}
           onSearchChange={handleSearchChange}
-          placeholder="Busque por ticket, cliente, tipo ou avaliação"
-          searchValue={ticketSearch}
+          placeholder="Busque por ticket, cliente ou tipo"
+          searchValue={search}
         />
-        <SupportTable
-          currentPage={safePage}
-          filteredCount={filteredTickets.length}
-          onEditTicket={setEditingTicketIndex}
-          onPageChange={setCurrentPage}
-          onViewTicket={setViewingTicketIndex}
-          pageCount={pageCount}
-          rows={paginatedTickets}
-          totalCount={tickets.length}
-        />
+        {isPending ? (
+          <div className="flex h-40 items-center justify-center text-sm text-slate-400">Carregando...</div>
+        ) : (
+          <SupportTable
+            currentPage={currentPage}
+            filteredCount={total}
+            onEditTicket={setEditingTicket}
+            onPageChange={setCurrentPage}
+            onSort={handleSort}
+            onViewTicket={setViewingTicket}
+            pageCount={pageCount}
+            rows={filteredItems}
+            sortBy={sortBy}
+            sortOrder={sortOrder}
+            totalCount={total}
+          />
+        )}
       </DataPanel>
 
       {isFilterModalOpen && (
@@ -208,24 +237,26 @@ export function SupportPage() {
           onClose={() => setIsFilterModalOpen(false)}
         />
       )}
-      {isTicketModalOpen && (
-        <SupportFormModal onClose={() => setIsTicketModalOpen(false)} onSubmit={handleAddTicket} title="Adicionar ticket" />
-      )}
-      {editingTicketIndex !== null && (
-        <SupportFormModal
-          initialValues={tickets[editingTicketIndex]}
-          onClose={() => setEditingTicketIndex(null)}
-          onSubmit={handleUpdateTicket}
-          ticketId={tickets[editingTicketIndex].ticket}
-          title="Editar ticket"
+      {viewingTicket && (
+        <TicketDetailModal
+          ticket={viewingTicket}
+          onClose={() => setViewingTicket(null)}
         />
       )}
-      {viewingTicketIndex !== null && (
-        <TicketDetailModal
-          clients={clients}
-          onClose={() => setViewingTicketIndex(null)}
-          ticket={tickets[viewingTicketIndex]}
-          tickets={tickets}
+      {isAddModalOpen && (
+        <TicketFormModal
+          mode="add"
+          onClose={() => setIsAddModalOpen(false)}
+          onSubmit={() => { setIsAddModalOpen(false); showNotice("Ticket registrado") }}
+        />
+      )}
+      {editingTicket && (
+        <TicketFormModal
+          mode="edit"
+          ticket={editingTicket}
+          onClose={() => setEditingTicket(null)}
+          onDelete={() => { setEditingTicket(null); showNotice("Ticket excluído") }}
+          onSubmit={() => { setEditingTicket(null); showNotice("Ticket atualizado") }}
         />
       )}
     </PageShell>

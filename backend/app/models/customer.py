@@ -5,8 +5,9 @@ from app.database import Base
 class Customer(Base):
     __tablename__ = "gold_cliente_360"
 
-    id_cliente = Column(Integer, primary_key=True, index=True)
-    nome = Column(String)
+    id_cliente = Column(String, primary_key=True, index=True)
+    nome = Column(String, index=True)
+
     email = Column(String, index=True)
     telefone = Column(String, nullable=True)
     data_cadastro = Column(Date, nullable=True)

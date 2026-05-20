@@ -1,9 +1,10 @@
-type HighlightTone = "emerald" | "amber" | "rose"
+type HighlightTone = "emerald" | "indigo" | "amber" | "rose"
 
 const highlightBadge: Record<HighlightTone, string> = {
-  emerald: "border-emerald-400 text-emerald-500",
-  amber:   "border-amber-400 text-amber-500",
-  rose:    "border-rose-400 text-rose-500",
+  emerald: "bg-[#F0FDF4] border-[#BBF7D0] text-[#22C55E]",
+  indigo:  "bg-[#EEF2FF] border-[#C7D2FE] text-[#6366F1]",
+  amber:   "bg-[#FFFBEB] border-[#FDE68A] text-[#F59E0B]",
+  rose:    "bg-[#FFF1F2] border-[#FECDD3] text-[#F43F5E]",
 }
 
 export function ProductHighlightCard({
@@ -27,7 +28,7 @@ export function ProductHighlightCard({
       </div>
       <div className="flex items-center justify-between gap-2">
         <p className="truncate text-base font-bold text-slate-900">{productName}</p>
-        <span className={`shrink-0 rounded-full border bg-white px-2.5 py-0.5 text-xs font-bold ${highlightBadge[tone]}`}>
+        <span className={`shrink-0 rounded-full border px-2.5 py-0.5 text-xs font-bold ${highlightBadge[tone]}`}>
           {metricValue}
         </span>
       </div>

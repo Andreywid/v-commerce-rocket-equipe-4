@@ -1,22 +1,12 @@
 import { useState } from "react"
-import { Outlet, useLocation } from "react-router-dom"
+import { Outlet } from "react-router-dom"
 
-import type { PageKey } from "@/types"
-import { useAppContext } from "@/context/AppContext"
 import { AssistantPanel } from "@/components/shared/AssistantPanel"
 import { FloatingAssistant } from "@/components/shared/FloatingAssistant"
 import { Header } from "./Header"
 import { Sidebar } from "./Sidebar"
 
-function deriveCurrentPage(pathname: string): PageKey {
-  if (pathname.includes("pedidos")) return "orders"
-  if (pathname.includes("suporte")) return "support"
-  return "dashboard"
-}
-
 export function AppLayout({ email, name, onLogout }: { email: string; name: string; onLogout: () => void }) {
-  const { orders, tickets } = useAppContext()
-  const { pathname } = useLocation()
   const [isAssistantOpen, setIsAssistantOpen] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
 
@@ -34,17 +24,12 @@ export function AppLayout({ email, name, onLogout }: { email: string; name: stri
         </div>
       </div>
 
-      {!isAssistantOpen && (
-        <FloatingAssistant onClick={() => setIsAssistantOpen(true)} />
-      )}
-      {isAssistantOpen && (
-        <AssistantPanel
-          currentPage={deriveCurrentPage(pathname)}
-          onClose={() => setIsAssistantOpen(false)}
-          orders={orders}
-          tickets={tickets}
-        />
-      )}
+      <FloatingAssistant onClick={() => setIsAssistantOpen((o) => !o)} isOpen={isAssistantOpen} />
+      <AssistantPanel
+        isVisible={isAssistantOpen}
+        onClose={() => setIsAssistantOpen(false)}
+        onMinimize={() => setIsAssistantOpen(false)}
+      />
     </main>
   )
 }
