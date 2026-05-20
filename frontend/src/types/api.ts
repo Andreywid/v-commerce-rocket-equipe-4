@@ -48,6 +48,16 @@ export type KPIsResponse = {
   meses: VendasKPIMes[]
 }
 
+export type TopRegiao = {
+  estado: string
+  receita: number
+  percentual: number
+}
+
+export type TopRegioesResponse = {
+  regioes: TopRegiao[]
+}
+
 // Clientes
 export type CustomerOut = {
   id_cliente: string
@@ -84,7 +94,9 @@ export type Customer360 = CustomerOut & {
   data_referencia_calculo: string
 }
 
-export type CustomerListResponse = PagedResponse<CustomerOut>
+export type CustomerListResponse = PagedResponse<CustomerOut> & {
+  segmento_alto: number
+}
 
 export type CustomerCreate = {
   nome: string
@@ -136,7 +148,11 @@ export type OrderOut = {
   trimestre: number
 }
 
-export type OrderListResponse = PagedResponse<OrderOut>
+export type OrderListResponse = PagedResponse<OrderOut> & {
+  total_pendentes: number
+  total_aprovados: number
+  receita_total: number
+}
 
 export type OrderCreate = {
   id_pedido: string

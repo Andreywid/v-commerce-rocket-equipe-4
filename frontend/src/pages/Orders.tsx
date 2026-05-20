@@ -22,8 +22,6 @@ import { EmptyTableState, TableHead, TableBody, TableHeader, TableRow, TableCell
 import { TableToolbar } from "@/components/shared/TableToolbar"
 import { CircleDollarSign, Heart, Smile, Tag } from "lucide-react"
 
-const PAGE_SIZE = 6
-
 function formatBRL(value: number | null | undefined): string {
   if (value == null) return "—"
   return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
@@ -38,8 +36,10 @@ function OrdersTable({
   filteredCount,
   onEditOrder,
   onPageChange,
+  onPageSizeChange,
   onSort,
   pageCount,
+  pageSize,
   rows,
   sortBy,
   sortOrder,
@@ -49,8 +49,10 @@ function OrdersTable({
   filteredCount: number
   onEditOrder: (id: string) => void
   onPageChange: (page: number) => void
+  onPageSizeChange: (size: number) => void
   onSort: (key: string) => void
   pageCount: number
+  pageSize: number
   rows: OrderOut[]
   sortBy?: string
   sortOrder?: "asc" | "desc"
@@ -105,7 +107,9 @@ function OrdersTable({
         currentPage={currentPage}
         filteredCount={filteredCount}
         onPageChange={onPageChange}
+        onPageSizeChange={onPageSizeChange}
         pageCount={pageCount}
+        pageSize={pageSize}
         totalCount={totalCount}
       />
     </div>
@@ -117,6 +121,7 @@ export function OrdersPage() {
   const [search, setSearch] = useState("")
   const [orderFilters, setOrderFilters] = useState<OrderFilters>(emptyOrderFilters)
   const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize, setPageSize] = useState(6)
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false)
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -144,18 +149,18 @@ export function OrdersPage() {
       dentro_prazo: dentroPrazo,
     },
     currentPage,
-    PAGE_SIZE,
+    pageSize,
   )
 
   const items = data?.items ?? []
   const editingOrder = items.find((o) => o.id_pedido === editingId) ?? null
   const total = data?.total ?? 0
-  const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE))
+  const pageCount = Math.max(1, Math.ceil(total / pageSize))
   const filteredItems = items
 
-  const aprovados = items.filter((o) => o.status === "Aprovado").length
-  const processando = items.filter((o) => o.status === "Processando").length
-  const receitaTotal = items.reduce((sum, o) => sum + o.valor_total, 0)
+  const aprovados    = data?.total_aprovados ?? 0
+  const processando  = data?.total_pendentes ?? 0
+  const receitaTotal = data?.receita_total   ?? 0
 
   const isFilterActive =
     !!orderFilters.date ||
@@ -164,6 +169,11 @@ export function OrdersPage() {
     orderFilters.priceMax < 100000 ||
     orderFilters.dentroDosPrazo ||
     orderFilters.foraDoPrazo
+
+  function handlePageSizeChange(size: number) {
+    setPageSize(size)
+    setCurrentPage(1)
+  }
 
   function handleSort(key: string) {
     if (sortBy === key) {
@@ -227,10 +237,10 @@ export function OrdersPage() {
   return (
     <PageShell title="Pedidos">
       <DataGrid>
-        <DataCard label="Pedidos pendentes"  value={String(processando)} helper="Nesta página"    tone="indigo" icon={Tag} />
+        <DataCard label="Pedidos pendentes"  value={String(processando)} helper="Resultado dos filtros" tone="indigo" icon={Tag} />
         <DataCard label="Total de pedidos"   value={total.toLocaleString("pt-BR")} helper="Resultado dos filtros" tone="indigo" icon={Smile} />
-        <DataCard label="Receita (página)"   value={formatBRL(receitaTotal)} helper="Soma dos pedidos exibidos" tone="rose" icon={CircleDollarSign} />
-        <DataCard label="Pedidos aprovados"  value={String(aprovados)} helper="Nesta página"   tone="emerald" icon={Heart} />
+        <DataCard label="Receita total"      value={formatBRL(receitaTotal)} helper="Resultado dos filtros" tone="rose" icon={CircleDollarSign} />
+        <DataCard label="Pedidos aprovados"  value={String(aprovados)} helper="Resultado dos filtros" tone="emerald" icon={Heart} />
       </DataGrid>
 
       <DataPanel>
@@ -258,8 +268,10 @@ export function OrdersPage() {
             filteredCount={total}
             onEditOrder={setEditingId}
             onPageChange={setCurrentPage}
+            onPageSizeChange={handlePageSizeChange}
             onSort={handleSort}
             pageCount={pageCount}
+            pageSize={pageSize}
             rows={filteredItems}
             sortBy={sortBy}
             sortOrder={sortOrder}

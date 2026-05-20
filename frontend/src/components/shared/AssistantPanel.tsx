@@ -1,6 +1,6 @@
 import React, { useState } from "react"
 import { useNavigate } from "react-router-dom"
-import { Eye, Minus, Route, Send, X } from "lucide-react"
+import { Eye, RotateCcw, Route, Send, X } from "lucide-react"
 
 import type { ChatMessage } from "@/types"
 import { useAgentChat, useAgentSuggestions } from "@/hooks/useAgent"
@@ -77,11 +77,9 @@ function ErrorBlock() {
 export function AssistantPanel({
   isVisible,
   onClose,
-  onMinimize,
 }: {
   isVisible: boolean
   onClose: () => void
-  onMinimize: () => void
 }) {
   const [question, setQuestion] = useState("")
   const [sessionId, setSessionId] = useState<string | null>(null)
@@ -95,10 +93,9 @@ export function AssistantPanel({
   const mutation = useAgentChat()
   const hasMessages = messages.length > 0
 
-  function handleClose() {
+  function handleNewConversation() {
     setMessages([])
     setSessionId(null)
-    onClose()
   }
 
   function sendMessage(message: string) {
@@ -144,11 +141,12 @@ export function AssistantPanel({
   if (!isVisible) return null
 
   return (
-    <div className="pointer-events-none fixed inset-0 z-50">
+    <div className="fixed inset-0 z-50" onClick={onClose}>
       <section
         className="pointer-events-auto fixed right-5 flex flex-col rounded-lg border border-slate-200 bg-white shadow-xl md:right-7"
+        onClick={(e) => e.stopPropagation()}
         style={{
-          bottom: "calc(28px + 64px + 12px)",
+          bottom: "calc(16px + 48px + 12px)",
           width: "min(464px, calc(100vw - 40px))",
           height: "min(793px, calc(100dvh - 160px))",
         }}
@@ -158,17 +156,19 @@ export function AssistantPanel({
           <h2 className="text-base font-semibold text-slate-900">Chat IA</h2>
           <div className="flex items-center gap-2">
             <button
-              aria-label="Minimizar assistente"
-              className="grid size-8 place-items-center rounded-full border border-slate-200 text-slate-500 transition hover:bg-slate-100"
-              onClick={onMinimize}
+              aria-label="Iniciar nova conversa"
+              className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium text-white transition hover:opacity-80"
+              onClick={handleNewConversation}
+              style={{ backgroundColor: "#0F172A" }}
               type="button"
             >
-              <Minus className="size-4" />
+              <RotateCcw className="size-3" />
+              Iniciar nova conversa
             </button>
             <button
               aria-label="Fechar assistente"
               className="grid size-8 place-items-center rounded-full border border-slate-200 text-slate-500 transition hover:bg-slate-100"
-              onClick={handleClose}
+              onClick={onClose}
               type="button"
             >
               <X className="size-4" />
@@ -232,7 +232,7 @@ export function AssistantPanel({
                               onView={(() => {
                                 const route = routeForSource(message.source!)
                                 if (!route) return null
-                                return () => { navigate(route); onMinimize() }
+                                return () => { navigate(route); onClose() }
                               })()}
                             />
                           )}

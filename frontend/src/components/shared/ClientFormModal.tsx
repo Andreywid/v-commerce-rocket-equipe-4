@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { ConfirmDeleteDialog } from "@/components/shared/ConfirmDeleteDialog"
 
 type AddProps = { mode: "add"; customer?: never; onDelete?: never }
 type EditProps = { mode: "edit"; customer: CustomerOut; onDelete: () => void }
@@ -28,6 +29,7 @@ export function ClientFormModal({ mode, customer, onClose, onDelete, onSubmit }:
   const [estado, setEstado] = useState(isEditing ? (customer.estado ?? "") : "")
 
   const isPending = create.isPending || update.isPending || remove.isPending
+  const [confirmingDelete, setConfirmingDelete] = useState(false)
 
   function handleDelete() {
     if (!isEditing) return
@@ -62,6 +64,13 @@ export function ClientFormModal({ mode, customer, onClose, onDelete, onSubmit }:
   }
 
   return (
+    <>
+    <ConfirmDeleteDialog
+      open={confirmingDelete}
+      entityName="cliente"
+      onCancel={() => setConfirmingDelete(false)}
+      onConfirm={() => { setConfirmingDelete(false); handleDelete() }}
+    />
     <Dialog open onOpenChange={(open) => { if (!open) onClose() }}>
       <DialogContent className="sm:max-w-[800px] rounded-lg px-6 py-4 gap-0">
         <DialogHeader className="border-b border-slate-100 pb-4">
@@ -129,7 +138,7 @@ export function ClientFormModal({ mode, customer, onClose, onDelete, onSubmit }:
                 variant="outline"
                 className="h-10 gap-2 rounded-full border-[#F43F5E] px-6 text-[#F43F5E] hover:bg-rose-50 hover:text-[#F43F5E]"
                 disabled={isPending}
-                onClick={handleDelete}
+                onClick={() => setConfirmingDelete(true)}
                 type="button"
               >
                 <Trash2 className="size-4" />
@@ -162,5 +171,6 @@ export function ClientFormModal({ mode, customer, onClose, onDelete, onSubmit }:
         </form>
       </DialogContent>
     </Dialog>
+    </>
   )
 }

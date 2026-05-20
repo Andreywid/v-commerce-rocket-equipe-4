@@ -21,8 +21,6 @@ import { TableToolbar } from "@/components/shared/TableToolbar"
 import { MapPin, Smile, Tag } from "lucide-react"
 import type { Metric } from "@/types"
 
-const PAGE_SIZE = 6
-
 function getInitials(name: string): string {
   const parts = name.trim().split(" ")
   if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase()
@@ -48,9 +46,11 @@ function ClientsTable({
   filteredCount,
   onEditClient,
   onPageChange,
+  onPageSizeChange,
   onSort,
   onViewProfile,
   pageCount,
+  pageSize,
   rows,
   sortBy,
   sortOrder,
@@ -60,9 +60,11 @@ function ClientsTable({
   filteredCount: number
   onEditClient: (customer: CustomerOut) => void
   onPageChange: (page: number) => void
+  onPageSizeChange: (size: number) => void
   onSort: (key: string) => void
   onViewProfile: (id: string) => void
   pageCount: number
+  pageSize: number
   rows: CustomerOut[]
   sortBy?: string
   sortOrder?: "asc" | "desc"
@@ -131,7 +133,9 @@ function ClientsTable({
         currentPage={currentPage}
         filteredCount={filteredCount}
         onPageChange={onPageChange}
+        onPageSizeChange={onPageSizeChange}
         pageCount={pageCount}
+        pageSize={pageSize}
         totalCount={totalCount}
       />
     </div>
@@ -143,6 +147,7 @@ export function ClientsPage() {
   const [search, setSearch] = useState("")
   const [advancedFilters, setAdvancedFilters] = useState<ClientAdvancedFilters>(emptyClientAdvancedFilters)
   const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize, setPageSize] = useState(6)
   const [isAdvancedFilterOpen, setIsAdvancedFilterOpen] = useState(false)
   const [profileId, setProfileId] = useState<string | null>(null)
   const [editingClient, setEditingClient] = useState<CustomerOut | null>(null)
@@ -170,17 +175,17 @@ export function ClientsPage() {
       order: sortBy ? sortOrder : undefined,
     },
     currentPage,
-    PAGE_SIZE,
+    pageSize,
   )
 
   const items = data?.items ?? []
   const total = data?.total ?? 0
-  const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE))
+  const pageCount = Math.max(1, Math.ceil(total / pageSize))
   const filteredItems = items
 
   const metrics: Metric[] = [
     { label: "Total de clientes", value: total.toLocaleString("pt-BR"), helper: "Cadastrados", tone: "emerald", icon: Users },
-    { label: "Segmento Alto",      value: String(items.filter((c) => c.segmento_ltv === "Alto").length), helper: "Na página atual", tone: "indigo",  icon: Tag },
+    { label: "Segmento Alto",      value: String(data?.segmento_alto ?? 0), helper: "Resultado dos filtros", tone: "indigo",  icon: Tag },
     {
       label: "Nota média",
       value: stats?.nota_media != null ? `${stats.nota_media.toFixed(1)}/5.0` : "—",
@@ -196,6 +201,11 @@ export function ClientsPage() {
       icon: MapPin,
     },
   ]
+
+  function handlePageSizeChange(size: number) {
+    setPageSize(size)
+    setCurrentPage(1)
+  }
 
   function handleSort(key: string) {
     if (sortBy === key) {
@@ -242,9 +252,11 @@ export function ClientsPage() {
             filteredCount={total}
             onEditClient={setEditingClient}
             onPageChange={setCurrentPage}
+            onPageSizeChange={handlePageSizeChange}
             onSort={handleSort}
             onViewProfile={setProfileId}
             pageCount={pageCount}
+            pageSize={pageSize}
             rows={filteredItems}
             sortBy={sortBy}
             sortOrder={sortOrder}

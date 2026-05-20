@@ -70,22 +70,41 @@ function getPageNumbers(current: number, total: number): (number | "…")[] {
   return pages
 }
 
+const PAGE_SIZE_OPTIONS = [6, 10, 20, 50]
+
 export function TablePagination({
   currentPage,
   filteredCount,
   onPageChange,
+  onPageSizeChange,
   pageCount,
+  pageSize,
   totalCount,
 }: {
   currentPage: number
   filteredCount: number
   onPageChange: (page: number) => void
+  onPageSizeChange: (size: number) => void
   pageCount: number
+  pageSize: number
   totalCount: number
 }) {
   const pages = getPageNumbers(currentPage, pageCount)
   return (
-    <div className="flex min-w-[900px] flex-col gap-3 px-5 py-4 text-sm text-slate-700 sm:flex-row sm:items-center sm:justify-between">
+    <div className="flex min-w-[900px] items-center justify-between px-5 py-4 text-sm text-slate-700">
+      <div className="flex items-center gap-2 text-slate-500">
+        <span>Linhas por página</span>
+        <select
+          className="rounded border border-slate-200 bg-white px-2 py-0.5 text-sm text-slate-700 shadow-sm focus:outline-none focus:ring-1 focus:ring-indigo-400"
+          onChange={(e) => onPageSizeChange(Number(e.target.value))}
+          value={pageSize}
+        >
+          {PAGE_SIZE_OPTIONS.map((n) => (
+            <option key={n} value={n}>{n}</option>
+          ))}
+        </select>
+      </div>
+
       <div className="flex items-center gap-2">
         <button
           className="font-medium transition hover:text-indigo-600 disabled:cursor-not-allowed disabled:opacity-40"
@@ -123,6 +142,7 @@ export function TablePagination({
           Próximo
         </button>
       </div>
+
       <p className="text-slate-600">
         Mostrando {filteredCount} de {totalCount} resultados
       </p>

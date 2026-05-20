@@ -17,10 +17,9 @@ import { TicketFormModal } from "@/components/shared/TicketFormModal"
 import { RatingBadge } from "@/components/shared/RatingBadge"
 import { EmptyTableState, TableHead, TableBody, TableHeader, TableRow, TableCell, TablePagination } from "@/components/shared/Table"
 import { TableToolbar } from "@/components/shared/TableToolbar"
+import { exportTicketsToCSV } from "@/helpers/export"
 import { Heart, Smile, Users } from "lucide-react"
 import type { Metric } from "@/types"
-
-const PAGE_SIZE = 6
 
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString("pt-BR")
@@ -31,9 +30,11 @@ function SupportTable({
   filteredCount,
   onEditTicket,
   onPageChange,
+  onPageSizeChange,
   onSort,
   onViewTicket,
   pageCount,
+  pageSize,
   rows,
   sortBy,
   sortOrder,
@@ -43,9 +44,11 @@ function SupportTable({
   filteredCount: number
   onEditTicket: (ticket: TicketOut) => void
   onPageChange: (page: number) => void
+  onPageSizeChange: (size: number) => void
   onSort: (key: string) => void
   onViewTicket: (ticket: TicketOut) => void
   pageCount: number
+  pageSize: number
   rows: TicketOut[]
   sortBy?: string
   sortOrder?: "asc" | "desc"
@@ -117,7 +120,9 @@ function SupportTable({
         currentPage={currentPage}
         filteredCount={filteredCount}
         onPageChange={onPageChange}
+        onPageSizeChange={onPageSizeChange}
         pageCount={pageCount}
+        pageSize={pageSize}
         totalCount={totalCount}
       />
     </div>
@@ -130,6 +135,7 @@ export function SupportPage() {
   const [advancedFilters, setAdvancedFilters] = useState<SupportFilters>(emptySupportFilters)
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false)
   const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize, setPageSize] = useState(6)
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
   const [viewingTicket, setViewingTicket] = useState<TicketOut | null>(null)
   const [editingTicket, setEditingTicket] = useState<TicketOut | null>(null)
@@ -148,12 +154,12 @@ export function SupportPage() {
       order: sortBy ? sortOrder : undefined,
     },
     currentPage,
-    PAGE_SIZE,
+    pageSize,
   )
 
   const items = data?.items ?? []
   const total = data?.total ?? 0
-  const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE))
+  const pageCount = Math.max(1, Math.ceil(total / pageSize))
   const filteredItems = items
 
   const resolvidos = items.filter((t) => t.status_ticket === "Resolvido").length
@@ -172,6 +178,11 @@ export function SupportPage() {
     advancedFilters.statuses.length > 0 ||
     advancedFilters.satisfacoes.length > 0
   )
+
+  function handlePageSizeChange(size: number) {
+    setPageSize(size)
+    setCurrentPage(1)
+  }
 
   function handleSort(key: string) {
     if (sortBy === key) {
@@ -199,7 +210,7 @@ export function SupportPage() {
     <PageShell title="Suporte">
       <MetricGrid metrics={metrics} />
 
-      <DataPanel className="h-[556px] overflow-hidden">
+      <DataPanel>
         <TableToolbar
           actionLabel="Registrar novo ticket"
           advancedFilterActive={isAdvancedFilterActive}
@@ -207,6 +218,11 @@ export function SupportPage() {
           label="Tickets de suporte"
           onAction={() => setIsAddModalOpen(true)}
           onAdvancedFilter={() => setIsFilterModalOpen(true)}
+          onExport={() => {
+            if (!items.length) { showNotice("Nenhum dado para exportar."); return }
+            exportTicketsToCSV(items)
+            showNotice(`${items.length} tickets exportados`)
+          }}
           onSearchChange={handleSearchChange}
           placeholder="Busque por ticket, cliente ou tipo"
           searchValue={search}
@@ -219,9 +235,11 @@ export function SupportPage() {
             filteredCount={total}
             onEditTicket={setEditingTicket}
             onPageChange={setCurrentPage}
+            onPageSizeChange={handlePageSizeChange}
             onSort={handleSort}
             onViewTicket={setViewingTicket}
             pageCount={pageCount}
+            pageSize={pageSize}
             rows={filteredItems}
             sortBy={sortBy}
             sortOrder={sortOrder}

@@ -73,24 +73,41 @@ interface InsightCardProps {
   value: string | number
   helper?: string
   tone?: MetricTone
+  onClick?: () => void
+  actionLabel?: string
 }
 
-export function InsightCard({ label, value, helper = "", tone = "indigo" }: InsightCardProps) {
+export function InsightCard({ label, value, helper = "", tone = "indigo", onClick, actionLabel }: InsightCardProps) {
   const badge = BADGE_COLORS[tone] ?? BADGE_COLORS.indigo
 
   return (
     <Card className="h-20 flex-row items-center justify-between gap-2 rounded-lg border border-slate-200 px-6 py-3 shadow-sm ring-0">
-      <div className="flex flex-col gap-2">
+      <div className="flex flex-col justify-between h-full py-0.5 min-w-0 flex-1">
         <p className="text-sm font-medium leading-5 text-[#4F46E5]">{label}</p>
         <p className="text-[18px] font-semibold leading-6.75 text-slate-900">{value}</p>
       </div>
-      {helper && (
-        <span
-          className="shrink-0 rounded-full px-3 py-1 text-xs font-medium whitespace-nowrap"
-          style={{ backgroundColor: badge.bg, color: badge.text, border: `1px solid ${badge.border}` }}
-        >
-          {helper}
-        </span>
+      {(actionLabel || helper) && (
+        <div className="flex shrink-0 flex-col items-end justify-between h-full py-0.5">
+          {actionLabel ? (
+            <button
+              className="text-xs font-medium text-slate-500 transition hover:text-[#4F46E5] hover:underline"
+              onClick={onClick}
+              type="button"
+            >
+              {actionLabel}
+            </button>
+          ) : (
+            <span />
+          )}
+          {helper && (
+            <span
+              className="rounded-full px-3 py-1 text-xs font-medium whitespace-nowrap"
+              style={{ backgroundColor: badge.bg, color: badge.text, border: `1px solid ${badge.border}` }}
+            >
+              {helper}
+            </span>
+          )}
+        </div>
       )}
     </Card>
   )

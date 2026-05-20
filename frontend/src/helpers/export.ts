@@ -1,4 +1,4 @@
-import type { CustomerOut, OrderOut } from "@/types/api"
+import type { CustomerOut, OrderOut, ProductOut, TicketOut } from "@/types/api"
 
 /**
  * Utility to export data to CSV format and trigger a browser download.
@@ -106,6 +106,47 @@ export function exportClientesToCSV(data: CustomerOut[]): void {
     c.is_em_risco ? "Sim" : "Não",
   ])
   const filename = `vcommerce_clientes_${new Date().toISOString().slice(0, 10)}.csv`
+  downloadFile(generateCSV(headers, rows), filename, "text/csv;charset=utf-8;")
+}
+
+export function exportProductsToCSV(data: ProductOut[]): void {
+  const headers = [
+    "ID Produto", "Nome", "Categoria", "Preço (R$)", "Ativo", "Estoque",
+    "Qtd Vendida Total", "Receita Total (R$)", "Nota Média", "Classificação",
+  ]
+  const rows = data.map((p) => [
+    p.id_produto,
+    p.nome_produto,
+    p.categoria,
+    p.preco_atual.toFixed(2),
+    p.ativo ? "Sim" : "Não",
+    p.estoque ?? "",
+    p.qtd_vendida_total,
+    p.receita_total.toFixed(2),
+    p.nota_media?.toFixed(1) ?? "",
+    p.classificacao,
+  ])
+  const filename = `vcommerce_produtos_${new Date().toISOString().slice(0, 10)}.csv`
+  downloadFile(generateCSV(headers, rows), filename, "text/csv;charset=utf-8;")
+}
+
+export function exportTicketsToCSV(data: TicketOut[]): void {
+  const headers = [
+    "ID Ticket", "Cliente", "Tipo", "Status", "Data Abertura",
+    "Data Resolução", "Agente", "Nota Avaliação", "SLA Estourado",
+  ]
+  const rows = data.map((t) => [
+    t.id_ticket,
+    t.nome_cliente,
+    t.tipo_problema,
+    t.status_ticket,
+    t.data_abertura,
+    t.data_resolucao ?? "",
+    t.agente_suporte ?? "",
+    t.nota_avaliacao ?? "",
+    t.sla_estourado ? "Sim" : "Não",
+  ])
+  const filename = `vcommerce_tickets_${new Date().toISOString().slice(0, 10)}.csv`
   downloadFile(generateCSV(headers, rows), filename, "text/csv;charset=utf-8;")
 }
 

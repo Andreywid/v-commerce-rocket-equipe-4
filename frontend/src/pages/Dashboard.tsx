@@ -2,7 +2,7 @@ import { useState } from "react"
 import { toast } from "sonner"
 
 import { useAppContext } from "@/context/AppContext"
-import { useKpis } from "@/hooks/useKpis"
+import { useKpis, useTopRegioes } from "@/hooks/useKpis"
 import { useProducts } from "@/hooks/useProducts"
 import { getKpiCards, getKpiInsights } from "@/helpers/metrics"
 import { exportKpiToCSV } from "@/helpers/export"
@@ -11,6 +11,8 @@ import { DataCard, DataGrid, InsightCard } from "@/components/shared/MetricCards
 import { RevenueChart, type RevenueChartPoint } from "@/components/shared/RevenueChart"
 import { OrderSummary } from "@/components/shared/OrderSummary"
 import { FilterModal, DEFAULT_FILTER, hasAnyFilter, type FilterState } from "@/components/shared/FilterModal"
+import { TopRegioesModal } from "@/components/shared/TopRegioesModal"
+import { TopProdutosModal } from "@/components/shared/TopProdutosModal"
 import type { VendasKPIMes } from "@/types/api"
 
 const MONTH_ABBR = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
@@ -30,11 +32,15 @@ function CardSkeleton() {
 
 export function Dashboard() {
   const { showNotice } = useAppContext()
-  const [filterOpen, setFilterOpen]         = useState(false)
-  const [appliedFilters, setAppliedFilters] = useState<FilterState>(DEFAULT_FILTER)
+  const [filterOpen, setFilterOpen]               = useState(false)
+  const [appliedFilters, setAppliedFilters]       = useState<FilterState>(DEFAULT_FILTER)
+  const [topRegioesOpen, setTopRegioesOpen]       = useState(false)
+  const [topProdutosOpen, setTopProdutosOpen]     = useState(false)
 
   const { data: kpis, isPending } = useKpis("all")
   const { data: topProductData } = useProducts({ sort_by: "qtd_vendida_total", order: "desc" }, 1, 1)
+  const { data: top5ProdutosData } = useProducts({ sort_by: "qtd_vendida_total", order: "desc" }, 1, 5)
+  const { data: topRegioesData } = useTopRegioes()
   const topProductName = topProductData?.items?.[0]?.nome_produto ?? null
   const allMeses = kpis?.meses ?? []
 
@@ -129,6 +135,18 @@ export function Dashboard() {
         availableMeses={availableMeses}
         availablePairs={availablePairs}
       />
+      {topRegioesOpen && (
+        <TopRegioesModal
+          regioes={topRegioesData?.regioes ?? []}
+          onClose={() => setTopRegioesOpen(false)}
+        />
+      )}
+      {topProdutosOpen && (
+        <TopProdutosModal
+          produtos={top5ProdutosData?.items ?? []}
+          onClose={() => setTopProdutosOpen(false)}
+        />
+      )}
       <PageShell title="Dashboard">
 
         <DataGrid>
@@ -170,6 +188,16 @@ export function Dashboard() {
                   value={insight.value}
                   helper={insight.helper}
                   tone={insight.tone}
+                  onClick={
+                    insight.label === "Top região" ? () => setTopRegioesOpen(true) :
+                    insight.label === "Produto mais vendido" ? () => setTopProdutosOpen(true) :
+                    undefined
+                  }
+                  actionLabel={
+                    insight.label === "Top região" || insight.label === "Produto mais vendido"
+                      ? "Ver Top 5"
+                      : undefined
+                  }
                 />
               ))}
         </div>

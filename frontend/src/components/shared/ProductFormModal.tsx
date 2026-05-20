@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { ConfirmDeleteDialog } from "@/components/shared/ConfirmDeleteDialog"
 
 const CATEGORIES: ProductCategory[] = ["Eletronicos", "Vestuario", "Casa", "Esportes", "Beleza", "Automotivo", "Brinquedos", "Moveis", "Sem categoria"]
 
@@ -39,6 +40,7 @@ export function ProductFormModal({
   title?: string
 }) {
   const [form, setForm] = useState<ProductCreate>(initialValues)
+  const [confirmingDelete, setConfirmingDelete] = useState(false)
   const isEditing = productId !== undefined
 
   function handleSubmit() {
@@ -54,6 +56,13 @@ export function ProductFormModal({
   }
 
   return (
+    <>
+    <ConfirmDeleteDialog
+      open={confirmingDelete}
+      entityName="produto"
+      onCancel={() => setConfirmingDelete(false)}
+      onConfirm={() => { setConfirmingDelete(false); onDelete?.() }}
+    />
     <Dialog open onOpenChange={(open) => { if (!open) onClose() }}>
       <DialogContent className="sm:max-w-200 rounded-lg px-6 py-4 gap-0">
         <DialogHeader className="border-b border-slate-100 pb-4">
@@ -134,7 +143,7 @@ export function ProductFormModal({
               <Button
                 variant="outline"
                 className="h-10 gap-2 rounded-full border-[#F43F5E] px-6 text-[#F43F5E] hover:bg-rose-50 hover:text-[#F43F5E]"
-                onClick={onDelete}
+                onClick={() => setConfirmingDelete(true)}
                 type="button"
               >
                 <Trash2 className="size-4" />
@@ -171,5 +180,6 @@ export function ProductFormModal({
         </form>
       </DialogContent>
     </Dialog>
+    </>
   )
 }

@@ -9,6 +9,7 @@ import { HttpError } from "@/services/api"
 import { useProducts, useProductMutations } from "@/hooks/useProducts"
 import { useDebounce } from "@/hooks/useDebounce"
 import { formatCategoryLabel, getCategoryIcon } from "@/helpers/dictionary"
+import { exportProductsToCSV } from "@/helpers/export"
 import { cn } from "@/lib/utils"
 import { DataPanel } from "@/components/shared/DataPanel"
 import { PageShell } from "@/components/shared/PageShell"
@@ -20,8 +21,6 @@ import { StatusBadge } from "@/components/shared/StatusBadge"
 import { RatingBadge } from "@/components/shared/RatingBadge"
 import { EmptyTableState, TableHead, TableBody, TableHeader, TableRow, TableCell, TablePagination } from "@/components/shared/Table"
 import { TableToolbar } from "@/components/shared/TableToolbar"
-
-const PAGE_SIZE = 6
 
 function formatBRL(value: number | null | undefined): string {
   if (value == null) return "—"
@@ -56,9 +55,11 @@ function ProductsTable({
   filteredCount,
   onEditProduct,
   onPageChange,
+  onPageSizeChange,
   onViewProduct,
   onSort,
   pageCount,
+  pageSize,
   rows,
   sortBy,
   sortOrder,
@@ -68,9 +69,11 @@ function ProductsTable({
   filteredCount: number
   onEditProduct: (id: string) => void
   onPageChange: (page: number) => void
+  onPageSizeChange: (size: number) => void
   onViewProduct: (id: string) => void
   onSort: (key: string) => void
   pageCount: number
+  pageSize: number
   rows: ProductOut[]
   sortBy?: string
   sortOrder?: "asc" | "desc"
@@ -142,7 +145,9 @@ function ProductsTable({
         currentPage={currentPage}
         filteredCount={filteredCount}
         onPageChange={onPageChange}
+        onPageSizeChange={onPageSizeChange}
         pageCount={pageCount}
+        pageSize={pageSize}
         totalCount={totalCount}
       />
     </div>
@@ -156,6 +161,7 @@ export function ProductsPage() {
   const [advancedFilter, setAdvancedFilter] = useState<ProductFilterState>(DEFAULT_PRODUCT_FILTER)
   const [filterOpen, setFilterOpen] = useState(false)
   const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize, setPageSize] = useState(6)
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [viewingId, setViewingId] = useState<string | null>(null)
@@ -181,7 +187,7 @@ export function ProductsPage() {
       order: sortBy ? sortOrder : undefined,
     },
     currentPage,
-    PAGE_SIZE,
+    pageSize,
   )
   const { create, update, remove } = useProductMutations()
 
@@ -199,11 +205,16 @@ export function ProductsPage() {
 
   const items = data?.items ?? []
   const total = data?.total ?? 0
-  const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE))
+  const pageCount = Math.max(1, Math.ceil(total / pageSize))
   const filteredItems = items
 
   const editingProduct = items.find((p) => p.id_produto === editingId) ?? null
   const viewingProduct = items.find((p) => p.id_produto === viewingId) ?? null
+
+  function handlePageSizeChange(size: number) {
+    setPageSize(size)
+    setCurrentPage(1)
+  }
 
   function handleSort(key: string) {
     if (sortBy === key) {
@@ -299,7 +310,7 @@ export function ProductsPage() {
         />
       </div>
 
-      <DataPanel className="h-[556px] overflow-hidden">
+      <DataPanel>
         <TableToolbar
           actionLabel="Adicionar produto"
           advancedFilterActive={isFilterActive(advancedFilter)}
@@ -307,6 +318,11 @@ export function ProductsPage() {
           label="Lista de produtos"
           onAction={() => setIsAddModalOpen(true)}
           onAdvancedFilter={() => setFilterOpen(true)}
+          onExport={() => {
+            if (!items.length) { showNotice("Nenhum dado para exportar."); return }
+            exportProductsToCSV(items)
+            showNotice(`${items.length} produtos exportados`)
+          }}
           onSearchChange={handleSearchChange}
           placeholder="Busque por um produto ou código"
           searchValue={search}
@@ -319,9 +335,11 @@ export function ProductsPage() {
             filteredCount={total}
             onEditProduct={setEditingId}
             onPageChange={setCurrentPage}
+            onPageSizeChange={handlePageSizeChange}
             onViewProduct={setViewingId}
             onSort={handleSort}
             pageCount={pageCount}
+            pageSize={pageSize}
             rows={filteredItems}
             sortBy={sortBy}
             sortOrder={sortOrder}

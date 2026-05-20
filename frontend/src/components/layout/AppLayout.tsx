@@ -28,7 +28,6 @@ export function AppLayout({ email, name, onLogout }: { email: string; name: stri
       <AssistantPanel
         isVisible={isAssistantOpen}
         onClose={() => setIsAssistantOpen(false)}
-        onMinimize={() => setIsAssistantOpen(false)}
       />
     </main>
   )
