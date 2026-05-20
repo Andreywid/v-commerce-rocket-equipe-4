@@ -1,5 +1,7 @@
+from sqlalchemy import func
 from app.database import SessionLocal
 from app.models.dashboard_kpi import DashboardKPI
+from app.models.order import Order
 
 _PERIODOS_VALIDOS = {"3m": 3, "6m": 6, "12m": 12, "all": 9999}
 
@@ -41,5 +43,32 @@ def get_kpis(periodo: str = "12m") -> list[dict]:
             for k in results[-meses_count:]
         ]
         return kpis
+    finally:
+        db.close()
+
+
+def get_top_regioes(limit: int = 5) -> list[dict]:
+    db = SessionLocal()
+    try:
+        rows = (
+            db.query(
+                Order.estado_cliente,
+                func.sum(Order.valor_total).label("receita"),
+            )
+            .filter(Order.estado_cliente.isnot(None))
+            .group_by(Order.estado_cliente)
+            .order_by(func.sum(Order.valor_total).desc())
+            .limit(limit)
+            .all()
+        )
+        total = db.query(func.sum(Order.valor_total)).scalar() or 0.0
+        return [
+            {
+                "estado": row.estado_cliente,
+                "receita": float(row.receita),
+                "percentual": round(float(row.receita) / total * 100, 1) if total else 0.0,
+            }
+            for row in rows
+        ]
     finally:
         db.close()

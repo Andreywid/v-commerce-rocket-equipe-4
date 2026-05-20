@@ -45,3 +45,6 @@ class OrderListResponse(BaseModel):
     page: int
     size: int
     items: list[OrderOut]
+    total_pendentes: int = 0
+    total_aprovados: int = 0
+    receita_total: float = 0.0

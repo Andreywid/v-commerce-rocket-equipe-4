@@ -67,6 +67,7 @@ class CustomerListResponse(BaseModel):
     page: int
     size: int
     items: list[CustomerOut]
+    segmento_alto: int = 0
 
 
 class CustomerStats(BaseModel):

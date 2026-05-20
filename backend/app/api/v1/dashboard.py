@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends
 from app.services import dashboard_service
-from app.schemas.dashboard import KPIsResponse
+from app.schemas.dashboard import KPIsResponse, TopRegioesResponse
 from app.core.deps import get_current_user
 
 router = APIRouter(prefix="/dashboard", tags=["dashboard"])
@@ -14,3 +14,9 @@ def get_kpis(periodo: str = "12m", current_user=Depends(get_current_user)):
     - **periodo**: janela de tempo — `3m`, `6m` ou `12m` (padrão: `12m`)
     """
     return dashboard_service.get_kpis(periodo)
+
+
+@router.get("/top-regioes", response_model=TopRegioesResponse)
+def get_top_regioes(current_user=Depends(get_current_user)):
+    """Retorna as top 5 regiões (estados) por receita total."""
+    return dashboard_service.get_top_regioes()

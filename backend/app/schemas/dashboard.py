@@ -26,3 +26,13 @@ class VendasKPIMes(BaseModel):
 class KPIsResponse(BaseModel):
     periodo: str
     meses: list[VendasKPIMes]
+
+
+class TopRegiao(BaseModel):
+    estado: str
+    receita: float
+    percentual: float
+
+
+class TopRegioesResponse(BaseModel):
+    regioes: list[TopRegiao]

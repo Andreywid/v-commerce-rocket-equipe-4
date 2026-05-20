@@ -34,7 +34,7 @@ def get_all(
     size: int = 20,
     sort_by: str | None = None,
     order: str | None = None,
-) -> tuple[list[Customer], int]:
+) -> tuple[list[Customer], int, int]:
     db = SessionLocal()
     try:
         query = db.query(Customer)
@@ -63,10 +63,11 @@ def get_all(
         if col is not None:
             query = query.order_by(asc(col) if order != "desc" else desc(col))
 
-        total = query.count()
+        total         = query.count()
+        segmento_alto = query.filter(Customer.segmento_ltv == "Alto").count()
         offset = (page - 1) * size
         items = query.offset(offset).limit(size).all()
-        return items, total
+        return items, total, segmento_alto
     finally:
         db.close()
 

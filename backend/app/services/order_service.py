@@ -19,12 +19,15 @@ def get_orders(
     order: str | None = None,
     dentro_prazo: bool | None = None,
 ) -> OrderListResponse:
-    items, total = order_repository.get_all(
+    items, total, total_pendentes, total_aprovados, receita_total = order_repository.get_all(
         status, categoria, estado, id_cliente, data_inicio, data_fim, nome, valor_min, valor_max, page, size, sort_by, order, dentro_prazo
     )
     return OrderListResponse(
         total=total, page=page, size=size,
         items=[OrderOut.model_validate(o) for o in items],
+        total_pendentes=total_pendentes,
+        total_aprovados=total_aprovados,
+        receita_total=receita_total,
     )
 
 

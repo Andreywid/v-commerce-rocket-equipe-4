@@ -1,7 +1,7 @@
 from datetime import date
 from app.database import SessionLocal
 from app.models.order import Order
-from sqlalchemy import asc, desc, or_
+from sqlalchemy import asc, desc, func, or_
 
 _SORTABLE = {
     "nome_produto": Order.nome_produto,
@@ -27,7 +27,7 @@ def get_all(
     sort_by: str | None = None,
     order: str | None = None,
     dentro_prazo: bool | None = None,
-) -> tuple[list[Order], int]:
+) -> tuple[list[Order], int, int, int, float]:
     db = SessionLocal()
     try:
         query = db.query(Order)
@@ -61,18 +61,22 @@ def get_all(
                     Order.id_pedido.ilike(pattern),
                 )
             )
-            
+
         col = _SORTABLE.get(sort_by) if sort_by else None
         if col is not None:
             query = query.order_by(asc(col) if order != "desc" else desc(col))
         else:
             query = query.order_by(desc(Order.data_pedido))
 
-        total = query.count()
+        total           = query.count()
+        total_pendentes = query.filter(Order.status == "Processando").count()
+        total_aprovados = query.filter(Order.status == "Aprovado").count()
+        receita_total   = query.with_entities(func.coalesce(func.sum(Order.valor_total), 0.0)).scalar() or 0.0
+
         offset = (page - 1) * size
         items = query.offset(offset).limit(size).all()
-        
-        return items, total
+
+        return items, total, total_pendentes, total_aprovados, float(receita_total)
     finally:
         db.close()
 
