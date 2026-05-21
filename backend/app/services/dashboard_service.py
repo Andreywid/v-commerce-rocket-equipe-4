@@ -1,6 +1,6 @@
 from fastapi import HTTPException
 from app.repositories import dashboard_repository
-from app.schemas.dashboard import KPIsResponse, VendasKPIMes, TopRegiao, TopRegioesResponse
+from app.schemas.dashboard import KPIsResponse, VendasKPIMes, TopRegiao, TopRegioesResponse, TopCategoria, TopCategoriasResponse
 
 _PERIODOS_VALIDOS = {"3m", "6m", "12m", "all"}
 
@@ -18,3 +18,8 @@ def get_kpis(periodo: str = "12m") -> KPIsResponse:
 def get_top_regioes() -> TopRegioesResponse:
     regioes = [TopRegiao(**row) for row in dashboard_repository.get_top_regioes()]
     return TopRegioesResponse(regioes=regioes)
+
+
+def get_top_categorias() -> TopCategoriasResponse:
+    categorias = [TopCategoria(**row) for row in dashboard_repository.get_top_categorias()]
+    return TopCategoriasResponse(categorias=categorias)
