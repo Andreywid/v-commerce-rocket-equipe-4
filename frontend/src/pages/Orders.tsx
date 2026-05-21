@@ -1,4 +1,5 @@
 import { useState } from "react"
+import { usePersistedPageSize } from "@/hooks/usePersistedPageSize"
 import { ClipboardList, Pencil } from "lucide-react"
 
 import type { OrderStatus } from "@/types"
@@ -121,7 +122,7 @@ export function OrdersPage() {
   const [search, setSearch] = useState("")
   const [orderFilters, setOrderFilters] = useState<OrderFilters>(emptyOrderFilters)
   const [currentPage, setCurrentPage] = useState(1)
-  const [pageSize, setPageSize] = useState(6)
+  const [pageSize, setPageSize] = usePersistedPageSize("pedidos")
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false)
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)

@@ -1,4 +1,5 @@
 import { useState } from "react"
+import { usePersistedPageSize } from "@/hooks/usePersistedPageSize"
 import { Pencil, Users } from "lucide-react"
 
 import type { ClienteStatus } from "@/types"
@@ -147,7 +148,7 @@ export function ClientsPage() {
   const [search, setSearch] = useState("")
   const [advancedFilters, setAdvancedFilters] = useState<ClientAdvancedFilters>(emptyClientAdvancedFilters)
   const [currentPage, setCurrentPage] = useState(1)
-  const [pageSize, setPageSize] = useState(6)
+  const [pageSize, setPageSize] = usePersistedPageSize("clientes")
   const [isAdvancedFilterOpen, setIsAdvancedFilterOpen] = useState(false)
   const [profileId, setProfileId] = useState<string | null>(null)
   const [editingClient, setEditingClient] = useState<CustomerOut | null>(null)
