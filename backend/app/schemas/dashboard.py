@@ -36,3 +36,13 @@ class TopRegiao(BaseModel):
 
 class TopRegioesResponse(BaseModel):
     regioes: list[TopRegiao]
+
+
+class TopCategoria(BaseModel):
+    categoria: str
+    qtd_vendida: int
+    percentual: float
+
+
+class TopCategoriasResponse(BaseModel):
+    categorias: list[TopCategoria]

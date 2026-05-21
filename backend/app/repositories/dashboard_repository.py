@@ -47,6 +47,33 @@ def get_kpis(periodo: str = "12m") -> list[dict]:
         db.close()
 
 
+def get_top_categorias(limit: int = 5) -> list[dict]:
+    db = SessionLocal()
+    try:
+        rows = (
+            db.query(
+                Order.categoria_produto,
+                func.sum(Order.quantidade).label("qtd_vendida"),
+            )
+            .filter(Order.categoria_produto.isnot(None))
+            .group_by(Order.categoria_produto)
+            .order_by(func.sum(Order.quantidade).desc())
+            .limit(limit)
+            .all()
+        )
+        total = db.query(func.sum(Order.quantidade)).scalar() or 0
+        return [
+            {
+                "categoria": row.categoria_produto,
+                "qtd_vendida": int(row.qtd_vendida),
+                "percentual": round(int(row.qtd_vendida) / total * 100, 1) if total else 0.0,
+            }
+            for row in rows
+        ]
+    finally:
+        db.close()
+
+
 def get_top_regioes(limit: int = 5) -> list[dict]:
     db = SessionLocal()
     try:
