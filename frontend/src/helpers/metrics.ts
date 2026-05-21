@@ -1,6 +1,7 @@
 import type { Metric, MetricTone } from "@/types"
 import type { VendasKPIMes } from "@/types/api"
-import { CircleDollarSign, Clock3, MapPin, Smartphone, Tag, Users } from "lucide-react"
+import { CircleDollarSign, Clock3, LayoutGrid, MapPin, Smartphone, Tag, Users } from "lucide-react"
+import { formatCategoryLabel } from "@/helpers/dictionary"
 
 export type PerformanceLabel = "Ótimo" | "Bom" | "Regular" | "Crítico"
 
@@ -56,7 +57,12 @@ export function getKpiCards(mes: VendasKPIMes): Metric[] {
   ]
 }
 
-export function getKpiInsights(mes: VendasKPIMes, topProductName?: string | null): Metric[] {
+export function getKpiInsights(
+  mes: VendasKPIMes,
+  topProductName?: string | null,
+  topCategoriaNome?: string | null,
+  topCategoriaQtd?: number | null,
+): Metric[] {
   const perf = getPerformance(mes.taxa_aprovacao)
   const regionPct = mes.qtd_pedidos > 0
     ? Math.round((mes.qtd_pedidos_aprovados / mes.qtd_pedidos) * 100)
@@ -71,9 +77,16 @@ export function getKpiInsights(mes: VendasKPIMes, topProductName?: string | null
       icon: Clock3,
     },
     {
+      label: "Top categorias",
+      value: formatCategoryLabel(topCategoriaNome ?? mes.categoria_mais_vendida),
+      helper: topCategoriaQtd != null ? `${topCategoriaQtd.toLocaleString("pt-BR")} un.` : "",
+      tone: "emerald",
+      icon: LayoutGrid,
+    },
+    {
       label: "Produto mais vendido",
       value: topProductName ?? mes.categoria_mais_vendida,
-      helper: `${mes.qtd_pedidos_aprovados.toLocaleString("pt-BR")} unidades`,
+      helper: `${mes.qtd_pedidos_aprovados.toLocaleString("pt-BR")} un.`,
       tone: "emerald",
       icon: Smartphone,
     },
