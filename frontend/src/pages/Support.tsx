@@ -1,4 +1,5 @@
 import { useState } from "react"
+import { usePersistedPageSize } from "@/hooks/usePersistedPageSize"
 import { ClipboardList, Pencil } from "lucide-react"
 
 import type { SupportType } from "@/types"
@@ -135,7 +136,7 @@ export function SupportPage() {
   const [advancedFilters, setAdvancedFilters] = useState<SupportFilters>(emptySupportFilters)
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false)
   const [currentPage, setCurrentPage] = useState(1)
-  const [pageSize, setPageSize] = useState(6)
+  const [pageSize, setPageSize] = usePersistedPageSize("suporte")
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
   const [viewingTicket, setViewingTicket] = useState<TicketOut | null>(null)
   const [editingTicket, setEditingTicket] = useState<TicketOut | null>(null)

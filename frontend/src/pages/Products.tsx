@@ -1,4 +1,5 @@
 import { useState } from "react"
+import { usePersistedPageSize } from "@/hooks/usePersistedPageSize"
 import { Package, Pencil } from "lucide-react"
 
 import type { ProductCategory } from "@/types"
@@ -161,7 +162,7 @@ export function ProductsPage() {
   const [advancedFilter, setAdvancedFilter] = useState<ProductFilterState>(DEFAULT_PRODUCT_FILTER)
   const [filterOpen, setFilterOpen] = useState(false)
   const [currentPage, setCurrentPage] = useState(1)
-  const [pageSize, setPageSize] = useState(6)
+  const [pageSize, setPageSize] = usePersistedPageSize("produtos")
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [viewingId, setViewingId] = useState<string | null>(null)
