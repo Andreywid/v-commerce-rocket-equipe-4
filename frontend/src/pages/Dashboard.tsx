@@ -2,7 +2,7 @@ import { useState } from "react"
 import { toast } from "sonner"
 
 import { useAppContext } from "@/context/AppContext"
-import { useKpis, useTopRegioes } from "@/hooks/useKpis"
+import { useKpis, useTopCategorias, useTopRegioes } from "@/hooks/useKpis"
 import { useProducts } from "@/hooks/useProducts"
 import { getKpiCards, getKpiInsights } from "@/helpers/metrics"
 import { exportKpiToCSV } from "@/helpers/export"
@@ -13,6 +13,7 @@ import { OrderSummary } from "@/components/shared/OrderSummary"
 import { FilterModal, DEFAULT_FILTER, hasAnyFilter, type FilterState } from "@/components/shared/FilterModal"
 import { TopRegioesModal } from "@/components/shared/TopRegioesModal"
 import { TopProdutosModal } from "@/components/shared/TopProdutosModal"
+import { TopCategoriasModal } from "@/components/shared/TopCategoriasModal"
 import type { VendasKPIMes } from "@/types/api"
 
 const MONTH_ABBR = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
@@ -36,12 +37,16 @@ export function Dashboard() {
   const [appliedFilters, setAppliedFilters]       = useState<FilterState>(DEFAULT_FILTER)
   const [topRegioesOpen, setTopRegioesOpen]       = useState(false)
   const [topProdutosOpen, setTopProdutosOpen]     = useState(false)
+  const [topCategoriasOpen, setTopCategoriasOpen] = useState(false)
 
   const { data: kpis, isPending } = useKpis("all")
   const { data: topProductData } = useProducts({ sort_by: "qtd_vendida_total", order: "desc" }, 1, 1)
   const { data: top5ProdutosData } = useProducts({ sort_by: "qtd_vendida_total", order: "desc" }, 1, 5)
   const { data: topRegioesData } = useTopRegioes()
+  const { data: topCategoriasData } = useTopCategorias()
   const topProductName = topProductData?.items?.[0]?.nome_produto ?? null
+  const topCategoriaNome = topCategoriasData?.categorias?.[0]?.categoria ?? null
+  const topCategoriaQtd = topCategoriasData?.categorias?.[0]?.qtd_vendida ?? null
   const allMeses = kpis?.meses ?? []
 
   // ── Anos disponíveis e pares válidos ─────────────────────────────────────────
@@ -96,7 +101,7 @@ export function Dashboard() {
 
   // ── Derivados ─────────────────────────────────────────────────────────────────
   const metrics      = ultimoMes ? getKpiCards(ultimoMes)    : []
-  const insights     = ultimoMes ? getKpiInsights(ultimoMes, topProductName) : []
+  const insights     = ultimoMes ? getKpiInsights(ultimoMes, topProductName, topCategoriaNome, topCategoriaQtd) : []
   const orderSummary = ultimoMes
     ? {
         aprovados:    ultimoMes.qtd_pedidos_aprovados,
@@ -147,6 +152,12 @@ export function Dashboard() {
           onClose={() => setTopProdutosOpen(false)}
         />
       )}
+      {topCategoriasOpen && (
+        <TopCategoriasModal
+          categorias={topCategoriasData?.categorias ?? []}
+          onClose={() => setTopCategoriasOpen(false)}
+        />
+      )}
       <PageShell title="Dashboard">
 
         <DataGrid>
@@ -178,9 +189,9 @@ export function Dashboard() {
           <OrderSummary data={orderSummary} />
         </div>
 
-        <div className="mt-7 grid gap-4 sm:grid-cols-3">
+        <div className="mt-7 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {isPending
-            ? Array.from({ length: 3 }).map((_, i) => <CardSkeleton key={i} />)
+            ? Array.from({ length: 4 }).map((_, i) => <CardSkeleton key={i} />)
             : insights.map((insight) => (
                 <InsightCard
                   key={insight.label}
@@ -191,10 +202,13 @@ export function Dashboard() {
                   onClick={
                     insight.label === "Top região" ? () => setTopRegioesOpen(true) :
                     insight.label === "Produto mais vendido" ? () => setTopProdutosOpen(true) :
+                    insight.label === "Top categorias" ? () => setTopCategoriasOpen(true) :
                     undefined
                   }
                   actionLabel={
-                    insight.label === "Top região" || insight.label === "Produto mais vendido"
+                    insight.label === "Top região" ||
+                    insight.label === "Produto mais vendido" ||
+                    insight.label === "Top categorias"
                       ? "Ver Top 5"
                       : undefined
                   }

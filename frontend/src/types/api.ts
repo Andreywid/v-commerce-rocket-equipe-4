@@ -58,6 +58,16 @@ export type TopRegioesResponse = {
   regioes: TopRegiao[]
 }
 
+export type TopCategoria = {
+  categoria: string
+  qtd_vendida: number
+  percentual: number
+}
+
+export type TopCategoriasResponse = {
+  categorias: TopCategoria[]
+}
+
 // Clientes
 export type CustomerOut = {
   id_cliente: string

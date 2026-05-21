@@ -81,13 +81,16 @@ export function InsightCard({ label, value, helper = "", tone = "indigo", onClic
   const badge = BADGE_COLORS[tone] ?? BADGE_COLORS.indigo
 
   return (
-    <Card className="h-20 flex-row items-center justify-between gap-2 rounded-lg border border-slate-200 px-6 py-3 shadow-sm ring-0">
-      <div className="flex flex-col justify-between h-full py-0.5 min-w-0 flex-1">
+    <Card
+      className="flex-row justify-between gap-2 rounded-lg border-[0.99px] border-slate-200 shadow-sm ring-0"
+      style={{ height: 75, paddingTop: 12, paddingRight: 24, paddingBottom: 12, paddingLeft: 24 }}
+    >
+      <div className="flex flex-col justify-between self-stretch py-0.5 min-w-0 flex-1 overflow-hidden">
         <p className="text-sm font-medium leading-5 text-[#4F46E5]">{label}</p>
-        <p className="text-[18px] font-semibold leading-6.75 text-slate-900">{value}</p>
+        <p className="text-[18px] font-semibold leading-6.75 text-slate-900 truncate">{value}</p>
       </div>
       {(actionLabel || helper) && (
-        <div className="flex shrink-0 flex-col items-end justify-between h-full py-0.5">
+        <div className="flex shrink-0 flex-col items-end justify-between self-stretch py-0.5">
           {actionLabel ? (
             <button
               className="text-xs font-medium text-slate-500 transition hover:text-[#4F46E5] hover:underline"
