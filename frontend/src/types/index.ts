@@ -3,7 +3,7 @@ import type { LucideIcon } from "lucide-react"
 export type PageKey = "dashboard" | "orders" | "support"
 export type MetricTone = "rose" | "emerald" | "indigo" | "violet"
 export type OrderStatus = "Aprovado" | "Recusado" | "Reembolsado" | "Processando"
-export type SupportType = "Entrega" | "Reembolso" | "Produto" | "Pagamento"
+export type SupportType = "Entrega" | "Reembolso" | "Produto" | "Pagamento" | "Outros"
 export type SupportStatus = "Aberto" | "Resolvido"
 export type SatisfacaoAtendimento = "alta" | "media" | "baixa" | "sem_avaliacao"
 export type RatingLabel = "Ótimo" | "Bom" | "Excelente" | "Crítico"
@@ -17,11 +17,11 @@ export type ProductCategory =
   | "Brinquedos"
   | "Moveis"
   | "Sem categoria"
-export type ProductClassificacao = "Top Vendedor" | "Estável" | "Problemático" | "Encalhado"
+export type ProductClassificacao = "Top Vendedor" | "Estavel" | "Problematico" | "Encalhado"
 export type ClientSegmento = "Alto" | "Medio" | "Baixo"
 export type ClienteStatus = "Novo" | "Recorrente"
 export type ReviewSentimento = "positivo" | "neutro" | "negativo"
-export type MetodoPagamento = "Cartao" | "PIX" | "Boleto" | "App"
+export type MetodoPagamento = "Cartao" | "PIX" | "Boleto"
 
 export type NavItem = {
   id: PageKey

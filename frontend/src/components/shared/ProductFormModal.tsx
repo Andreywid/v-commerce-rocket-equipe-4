@@ -19,7 +19,7 @@ const EMPTY: ProductCreate = {
   categoria: "Eletronicos",
   preco_atual: 0,
   ativo: true,
-  estoque: 0,
+  estoque_disponivel: 0,
 }
 
 export function ProductFormModal({
@@ -48,7 +48,7 @@ export function ProductFormModal({
       toast.error("O nome do produto é obrigatório")
       return
     }
-    if (!form.preco_atual || form.preco_atual <= 0) {
+    if (form.preco_atual <= 0) {
       toast.error("Informe um preço válido para o produto")
       return
     }
@@ -131,8 +131,8 @@ export function ProductFormModal({
               <Label className="text-sm font-semibold text-slate-700">Quantidade no estoque</Label>
               <Input
                 placeholder="ex: 24"
-                value={form.estoque === 0 || form.estoque == null ? "" : String(form.estoque)}
-                onChange={(e) => setForm({ ...form, estoque: Number(e.target.value) || 0 })}
+                value={form.estoque_disponivel === 0 || form.estoque_disponivel == null ? "" : String(form.estoque_disponivel)}
+                onChange={(e) => setForm({ ...form, estoque_disponivel: Number(e.target.value) || 0 })}
               />
             </div>
           </div>

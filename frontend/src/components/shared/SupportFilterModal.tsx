@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
-const SUPPORT_TYPE_OPTIONS: SupportType[] = ["Entrega", "Reembolso", "Produto", "Pagamento"]
+const SUPPORT_TYPE_OPTIONS: SupportType[] = ["Entrega", "Reembolso", "Produto", "Pagamento", "Outros"]
 const SUPPORT_STATUS_OPTIONS: SupportStatus[] = ["Aberto", "Resolvido"]
 const SATISFACTION_OPTIONS: SatisfacaoAtendimento[] = ["alta", "media", "baixa", "sem_avaliacao"]
 
@@ -30,6 +30,7 @@ const TYPE_CHIP: Record<SupportType, { bg: string; text: string; border: string 
   Entrega:   { bg: "#ECFDF5", text: "#059669", border: "#A7F3D0" },
   Reembolso: { bg: "#FFF1F2", text: "#F43F5E", border: "#FECDD3" },
   Produto:   { bg: "#F5F3FF", text: "#7C3AED", border: "#DDD6FE" },
+  Outros:    { bg: "#F8FAFC", text: "#64748B", border: "#CBD5E1" },
 }
 
 const STATUS_CHIP: Record<SupportStatus, { bg: string; text: string; border: string }> = {

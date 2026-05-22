@@ -40,12 +40,13 @@ export const supportTypeClasses: Record<SupportType, string> = {
   "Reembolso": "bg-amber-50 text-amber-600 border-amber-200",
   "Produto":   "bg-violet-50 text-violet-600 border-violet-200",
   "Pagamento": "bg-rose-50 text-rose-600 border-rose-200",
+  "Outros":    "bg-slate-50 text-slate-600 border-slate-200",
 }
 
 export const classificacaoClasses: Record<ProductClassificacao, string> = {
   "Top Vendedor": "bg-emerald-50 text-emerald-600 border-emerald-200",
-  "Estável":      "bg-sky-50 text-sky-600 border-sky-200",
-  "Problemático": "bg-amber-50 text-amber-600 border-amber-200",
+  "Estavel":      "bg-sky-50 text-sky-600 border-sky-200",
+  "Problematico": "bg-amber-50 text-amber-600 border-amber-200",
   "Encalhado":    "bg-rose-50 text-rose-600 border-rose-200",
 }
 

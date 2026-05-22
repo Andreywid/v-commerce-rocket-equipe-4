@@ -21,10 +21,10 @@ export function ProductDetailDialog({
 }) {
   const { data: perf } = useProductPerformance(product.id_produto)
 
-  const qtdPositivas = perf != null
+  const qtdPositivas = perf != null && perf.pct_recomendam != null
     ? Math.round(perf.qtd_avaliacoes * (perf.pct_recomendam / 100))
     : null
-  const qtdNegativas = perf != null
+  const qtdNegativas = perf != null && perf.pct_recomendam != null
     ? Math.round(perf.qtd_avaliacoes * (1 - perf.pct_recomendam / 100))
     : null
 
@@ -77,14 +77,6 @@ export function ProductDetailDialog({
               <p className="text-xl font-bold text-[#334155]">{formatBRL(product.preco_atual)}</p>
             </div>
           </div>
-
-          {/* Descrição */}
-          {product.descricao && (
-            <div className="mt-4">
-              <p className="text-sm font-semibold text-slate-700 mb-1">Descrição</p>
-              <p className="text-sm leading-relaxed text-slate-600">{product.descricao}</p>
-            </div>
-          )}
 
         </div>
       </DialogContent>

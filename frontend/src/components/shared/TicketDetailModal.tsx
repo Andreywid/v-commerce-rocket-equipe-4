@@ -26,6 +26,7 @@ const TICKET_TITLE: Record<SupportType, string> = {
   Entrega:   "Problema com entrega",
   Reembolso: "Solicitação de reembolso",
   Produto:   "Problema com produto",
+  Outros:    "Outros assuntos",
 }
 
 const MESSAGES: Record<SupportType, { opening: string; details: string[] }> = {
@@ -44,6 +45,10 @@ const MESSAGES: Record<SupportType, { opening: string; details: string[] }> = {
   Produto: {
     opening: "Olá!\nEstou com problema com o produto recebido.",
     details: ["Produto:", "- Problema: Defeito de fabricação", "- Data de entrega: há 3 dias"],
+  },
+  Outros: {
+    opening: "Olá!\nGostaria de relatar uma situação.",
+    details: ["Detalhes:", "- Tipo: Outros"],
   },
 }
 

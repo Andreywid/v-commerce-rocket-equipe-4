@@ -23,7 +23,7 @@ export function ClientFormModal({ mode, customer, onClose, onDelete, onSubmit }:
   const { create, update, remove } = useCustomerMutations()
 
   const [nome, setNome] = useState(isEditing ? customer.nome : "")
-  const [email, setEmail] = useState(isEditing ? customer.email : "")
+  const [email, setEmail] = useState(isEditing ? (customer.email ?? "") : "")
   const [telefone, setTelefone] = useState(isEditing ? (customer.telefone ?? "") : "")
   const [cidade, setCidade] = useState(isEditing ? (customer.cidade ?? "") : "")
   const [estado, setEstado] = useState(isEditing ? (customer.estado ?? "") : "")
@@ -41,20 +41,16 @@ export function ClientFormModal({ mode, customer, onClose, onDelete, onSubmit }:
       toast.error("O nome do cliente é obrigatório")
       return
     }
-    if (!email.trim()) {
-      toast.error("O e-mail do cliente é obrigatório")
-      return
-    }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+    if (email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
       toast.error("Informe um e-mail válido")
       return
     }
     const payload = {
       nome: nome.trim(),
-      email: email.trim(),
+      email: email.trim() || undefined,
       telefone: telefone.trim() || undefined,
       cidade: cidade.trim() || undefined,
-      estado: estado.trim().toUpperCase() || undefined,
+      estado: estado.trim() || undefined,
     }
     if (isEditing) {
       update.mutate({ id: customer.id_cliente, data: payload }, { onSuccess: onSubmit })
@@ -121,10 +117,9 @@ export function ClientFormModal({ mode, customer, onClose, onDelete, onSubmit }:
               />
             </div>
             <div className="grid gap-1.5">
-              <Label className="text-sm font-semibold text-slate-700">Estado (UF)</Label>
+              <Label className="text-sm font-semibold text-slate-700">Estado</Label>
               <Input
-                placeholder="SP"
-                maxLength={2}
+                placeholder="São Paulo"
                 value={estado}
                 onChange={(e) => setEstado(e.target.value)}
               />

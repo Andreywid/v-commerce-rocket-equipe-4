@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ConfirmDeleteDialog } from "@/components/shared/ConfirmDeleteDialog"
 
-const TIPOS = ["Entrega", "Reembolso", "Produto", "Pagamento"] as const
+const TIPOS = ["Entrega", "Reembolso", "Produto", "Pagamento", "Outros"] as const
 const STATUSES = ["Aberto", "Resolvido"] as const
 
 type AddProps = { mode: "add"; ticket?: never; onDelete?: never }

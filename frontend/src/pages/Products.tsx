@@ -43,11 +43,9 @@ function toProductCreate(p: ProductOut): ProductCreate {
   return {
     nome_produto: p.nome_produto,
     categoria: p.categoria,
-    preco_atual: p.preco_atual,
+    preco_atual: p.preco_atual ?? 0,
     ativo: p.ativo,
-    estoque: p.estoque,
-    descricao: p.descricao,
-    imagem_url: p.imagem_url,
+    estoque_disponivel: p.estoque_disponivel,
   }
 }
 
