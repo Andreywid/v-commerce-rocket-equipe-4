@@ -112,7 +112,7 @@ GOLD_SCHEMA = {
             "Não use esta tabela para análises detalhadas de pedidos individuais.",
             "Para comportamento por dia, use gold_clickstream_resumo.",
             "Para avaliações individuais, use gold_avaliacoes.",
-            "Nordeste, Norte, Sul, Sudeste e Centro-Oeste são nomes de região: expanda para uf IN ('Estado',...) conforme o mapeamento de regiões do Brasil; não rejeite a pergunta só por usar o nome da região nem peça esclarecimento de granularidade geográfica quando a região puder ser inferida."
+            "Nordeste, Norte, Sul, Sudeste e Centro-Oeste são nomes de região: expanda para estado IN ('Estado',...) conforme o mapeamento de regiões do Brasil; não rejeite a pergunta só por usar o nome da região nem peça esclarecimento de granularidade geográfica quando a região puder ser inferida."
         ],
         "colunas": {
             "id_cliente": {
@@ -140,8 +140,8 @@ GOLD_SCHEMA = {
                 "descricao": "Cidade do cliente.",
                 "tipo": "texto"
             },
-            "uf": {
-                "descricao": "Nome completo do estado do cliente, apesar do nome da coluna ser uf. Exemplos: Pernambuco, São Paulo, Bahia. Se o usuário disser Nordeste, Sudeste, Sul, Norte ou Centro-Oeste, filtre com IN nos estados daquela região.",
+            "estado": {
+                "descricao": "Nome completo do estado do cliente. Exemplos: Pernambuco, São Paulo, Bahia. Se o usuário disser Nordeste, Sudeste, Sul, Norte ou Centro-Oeste, filtre com IN nos estados daquela região.",
                 "tipo": "texto"
             },
 
@@ -313,7 +313,7 @@ GOLD_SCHEMA = {
                 "tipo": "inteiro",
                 "agregacao": "SUM"
             },
-"           data_cadastro_produto": {
+            "data_cadastro_produto": {
                 "descricao": "Data de cadastro do produto.",
                 "tipo": "data",
                 "formato": "YYYY-MM-DD"
@@ -464,7 +464,7 @@ GOLD_SCHEMA = {
                 "tipo": "texto"
             },
             "estado_cliente": {
-                "descricao": "UF do cliente no pedido nome completo (Pernambuco, São Paulo, etc) . Macro-regiões (Nordeste, etc.) devem ser expandidas para IN com lista de nome de estados, não usadas como valor literal.",
+                "descricao": "Estado do cliente no pedido por extenso (Pernambuco, São Paulo, etc). Macro-regiões (Nordeste, etc.) devem ser expandidas para IN com lista de nomes de estados, não usadas como valor literal.",
                 "tipo": "texto"
             },
             "nome_produto": {
@@ -493,7 +493,7 @@ GOLD_SCHEMA = {
     "gold_tickets": {
         "descricao": "Tabela de chamados de suporte. Use para perguntas sobre problemas, SLA, tempo de resolução e qualidade do atendimento.",
         "granularidade": "Uma linha por ticket.",
-        "chave_primaria": ["ticket_id"],
+        "chave_primaria": ["id_ticket"],
         "chaves_estrangeiras": {
             "id_cliente": "gold_cliente_360.id_cliente",
             "id_produto": "gold_produto_performance.id_produto",
@@ -504,12 +504,12 @@ GOLD_SCHEMA = {
             "Para tickets em aberto, filtre status_ticket = 'Aberto'.",
             "Para SLA estourado, filtre sla_estourado = true.",
             "data_resolucao pode ser nula quando o ticket estiver aberto.",
-            "Para analisar o tipo de problema, use a coluna tipo_problema_padronizado.",
-            "data_abertura e data_resolucao são campos datetime no formato YYYY-MM-DDTHH:MM:SS.mmmZ.",
+            "Para analisar o tipo de problema, use a coluna tipo_problema.",
+            "data_abertura e data_resolucao são campos datetime no formato YYYY-MM-DD HH:MM:SS.",
             "Para filtros, agrupamentos ou ordenações por dia usando data_abertura ou data_resolucao, converta o datetime para data conforme o dialeto do banco: em SQLite use date(data_abertura) e date(data_resolucao); em PostgreSQL use CAST(data_abertura AS DATE) e CAST(data_resolucao AS DATE)."
         ],
         "colunas": {
-            "ticket_id": {
+            "id_ticket": {
                 "descricao": "ID único do ticket.",
                 "tipo": "texto"
             },
@@ -525,7 +525,7 @@ GOLD_SCHEMA = {
                 "descricao": "ID do produto relacionado ao ticket.",
                 "tipo": "texto"
             },
-            "tipo_problema_padronizado": {
+            "tipo_problema": {
                 "descricao": "Tipo de problema reportado, já padronizado pela engenharia de dados.",
                 "tipo": "enum",
                 "valores_validos": ["Entrega", "Reembolso", "Produto", "Pagamento", "Outros"]
@@ -538,12 +538,12 @@ GOLD_SCHEMA = {
             "data_abertura": {
                 "descricao": "Data e hora de abertura do ticket.",
                 "tipo": "datetime",
-                "formato": "YYYY-MM-DDTHH:MM:SS.mmmZ"
+                "formato": "YYYY-MM-DD HH:MM:SS"
             },
             "data_resolucao": {
                 "descricao": "Data e hora de resolução do ticket. Pode ser nula se estiver aberto.",
                 "tipo": "datetime",
-                "formato": "YYYY-MM-DDTHH:MM:SS.mmmZ"
+                "formato": "YYYY-MM-DD HH:MM:SS"
             },
             "tempo_resolucao_horas": {
                 "descricao": "Tempo de resolução em horas.",
@@ -604,7 +604,7 @@ GOLD_SCHEMA = {
             "Para média de nota de produto, use AVG(nota_produto).",
             "Para média de NPS, use AVG(nota_nps).",
             "Não invente sentimento além dos valores válidos.",
-            "data_avaliacao está no formato DD/MM/YYYY. Para filtros, agrupamentos ou ordenações por data, converta para data conforme o dialeto do banco: em SQLite use date(substr(data_avaliacao, 7, 4) || '-' || substr(data_avaliacao, 4, 2) || '-' || substr(data_avaliacao, 1, 2)); em PostgreSQL use TO_DATE(data_avaliacao, 'DD/MM/YYYY')."
+            "data_avaliacao está no formato YYYY-MM-DD. Use diretamente em filtros e ordenações sem conversão."
         ],
         "colunas": {
             "id_avaliacao": {
@@ -647,9 +647,9 @@ GOLD_SCHEMA = {
                 "valores_validos": ["positivo", "neutro", "negativo"]
             },
             "data_avaliacao": {
-                "descricao": "Data da avaliação. No CSV atual está no formato DD/MM/YYYY. Para filtros e ordenações por data, converter para formato de data antes de comparar quando necessário.",
+                "descricao": "Data da avaliação.",
                 "tipo": "data",
-                "formato": "DD/MM/YYYY"
+                "formato": "YYYY-MM-DD"
             },
             "nome_produto": {
                 "descricao": "Nome do produto, campo denormalizado.",
@@ -679,8 +679,8 @@ GOLD_SCHEMA = {
             "Para abandono de carrinho, use qtd_abandon_cart.",
             "Para adição ao carrinho, use qtd_add_to_cart.",
             "Para buscas, pesquisas ou termos pesquisados no comportamento digital, use qtd_search.",
-            "A coluna data está no formato DD/MM/YYYY. Para filtros, agrupamentos ou ordenações por data, converta para data conforme o dialeto do banco: em SQLite use date(substr(data, 7, 4) || '-' || substr(data, 4, 2) || '-' || substr(data, 1, 2)); em PostgreSQL use TO_DATE(data, 'DD/MM/YYYY').",
-            "data_referencia_calculo é um campo datetime no formato YYYY-MM-DDTHH:MM:SS.mmmZ. Para filtros por dia, converta conforme o dialeto do banco: em SQLite use date(data_referencia_calculo); em PostgreSQL use CAST(data_referencia_calculo AS DATE)."
+            "A coluna data está no formato YYYY-MM-DD. Use diretamente em filtros e ordenações sem conversão.",
+            "data_referencia_calculo está no formato YYYY-MM-DD."
         ],
         "colunas": {
             "id_cliente": {
@@ -688,9 +688,9 @@ GOLD_SCHEMA = {
                 "tipo": "texto"
             },
             "data": {
-                "descricao": "Data da navegação. No CSV atual está no formato DD/MM/YYYY. Para filtros e ordenações por data, converter para formato de data antes de comparar quando necessário.",
+                "descricao": "Data da navegação.",
                 "tipo": "data",
-                "formato": "DD/MM/YYYY"
+                "formato": "YYYY-MM-DD"
             },
             "qtd_eventos": {
                 "descricao": "Quantidade total de eventos no dia.",
@@ -748,9 +748,9 @@ GOLD_SCHEMA = {
                 "agregacao": "SUM"
             },
             "data_referencia_calculo": {
-                "descricao": "Data e hora da última atualização do cálculo.",
-                "tipo": "datetime",
-                "formato": "YYYY-MM-DDTHH:MM:SS.mmmZ"
+                "descricao": "Data da última atualização do cálculo.",
+                "tipo": "data",
+                "formato": "YYYY-MM-DD"
             }
         }
     }

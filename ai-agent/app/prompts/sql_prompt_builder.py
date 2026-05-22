@@ -1,6 +1,6 @@
 """Builder do prompt de usuário enviado ao agente Text-to-SQL."""
 
-from datetime import datetime
+from datetime import date
 
 from app.prompts.sql_user_prompt import (
     SqlDialect,
@@ -15,7 +15,7 @@ def build_prompt(
     schema: str,
     examples: list[str],
     values: list[str],
-    current_date: datetime,
+    current_date: date,
     *,
     dialect: SqlDialect = "postgresql",
 ) -> str:

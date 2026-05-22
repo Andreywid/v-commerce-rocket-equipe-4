@@ -1,10 +1,11 @@
 """Cliente LLM responsável por transformar perguntas de negócio em SQL seguro."""
 
 import sqlite3
-from datetime import datetime
+from datetime import date
 
 from pydantic_ai import Agent
 
+from app.config import DATA_REFERENCIA_CALCULO
 from app.database.schema_registry import get_schema_prompt
 from app.agents.model_config import configure_provider_api_keys, create_agent_with_fallback, get_model_chain
 from app.models.deps import Deps
@@ -64,7 +65,7 @@ class AgentTextToSQLClient:
             schema=get_schema_prompt(),
             examples=self._select_examples(dialect),
             values=VALUE_EXAMPLES,
-            current_date=datetime.now(),
+            current_date=date.fromisoformat(DATA_REFERENCIA_CALCULO),
             dialect=dialect,
         )
 
