@@ -1,6 +1,6 @@
 import { useState } from "react"
 import { usePersistedPageSize } from "@/hooks/usePersistedPageSize"
-import { ClipboardList, Pencil } from "lucide-react"
+import { AlertCircle, ClipboardCheck, ClipboardList, Pencil, Smile, Users } from "lucide-react"
 
 import type { SupportType } from "@/types"
 import type { TicketOut } from "@/types/api"
@@ -8,8 +8,8 @@ import { supportStatusClasses, supportTypeClasses } from "@/constants/badgeStyle
 import { useAppContext } from "@/context/AppContext"
 import { useSupport } from "@/hooks/useSupport"
 import { useDebounce } from "@/hooks/useDebounce"
+import { DataCard, DataGrid } from "@/components/shared/MetricCards"
 import { DataPanel } from "@/components/shared/DataPanel"
-import { MetricGrid } from "@/components/shared/MetricCard"
 import { PageShell } from "@/components/shared/PageShell"
 import { StatusBadge } from "@/components/shared/StatusBadge"
 import { SupportFilterModal, emptySupportFilters, type SupportFilters } from "@/components/shared/SupportFilterModal"
@@ -19,8 +19,6 @@ import { RatingBadge } from "@/components/shared/RatingBadge"
 import { EmptyTableState, TableHead, TableBody, TableHeader, TableRow, TableCell, TablePagination } from "@/components/shared/Table"
 import { TableToolbar } from "@/components/shared/TableToolbar"
 import { exportTicketsToCSV } from "@/helpers/export"
-import { Heart, Smile, Users } from "lucide-react"
-import type { Metric } from "@/types"
 
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString("pt-BR")
@@ -159,19 +157,11 @@ export function SupportPage() {
   )
 
   const items = data?.items ?? []
-  const total = data?.total ?? 0
+  const total           = data?.total           ?? 0
+  const totalAbertos    = data?.total_abertos   ?? 0
+  const totalResolvidos = data?.total_resolvidos ?? 0
   const pageCount = Math.max(1, Math.ceil(total / pageSize))
   const filteredItems = items
-
-  const resolvidos = items.filter((t) => t.status_ticket === "Resolvido").length
-  const abertos = items.filter((t) => t.status_ticket === "Aberto").length
-
-  const metrics: Metric[] = [
-    { label: "Tickets resolvidos", value: String(resolvidos),   helper: "Nesta página",       tone: "emerald", icon: Users },
-    { label: "Total de tickets",   value: total.toLocaleString("pt-BR"), helper: "Resultado dos filtros", tone: "emerald", icon: Smile },
-    { label: "Tickets em aberto",  value: String(abertos),      helper: "Nesta página",       tone: "rose",    icon: Users },
-    { label: "Total (página)",     value: String(items.length), helper: "Tickets exibidos",   tone: "violet",  icon: Heart },
-  ]
 
   const isAdvancedFilterActive = !!(
     advancedFilters.date ||
@@ -209,7 +199,12 @@ export function SupportPage() {
 
   return (
     <PageShell title="Suporte">
-      <MetricGrid metrics={metrics} />
+      <DataGrid>
+        <DataCard label="Total de tickets"    value={total.toLocaleString("pt-BR")}          helper={isAdvancedFilterActive ? "Resultado dos filtros" : "Total geral"} tone="indigo"  icon={Users}         />
+        <DataCard label="Tickets em aberto"   value={totalAbertos.toLocaleString("pt-BR")}   helper={isAdvancedFilterActive ? "Resultado dos filtros" : "Total geral"} tone="rose"    icon={AlertCircle}   />
+        <DataCard label="Tickets resolvidos"  value={totalResolvidos.toLocaleString("pt-BR")} helper={isAdvancedFilterActive ? "Resultado dos filtros" : "Total geral"} tone="emerald" icon={ClipboardCheck} />
+        <DataCard label="Taxa de resolução"   value={total > 0 ? `${((totalResolvidos / total) * 100).toFixed(1)}%` : "—"} helper={isAdvancedFilterActive ? "Resultado dos filtros" : "Total geral"} tone="violet"  icon={Smile}         />
+      </DataGrid>
 
       <DataPanel>
         <TableToolbar

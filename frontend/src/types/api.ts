@@ -246,7 +246,10 @@ export type TicketOut = {
   data_referencia_calculo: string | null
 }
 
-export type TicketListResponse = PagedResponse<TicketOut>
+export type TicketListResponse = PagedResponse<TicketOut> & {
+  total_abertos: number
+  total_resolvidos: number
+}
 
 export type TicketCreate = {
   id_cliente: string
