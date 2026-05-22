@@ -131,11 +131,6 @@ export function OrdersPage() {
 
   const { create, update, remove } = useOrderMutations()
 
-  const dentroPrazo =
-    orderFilters.dentroDosPrazo && !orderFilters.foraDoPrazo ? true :
-    orderFilters.foraDoPrazo && !orderFilters.dentroDosPrazo ? false :
-    undefined
-
   const debouncedSearch = useDebounce(search, 400)
   const { data, isPending } = useOrders(
     {
@@ -147,7 +142,6 @@ export function OrdersPage() {
       valor_max: orderFilters.priceMax < 100000 ? orderFilters.priceMax : undefined,
       sort_by: sortBy,
       order: sortBy ? sortOrder : undefined,
-      dentro_prazo: dentroPrazo,
     },
     currentPage,
     pageSize,
@@ -167,9 +161,7 @@ export function OrdersPage() {
     !!orderFilters.date ||
     orderFilters.statuses.length > 0 ||
     orderFilters.priceMin > 0 ||
-    orderFilters.priceMax < 100000 ||
-    orderFilters.dentroDosPrazo ||
-    orderFilters.foraDoPrazo
+    orderFilters.priceMax < 100000
 
   function handlePageSizeChange(size: number) {
     setPageSize(size)
@@ -238,10 +230,10 @@ export function OrdersPage() {
   return (
     <PageShell title="Pedidos">
       <DataGrid>
-        <DataCard label="Pedidos pendentes"  value={String(processando)} helper="Resultado dos filtros" tone="indigo" icon={Tag} />
-        <DataCard label="Total de pedidos"   value={total.toLocaleString("pt-BR")} helper="Resultado dos filtros" tone="indigo" icon={Smile} />
-        <DataCard label="Receita total"      value={formatBRL(receitaTotal)} helper="Resultado dos filtros" tone="rose" icon={CircleDollarSign} />
-        <DataCard label="Pedidos aprovados"  value={String(aprovados)} helper="Resultado dos filtros" tone="emerald" icon={Heart} />
+        <DataCard label="Pedidos pendentes"  value={String(processando)} helper={isFilterActive ? "Resultado dos filtros" : "Total geral"} tone="indigo" icon={Tag} />
+        <DataCard label="Total de pedidos"   value={total.toLocaleString("pt-BR")} helper={isFilterActive ? "Resultado dos filtros" : "Total geral"} tone="indigo" icon={Smile} />
+        <DataCard label="Receita total"      value={formatBRL(receitaTotal)} helper={isFilterActive ? "Resultado dos filtros" : "Total geral"} tone="rose" icon={CircleDollarSign} />
+        <DataCard label="Pedidos aprovados"  value={String(aprovados)} helper={isFilterActive ? "Resultado dos filtros" : "Total geral"} tone="emerald" icon={Heart} />
       </DataGrid>
 
       <DataPanel>

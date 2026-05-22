@@ -185,8 +185,8 @@ export function ClientsPage() {
   const filteredItems = items
 
   const metrics: Metric[] = [
-    { label: "Total de clientes", value: total.toLocaleString("pt-BR"), helper: "Cadastrados", tone: "emerald", icon: Users },
-    { label: "Segmento Alto",      value: String(data?.segmento_alto ?? 0), helper: "Resultado dos filtros", tone: "indigo",  icon: Tag },
+    { label: "Total de clientes", value: total.toLocaleString("pt-BR"), helper: isFilterActive(advancedFilters) ? "Resultado dos filtros" : "Total geral", tone: "emerald", icon: Users },
+    { label: "Segmento Alto",      value: String(data?.segmento_alto ?? 0), helper: isFilterActive(advancedFilters) ? "Resultado dos filtros" : "Total geral", tone: "indigo",  icon: Tag },
     {
       label: "Nota média",
       value: stats?.nota_media != null ? `${stats.nota_media.toFixed(1)}/5.0` : "—",
