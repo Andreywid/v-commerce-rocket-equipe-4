@@ -16,9 +16,10 @@ def get_tickets(
     sort_by: str | None = None,
     order: str | None = None,
 ) -> TicketListResponse:
-    items, total = support_repository.get_all(id_cliente, tipo, status, sla_estourado, data_abertura, nome, satisfacao, page, size, sort_by, order)
+    items, total, total_abertos, total_resolvidos = support_repository.get_all(id_cliente, tipo, status, sla_estourado, data_abertura, nome, satisfacao, page, size, sort_by, order)
     return TicketListResponse(
-        total=total, page=page, size=size,
+        total=total, total_abertos=total_abertos, total_resolvidos=total_resolvidos,
+        page=page, size=size,
         items=[TicketOut.model_validate(t) for t in items],
     )
 

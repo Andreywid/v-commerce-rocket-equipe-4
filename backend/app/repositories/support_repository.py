@@ -22,7 +22,7 @@ def get_all(
     size: int = 20,
     sort_by: str | None = None,
     order: str | None = None,
-) -> tuple[list[SupportTicket], int]:
+) -> tuple[list[SupportTicket], int, int, int]:
     db = SessionLocal()
     try:
         query = db.query(SupportTicket)
@@ -53,10 +53,13 @@ def get_all(
         if col is not None:
             query = query.order_by(asc(col) if order != "desc" else desc(col))
 
-        total = query.count()
+        total           = query.count()
+        total_abertos   = query.filter(SupportTicket.status_ticket == "Aberto").count()
+        total_resolvidos = query.filter(SupportTicket.status_ticket == "Resolvido").count()
+
         offset = (page - 1) * size
         items = query.offset(offset).limit(size).all()
-        return items, total
+        return items, total, total_abertos, total_resolvidos
     finally:
         db.close()
 

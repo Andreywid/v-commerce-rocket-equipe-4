@@ -47,6 +47,8 @@ class TicketOut(BaseModel):
 
 class TicketListResponse(BaseModel):
     total: int
+    total_abertos: int
+    total_resolvidos: int
     page: int
     size: int
     items: list[TicketOut]
