@@ -3,7 +3,6 @@ import { Check, SlidersHorizontal, X } from "lucide-react"
 
 import type { OrderStatus } from "@/types"
 import { Button } from "@/components/ui/button"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 const ORDER_STATUS_OPTIONS: OrderStatus[] = ["Aprovado", "Processando", "Recusado", "Reembolsado"]
 
@@ -21,12 +20,6 @@ export const emptyOrderFilters: OrderFilters = {
   priceMax: 100000,
 }
 
-const STATUS_CHIP: Record<OrderStatus, { bg: string; text: string; border: string }> = {
-  Aprovado:    { bg: "#DCFCE7", text: "#15803D", border: "#86EFAC" },
-  Processando: { bg: "#FFFBEB", text: "#B45309", border: "#FDE68A" },
-  Recusado:    { bg: "#FFF1F2", text: "#BE123C", border: "#FECDD3" },
-  Reembolsado: { bg: "#F1F5F9", text: "#475569", border: "#CBD5E1" },
-}
 
 const PRICE_MAX = 100000
 
@@ -92,10 +85,10 @@ export function OrderFilterModal({
         </div>
 
         {/* Body */}
-        <div className="flex flex-col gap-0 px-6 py-5">
+        <div className="flex flex-col gap-5 px-6 py-5">
 
           {/* Data do pedido */}
-          <div className="mb-4">
+          <div>
             <label className="mb-2 block text-sm font-medium text-slate-700">Data do pedido</label>
             <input
               type="date"
@@ -105,102 +98,73 @@ export function OrderFilterModal({
             />
           </div>
 
-          <hr className="border-slate-100 mb-4" />
-
-          {/* Status do pedido */}
-          <div className="mb-4">
-            <label className="mb-2 block text-sm font-medium text-slate-700">Status do pedido</label>
-            <Select
-              value=""
-              onValueChange={(v) => { if (v) toggleStatus(v as OrderStatus) }}
-            >
-              <SelectTrigger className="h-9 rounded-md sm:w-80">
-                <SelectValue placeholder="Selecione o status" />
-              </SelectTrigger>
-              <SelectContent>
-                {ORDER_STATUS_OPTIONS
-                  .filter((s) => !form.statuses.includes(s))
-                  .map((option) => (
-                    <SelectItem key={option} value={option}>{option}</SelectItem>
-                  ))}
-              </SelectContent>
-            </Select>
-
-            {form.statuses.length > 0 && (
-              <div className="mt-2 flex flex-wrap gap-2">
-                {form.statuses.map((s) => {
-                  const c = STATUS_CHIP[s]
-                  return (
-                    <span
-                      key={s}
-                      className="inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-medium"
-                      style={{ backgroundColor: c.bg, color: c.text, borderColor: c.border }}
-                    >
-                      {s}
-                      <button
-                        type="button"
-                        onClick={() => toggleStatus(s)}
-                        className="ml-0.5 opacity-60 hover:opacity-100"
-                      >
-                        <X className="size-3" />
-                      </button>
-                    </span>
-                  )
-                })}
+          {/* Faixa de preço + Status */}
+          <div className="grid grid-cols-2 gap-8">
+            <div>
+              <label className="mb-3 block text-sm font-medium text-slate-700">Faixa de preço</label>
+              <div className="mb-4 flex gap-3">
+                <label className="flex flex-1 items-center gap-2 rounded-md border border-slate-200 px-3 py-2.5">
+                  <span className="shrink-0 text-sm text-slate-400">R$ Min</span>
+                  <input
+                    type="number"
+                    min={0}
+                    max={form.priceMax}
+                    value={form.priceMin === 0 ? "" : form.priceMin}
+                    placeholder="0"
+                    onChange={(e) => setForm({ ...form, priceMin: Math.min(Number(e.target.value) || 0, form.priceMax) })}
+                    className="w-full text-sm text-slate-700 outline-none"
+                  />
+                </label>
+                <label className="flex flex-1 items-center gap-2 rounded-md border border-slate-200 px-3 py-2.5">
+                  <span className="shrink-0 text-sm text-slate-400">R$ Máx</span>
+                  <input
+                    type="number"
+                    min={form.priceMin}
+                    max={PRICE_MAX}
+                    value={form.priceMax === PRICE_MAX ? "" : form.priceMax}
+                    placeholder="100.000"
+                    onChange={(e) => setForm({ ...form, priceMax: Math.max(Number(e.target.value) || PRICE_MAX, form.priceMin) })}
+                    className="w-full text-sm text-slate-700 outline-none"
+                  />
+                </label>
               </div>
-            )}
-          </div>
-
-          <hr className="border-slate-100 mb-4" />
-
-          {/* Faixa de preço */}
-          <div>
-            <label className="mb-3 block text-sm font-medium text-slate-700">Faixa de preço</label>
-            <div className="mb-4 flex gap-3">
-              <label className="flex flex-1 items-center gap-2 rounded-md border border-slate-200 px-3 py-2.5">
-                <span className="shrink-0 text-sm text-slate-400">R$ Min</span>
-                <input
-                  type="number"
-                  min={0}
-                  max={form.priceMax}
-                  value={form.priceMin === 0 ? "" : form.priceMin}
-                  placeholder="0"
-                  onChange={(e) => setForm({ ...form, priceMin: Math.min(Number(e.target.value) || 0, form.priceMax) })}
-                  className="w-full text-sm text-slate-700 outline-none"
+              <div className="relative h-1.5 rounded-full bg-slate-200">
+                <div
+                  className="absolute h-1.5 rounded-full bg-[#0F172A]"
+                  style={{ left: `${minPct}%`, right: `${100 - maxPct}%` }}
                 />
-              </label>
-              <label className="flex flex-1 items-center gap-2 rounded-md border border-slate-200 px-3 py-2.5">
-                <span className="shrink-0 text-sm text-slate-400">R$ Máx</span>
                 <input
-                  type="number"
-                  min={form.priceMin}
-                  max={PRICE_MAX}
-                  value={form.priceMax === PRICE_MAX ? "" : form.priceMax}
-                  placeholder="100.000"
-                  onChange={(e) => setForm({ ...form, priceMax: Math.max(Number(e.target.value) || PRICE_MAX, form.priceMin) })}
-                  className="w-full text-sm text-slate-700 outline-none"
+                  type="range" min={0} max={PRICE_MAX} step={1000} value={form.priceMin}
+                  onChange={(e) => setForm({ ...form, priceMin: Math.min(Number(e.target.value), form.priceMax) })}
+                  className={RANGE_THUMB_CLASSES}
                 />
-              </label>
+                <input
+                  type="range" min={0} max={PRICE_MAX} step={1000} value={form.priceMax}
+                  onChange={(e) => setForm({ ...form, priceMax: Math.max(Number(e.target.value), form.priceMin) })}
+                  className={RANGE_THUMB_CLASSES}
+                />
+              </div>
+              <div className="mt-2 flex justify-between text-xs text-slate-400">
+                <span>R$0</span>
+                <span>R$100.000</span>
+              </div>
             </div>
-            <div className="relative h-1.5 rounded-full bg-slate-200">
-              <div
-                className="absolute h-1.5 rounded-full bg-[#0F172A]"
-                style={{ left: `${minPct}%`, right: `${100 - maxPct}%` }}
-              />
-              <input
-                type="range" min={0} max={PRICE_MAX} step={1000} value={form.priceMin}
-                onChange={(e) => setForm({ ...form, priceMin: Math.min(Number(e.target.value), form.priceMax) })}
-                className={RANGE_THUMB_CLASSES}
-              />
-              <input
-                type="range" min={0} max={PRICE_MAX} step={1000} value={form.priceMax}
-                onChange={(e) => setForm({ ...form, priceMax: Math.max(Number(e.target.value), form.priceMin) })}
-                className={RANGE_THUMB_CLASSES}
-              />
-            </div>
-            <div className="mt-2 flex justify-between text-xs text-slate-400">
-              <span>R$0</span>
-              <span>R$100.000</span>
+
+            <div>
+              <label className="mb-3 block text-sm font-medium text-slate-700">Status do pedido</label>
+              <div className="flex flex-col gap-3">
+                {ORDER_STATUS_OPTIONS.map((status) => (
+                  <label key={status} className="flex cursor-pointer items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={form.statuses.includes(status)}
+                      onChange={() => toggleStatus(status)}
+                      className="size-4 accent-[#0F172A]"
+                    />
+                    <span className="text-sm text-slate-600">{status}</span>
+                  </label>
+                ))}
+              </div>
             </div>
           </div>
         </div>

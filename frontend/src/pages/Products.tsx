@@ -33,9 +33,7 @@ function isFilterActive(filter: ProductFilterState): boolean {
     filter.search !== "" ||
     filter.categories.length > 0 ||
     filter.minPrice > 0 ||
-    filter.maxPrice < 100_000 ||
-    filter.apenasAtivo ||
-    filter.apenasInativo
+    filter.maxPrice < 100_000
   )
 }
 
@@ -170,16 +168,10 @@ export function ProductsPage() {
   const rawSearch = search || advancedFilter.search
   const debouncedSearch = useDebounce(rawSearch, 400)
 
-  const ativo =
-    advancedFilter.apenasAtivo && !advancedFilter.apenasInativo ? true :
-    advancedFilter.apenasInativo && !advancedFilter.apenasAtivo ? false :
-    undefined
-
   const { data, isPending } = useProducts(
     {
       categorias: advancedFilter.categories.length > 0 ? advancedFilter.categories : undefined,
       nome: debouncedSearch || undefined,
-      ativo,
       preco_min: advancedFilter.minPrice > 0 ? advancedFilter.minPrice : undefined,
       preco_max: advancedFilter.maxPrice < 100_000 ? advancedFilter.maxPrice : undefined,
       sort_by: sortBy,

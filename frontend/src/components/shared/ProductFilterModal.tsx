@@ -46,8 +46,6 @@ export type ProductFilterState = {
   categories: ProductCategory[]
   minPrice: number
   maxPrice: number
-  apenasAtivo: boolean
-  apenasInativo: boolean
 }
 
 export const DEFAULT_PRODUCT_FILTER: ProductFilterState = {
@@ -55,8 +53,6 @@ export const DEFAULT_PRODUCT_FILTER: ProductFilterState = {
   categories: [],
   minPrice: 0,
   maxPrice: 100_000,
-  apenasAtivo: false,
-  apenasInativo: false,
 }
 
 const PRICE_MAX = 100_000
@@ -260,39 +256,14 @@ export function ProductFilterModal({ open, onClose, onSave, initial }: ProductFi
             />
           </div>
 
-          {/* Price range + Disponibilidade */}
-          <div className="grid grid-cols-2 gap-8">
-            <div>
-              <label className="mb-3 block text-sm font-medium text-slate-700">Faixa de preço</label>
-              <PriceRange
-                min={state.minPrice}
-                max={state.maxPrice}
-                onChange={(minPrice, maxPrice) => setState((s) => ({ ...s, minPrice, maxPrice }))}
-              />
-            </div>
-            <div>
-              <label className="mb-3 block text-sm font-medium text-slate-700">Disponibilidade</label>
-              <div className="flex flex-col gap-3">
-                <label className="flex cursor-pointer items-center gap-2">
-                  <input
-                    type="checkbox"
-                    checked={state.apenasAtivo}
-                    onChange={(e) => setState((s) => ({ ...s, apenasAtivo: e.target.checked }))}
-                    className="size-4 accent-[#0F172A]"
-                  />
-                  <span className="text-sm text-slate-600">Ativo</span>
-                </label>
-                <label className="flex cursor-pointer items-center gap-2">
-                  <input
-                    type="checkbox"
-                    checked={state.apenasInativo}
-                    onChange={(e) => setState((s) => ({ ...s, apenasInativo: e.target.checked }))}
-                    className="size-4 accent-[#0F172A]"
-                  />
-                  <span className="text-sm text-slate-600">Inativo</span>
-                </label>
-              </div>
-            </div>
+          {/* Price range */}
+          <div>
+            <label className="mb-3 block text-sm font-medium text-slate-700">Faixa de preço</label>
+            <PriceRange
+              min={state.minPrice}
+              max={state.maxPrice}
+              onChange={(minPrice, maxPrice) => setState((s) => ({ ...s, minPrice, maxPrice }))}
+            />
           </div>
         </div>
 
