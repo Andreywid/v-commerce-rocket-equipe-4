@@ -10,7 +10,7 @@ router = APIRouter(prefix="/orders", tags=["orders"])
 def list_orders(
     status: list[str] | None = Query(None, description="Aprovado | Recusado | Reembolsado | Processando"),
     categoria: str | None = Query(None),
-    estado: str | None = Query(None, description="UF do cliente, ex: SP"),
+    estado: str | None = Query(None, description="Estado do cliente por extenso, ex: São Paulo"),
     id_cliente: str | None = Query(None),
     data_inicio: str | None = Query(None, description="YYYY-MM-DD"),
     data_fim: str | None = Query(None, description="YYYY-MM-DD"),

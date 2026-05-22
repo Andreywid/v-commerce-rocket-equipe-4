@@ -8,12 +8,13 @@ class Customer(Base):
     id_cliente = Column(String, primary_key=True, index=True)
     nome = Column(String, index=True)
 
-    email = Column(String, index=True)
+    email = Column(String, index=True, nullable=True)
     telefone = Column(String, nullable=True)
     data_cadastro = Column(Date, nullable=True)
     cidade = Column(String, nullable=True)
-    estado = Column(String(2), nullable=True)
-    origem = Column(String, nullable=True)  # App | Web | Indicacao
+    estado = Column(String, nullable=True)
+    origem = Column(String, nullable=True)  # app | web | indicacao
+    maior_de_idade = Column(Boolean, nullable=True)
 
     qtd_pedidos_total = Column(Integer, default=0)
     qtd_pedidos_aprovados = Column(Integer, default=0)

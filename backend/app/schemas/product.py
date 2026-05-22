@@ -8,9 +8,7 @@ class ProductCreate(BaseModel):
     categoria: str
     preco_atual: float
     ativo: bool = True
-    estoque: Optional[int] = None
-    descricao: Optional[str] = None
-    imagem_url: Optional[str] = None
+    estoque_disponivel: Optional[int] = None
 
 
 class ProductUpdate(BaseModel):
@@ -18,9 +16,7 @@ class ProductUpdate(BaseModel):
     categoria: Optional[str] = None
     preco_atual: Optional[float] = None
     ativo: Optional[bool] = None
-    estoque: Optional[int] = None
-    descricao: Optional[str] = None
-    imagem_url: Optional[str] = None
+    estoque_disponivel: Optional[int] = None
 
 
 class ProductOut(BaseModel):
@@ -29,13 +25,15 @@ class ProductOut(BaseModel):
     categoria: str
     preco_atual: Optional[float] = None
     ativo: bool
-    estoque: Optional[int] = None
-    descricao: Optional[str] = None
-    imagem_url: Optional[str] = None
+    fornecedor: Optional[str] = None
+    peso_kg: Optional[float] = None
+    estoque_disponivel: Optional[int] = None
+    data_cadastro_produto: Optional[date] = None
     qtd_vendida_total: int = 0
     receita_total: float = 0.0
     nota_media: Optional[float] = None
     qtd_tickets_associados: int = 0
+    taxa_conversao: Optional[float] = None
     classificacao: Optional[str] = None
 
     model_config = {"from_attributes": True}
@@ -46,12 +44,11 @@ class ProductPerformance(ProductOut):
     qtd_vendida_90d: int = 0
     receita_30d: float = 0.0
     qtd_tickets_30d: int = 0
-    taxa_problema: float = 0.0
+    taxa_problema: Optional[float] = None
     qtd_avaliacoes: int = 0
     pct_recomendam: Optional[float] = None
     qtd_visualizacoes: int = 0
     qtd_carrinho: int = 0
-    taxa_conversao: float = 0.0
     data_referencia_calculo: Optional[date] = None
 
 

@@ -75,7 +75,7 @@ def create(data: dict) -> Product:
         # Campos calculados iniciam zerados/default para novos produtos
         new_product.qtd_vendida_total = 0
         new_product.receita_total = 0.0
-        new_product.classificacao = "Estável"
+        new_product.classificacao = "Estavel"
         new_product.data_referencia_calculo = date.today()
         
         db.add(new_product)

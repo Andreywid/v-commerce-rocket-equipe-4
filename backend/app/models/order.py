@@ -17,7 +17,7 @@ class Order(Base):
     metodo_pagamento = Column(String)  # PIX | Cartao | Boleto
 
     nome_cliente = Column(String)
-    estado_cliente = Column(String(2), nullable=True)
+    estado_cliente = Column(String, nullable=True)
     nome_produto = Column(String)
     categoria_produto = Column(String)
 

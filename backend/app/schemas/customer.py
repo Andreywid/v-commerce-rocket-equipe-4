@@ -6,12 +6,13 @@ from typing import Literal, Optional
 class CustomerOut(BaseModel):
     id_cliente: str
     nome: str
-    email: str
+    email: Optional[str] = None
     telefone: Optional[str] = None
     data_cadastro: Optional[date] = None
     cidade: Optional[str] = None
     estado: Optional[str] = None
     origem: Optional[str] = None
+    maior_de_idade: Optional[bool] = None
     qtd_pedidos_total: int = 0
     valor_total_gasto: Optional[float] = None
     ticket_medio: Optional[float] = None
@@ -26,12 +27,12 @@ class CustomerOut(BaseModel):
 
 class CustomerCreate(BaseModel):
     nome: str
-    email: EmailStr
+    email: Optional[EmailStr] = None
     telefone: Optional[str] = None
     data_cadastro: Optional[date] = None
     cidade: Optional[str] = None
     estado: Optional[str] = None
-    origem: Optional[Literal["App", "Web", "Indicacao"]] = None
+    origem: Optional[Literal["app", "web", "indicacao"]] = None
 
 
 class CustomerUpdate(BaseModel):
@@ -40,7 +41,7 @@ class CustomerUpdate(BaseModel):
     telefone: Optional[str] = None
     cidade: Optional[str] = None
     estado: Optional[str] = None
-    origem: Optional[Literal["App", "Web", "Indicacao"]] = None
+    origem: Optional[Literal["app", "web", "indicacao"]] = None
     segmento_ltv: Optional[Literal["Alto", "Medio", "Baixo"]] = None
     is_ativo_90d: Optional[bool] = None
     is_em_risco: Optional[bool] = None

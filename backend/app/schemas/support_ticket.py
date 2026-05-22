@@ -34,6 +34,7 @@ class TicketOut(BaseModel):
     sla_estourado: bool = False
     nome_cliente: str
     nome_produto: Optional[str] = None
+    maior_de_idade: Optional[bool] = None
     data_referencia_calculo: Optional[date] = None
 
     model_config = {"from_attributes": True}
@@ -55,7 +56,7 @@ class TicketCreate(BaseModel):
     id_cliente: str
     id_pedido: Optional[str] = None
     id_produto: Optional[str] = None
-    tipo_problema: Literal["Entrega", "Reembolso", "Produto", "Pagamento"]
+    tipo_problema: Literal["Entrega", "Reembolso", "Produto", "Pagamento", "Outros"]
     agente_suporte: str
     nome_cliente: str
     nome_produto: Optional[str] = None
@@ -63,7 +64,7 @@ class TicketCreate(BaseModel):
 
 
 class TicketUpdate(BaseModel):
-    tipo_problema: Optional[Literal["Entrega", "Reembolso", "Produto", "Pagamento"]] = None
+    tipo_problema: Optional[Literal["Entrega", "Reembolso", "Produto", "Pagamento", "Outros"]] = None
     satisfacao_atendimento: Optional[Literal["alta", "media", "baixa", "sem_avaliacao"]] = None
     agente_suporte: Optional[str] = None
     nota_avaliacao: Optional[int] = None

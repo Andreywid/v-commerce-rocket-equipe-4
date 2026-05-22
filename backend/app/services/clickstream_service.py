@@ -1,6 +1,6 @@
 from fastapi import HTTPException
 from app.repositories import clickstream_repository
-from app.schemas.clickstream import ClickstreamOut, ClickstreamListResponse, ClickstreamCreate, ClickstreamUpdate
+from app.schemas.clickstream import ClickstreamOut, ClickstreamListResponse, ClickstreamCreate
 
 
 def get_clickstream(
@@ -18,8 +18,8 @@ def get_clickstream(
     )
 
 
-def get_clickstream_by_id(id: int) -> ClickstreamOut:
-    record = clickstream_repository.get_by_id(id)
+def get_clickstream_by_key(id_cliente: str, data: str) -> ClickstreamOut:
+    record = clickstream_repository.get_by_key(id_cliente, data)
     if not record:
         raise HTTPException(status_code=404, detail="Registro de clickstream não encontrado")
     return ClickstreamOut.model_validate(record)
@@ -28,15 +28,3 @@ def get_clickstream_by_id(id: int) -> ClickstreamOut:
 def create_clickstream(data: ClickstreamCreate) -> ClickstreamOut:
     record = clickstream_repository.create(data.model_dump())
     return ClickstreamOut.model_validate(record)
-
-
-def update_clickstream(id: int, data: ClickstreamUpdate) -> ClickstreamOut:
-    updated = clickstream_repository.update(id, data.model_dump(exclude_none=True))
-    if not updated:
-        raise HTTPException(status_code=404, detail="Registro de clickstream não encontrado")
-    return ClickstreamOut.model_validate(updated)
-
-
-def delete_clickstream(id: int) -> None:
-    if not clickstream_repository.delete(id):
-        raise HTTPException(status_code=404, detail="Registro de clickstream não encontrado")

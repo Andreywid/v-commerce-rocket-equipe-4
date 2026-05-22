@@ -23,4 +23,5 @@ class SupportTicket(Base):
 
     nome_cliente = Column(String)
     nome_produto = Column(String, nullable=True)
+    maior_de_idade = Column(Boolean, nullable=True)
     data_referencia_calculo = Column(String, nullable=True)

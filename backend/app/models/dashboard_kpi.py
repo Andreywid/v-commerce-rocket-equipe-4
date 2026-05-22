@@ -4,9 +4,8 @@ from app.database import Base
 class DashboardKPI(Base):
     __tablename__ = "gold_vendas_kpis"
 
-    id = Column(Integer, primary_key=True, index=True)
-    ano = Column(Integer, nullable=False)
-    mes = Column(Integer, nullable=False)
+    ano = Column(Integer, primary_key=True, nullable=False)
+    mes = Column(Integer, primary_key=True, nullable=False)
     ano_mes = Column(String, nullable=False, index=True)
     qtd_pedidos = Column(Integer, nullable=False)
     qtd_pedidos_aprovados = Column(Integer, nullable=False)
