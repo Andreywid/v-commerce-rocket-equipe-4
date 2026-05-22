@@ -23,19 +23,13 @@ REGRAS OBRIGATÓRIAS:
 REGRAS DE NEGÓCIO (SCHEMA GOLD):
 
 1. DATAS:
+   - Para datas relativas, use a data informada em # CURRENT DATE como âncora temporal; não use o relógio da máquina (CURRENT_DATE, date('now'), datetime('now'), datetime.now()).
    - Use a coluna 'ano_mes' no formato 'YYYY-MM' para filtros mensais na tabela gold_vendas_kpis.
    - Use colunas de data reais como 'data_pedido', 'data_abertura', 'data_avaliacao' e 'data' quando a consulta for diária ou detalhada.
-   - Para intervalos de datas em PostgreSQL, prefira intervalo fechado-aberto:
-     data >= DATE '2026-04-01' AND data < DATE '2026-05-01'.
-   - "Último mês" significa o mês completo imediatamente anterior ao mês atual.
-     Em PostgreSQL, use:
-     data >= DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '1 month'
-     AND data < DATE_TRUNC('month', CURRENT_DATE).
-     Em SQLite, use:
-     data >= date('now', 'start of month', '-1 month')
-     AND data < date('now', 'start of month').
-    - "Último trimestre" (trimestre civil ou móvel): interprete como os três meses completos imediatamente anteriores ao mês da data corrente do prompt, salvo o usuário fixar datas; use data_pedido ou ano_mes conforme a granularidade da tabela.
-    - Se a tabela não tem coluna de data e possui métricas por janela (ex.: gold_produto_performance), interprete "último mês" como últimos 30 dias e use colunas *_30d; para "últimos 90 dias", use *_90d; use *_total apenas para histórico/total.
+   - Para intervalos de datas em PostgreSQL, prefira intervalo fechado-aberto.
+   - "Último mês" significa o mês completo imediatamente anterior ao mês da data de referência. Use DATE_TRUNC em PostgreSQL e date com 'start of month' em SQLite.
+   - "Último trimestre" (trimestre civil ou móvel): interprete como os três meses completos imediatamente anteriores ao mês da data de referência do prompt, salvo o usuário fixar datas; use data_pedido ou ano_mes conforme a granularidade da tabela.
+   - Se a tabela não tem coluna de data e possui métricas por janela (ex.: gold_produto_performance), interprete "último mês" como últimos 30 dias e use colunas *_30d; para "últimos 90 dias", use *_90d; use *_total apenas para histórico/total.
 
 2. FATURAMENTO:
    - Para análises mensais e agregadas, prefira 'receita_bruta' da tabela gold_vendas_kpis.
@@ -80,7 +74,7 @@ REGRAS DE NEGÓCIO (SCHEMA GOLD):
    - Segmentos LTV válidos: 'Alto', 'Medio', 'Baixo'.
    - Sentimentos válidos: 'positivo', 'neutro', 'negativo'.
 
-6. LOCALIZAÇÃO (UF E REGIÕES):
+6. LOCALIZAÇÃO (ESTADOS E REGIÕES):
    - Sempre que citar regiões, estados ou cidades, use os campos e valores do schema.
    - Use os campos de estado por extenso e cidade conforme o schema; não invente nomes, códigos ou siglas.
    - Trate sempre regiões como conjuntos de estados por extenso, mesmo que o usuário não use o nome completo; por exemplo, "nordeste" deve ser traduzido para filtro com IN (...) nos estados correspondentes.
@@ -89,7 +83,7 @@ REGRAS DE NEGÓCIO (SCHEMA GOLD):
    - As colunas de estado (ex.: estado em gold_cliente_360, estado_cliente em gold_pedidos_enriquecidos)
      guardam o nome do estado por extenso; use o nome completo exatamente como aparece no schema.
    - Quando o usuário citar uma macro-região do Brasil, traduza para filtro com IN (...) nos nomes dos estados;
-     não retorne InvalidRequest apenas porque ele não digitou UFs.
+     não retorne InvalidRequest apenas porque ele não digitou estados por extenso.
    - Mapeamento usual (IBGE):
      - Nordeste: ('Alagoas','Bahia','Ceará','Maranhão','Paraíba','Pernambuco','Piauí','Rio Grande do Norte','Sergipe')
      - Norte: ('Acre','Amapá','Amazonas','Pará','Rondônia','Roraima','Tocantins')

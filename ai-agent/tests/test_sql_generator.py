@@ -34,7 +34,7 @@ class AgentTextToSQLClientTest(unittest.TestCase):
 
         self.assertIn("maior crescimento de receita", examples_text)
         self.assertIn("strftime('%Y-%m', data_pedido)", examples_text)
-        self.assertIn("date('now', 'start of month', '-12 months')", examples_text)
+        self.assertIn("date('2026-05-22', 'start of month', '-12 months')", examples_text)
         self.assertIn("ELSE NULL", examples_text)
         self.assertIn("regiao IS NOT NULL", examples_text)
         self.assertNotIn("Indefinida", examples_text)

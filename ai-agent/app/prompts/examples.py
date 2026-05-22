@@ -49,8 +49,8 @@ SQL_EXAMPLES = [
       SUM(valor_total) AS receita
     FROM gold_pedidos_enriquecidos
     WHERE status = 'Aprovado'
-      AND data_pedido >= DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '12 months'
-      AND data_pedido < DATE_TRUNC('month', CURRENT_DATE)
+      AND data_pedido >= DATE_TRUNC('month', DATE '2026-05-22') - INTERVAL '12 months'
+      AND data_pedido < DATE_TRUNC('month', DATE '2026-05-22')
     GROUP BY regiao, mes
   ),
   extremos AS (
@@ -99,8 +99,8 @@ SQL_EXAMPLES = [
       SUM(valor_total) AS receita
     FROM gold_pedidos_enriquecidos
     WHERE status = 'Aprovado'
-      AND data_pedido >= date('now', 'start of month', '-12 months')
-      AND data_pedido < date('now', 'start of month')
+      AND data_pedido >= date('2026-05-22', 'start of month', '-12 months')
+      AND data_pedido < date('2026-05-22', 'start of month')
     GROUP BY regiao, mes
   ),
   extremos AS (
@@ -149,8 +149,8 @@ SQL_EXAMPLES = [
             SUM(valor_total) AS receita
         FROM gold_pedidos_enriquecidos
         WHERE status = 'Aprovado'
-          AND data_pedido >= DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '12 months'
-          AND data_pedido < DATE_TRUNC('month', CURRENT_DATE)
+          AND data_pedido >= DATE_TRUNC('month', DATE '2026-05-22') - INTERVAL '12 months'
+          AND data_pedido < DATE_TRUNC('month', DATE '2026-05-22')
         GROUP BY regiao, mes
     ),
     extremos AS (
@@ -198,7 +198,7 @@ SQL_EXAMPLES = [
         COUNT(*) AS qtd_vendas
       FROM gold_pedidos_enriquecidos
       WHERE status = 'Aprovado'
-        AND data_pedido >= date('now', 'start of day', '-30 days')
+        AND data_pedido >= date('2026-05-22', '-30 days')
       GROUP BY regiao
     )
     SELECT regiao, qtd_vendas
@@ -241,8 +241,6 @@ SQL_EXAMPLES = [
     WHERE ativo = TRUE AND preco_atual > 100;
     """,
 
-    # NOVO:
-    # Exemplo de ranking por janela de 30 dias em gold_produto_performance.
     """
     Pergunta:
     Quais foram os 5 produtos mais vendidos no último mês?
@@ -287,9 +285,7 @@ SQL_EXAMPLES = [
     ORDER BY data_abertura;
     """,
 
-    # NOVO:
-    # Exemplo para ensinar que taxa agregada deve ser recalculada com numerador/denominador.
-    # Evita erros como SUM(taxa_aprovacao) ou AVG(taxa_aprovacao).
+    # taxa agregada: recalcular numerador/denominador, não somar taxa_aprovacao
     """
     Pergunta:
     Qual foi a taxa de aprovação agregada no primeiro trimestre de 2026?
@@ -301,8 +297,6 @@ SQL_EXAMPLES = [
     WHERE ano_mes BETWEEN '2026-01' AND '2026-03';
     """,
 
-    # NOVO:
-    # Exemplo para taxa de recusa agregada.
     """
     Pergunta:
     Qual foi a taxa de recusa agregada entre janeiro e março de 2026?
@@ -314,8 +308,6 @@ SQL_EXAMPLES = [
     WHERE ano_mes BETWEEN '2026-01' AND '2026-03';
     """,
 
-    # NOVO:
-    # Exemplo para taxa de reembolso agregada.
     """
     Pergunta:
     Qual foi a taxa de reembolso agregada em 2026?
@@ -327,8 +319,6 @@ SQL_EXAMPLES = [
     WHERE ano = 2026;
     """,
 
-    # NOVO:
-    # Exemplo de faturamento agregado usando receita_bruta na tabela mensal.
     """
     Pergunta:
     Qual foi o faturamento total de 2026?
@@ -339,8 +329,6 @@ SQL_EXAMPLES = [
     WHERE ano = 2026;
     """,
 
-    # NOVO:
-    # Exemplo de análise mensal usando ano_mes.
     """
     Pergunta:
     Quantos pedidos aprovados tivemos por mês em 2026?
@@ -352,23 +340,19 @@ SQL_EXAMPLES = [
     ORDER BY ano_mes;
     """,
 
-    # NOVO:
-    # Exemplo de filtro por status e estado usando sigla UF.
     """
     Pergunta:
-    Liste os pedidos reembolsados do estado de PE
+    Liste os pedidos reembolsados do estado de Pernambuco
 
     SQL:
     SELECT id_pedido, data_pedido, nome_cliente, estado_cliente, nome_produto, valor_total
     FROM gold_pedidos_enriquecidos
-    WHERE status = 'Reembolsado' AND estado_cliente = 'PE'
+    WHERE status = 'Reembolsado' AND estado_cliente = 'Pernambuco'
     ORDER BY data_pedido DESC
     LIMIT 100;
     """,
 
-    # NOVO:
-    # Exemplo de receita detalhada por categoria.
-    # Como usa gold_pedidos_enriquecidos para receita, filtra status = 'Aprovado'.
+    # receita por categoria via gold_pedidos_enriquecidos exige status = 'Aprovado'
     """
     Pergunta:
     Qual categoria gerou mais receita em abril de 2026?
@@ -384,8 +368,6 @@ SQL_EXAMPLES = [
     LIMIT 1;
     """,
 
-    # NOVO:
-    # Exemplo de segmentação de clientes por LTV e UF.
     """
     Pergunta:
     Quais são os clientes de alto valor em Pernambuco?
@@ -393,13 +375,11 @@ SQL_EXAMPLES = [
     SQL:
     SELECT id_cliente, nome, email, cidade, estado, valor_total_gasto, segmento_ltv
     FROM gold_cliente_360
-    WHERE segmento_ltv = 'Alto' AND estado = 'PE'
+    WHERE segmento_ltv = 'Alto' AND estado = 'Pernambuco'
     ORDER BY valor_total_gasto DESC
     LIMIT 100;
     """,
 
-    # NOVO:
-    # Exemplo de uso de booleano.
     """
     Pergunta:
     Quais clientes estão em risco?
@@ -412,8 +392,6 @@ SQL_EXAMPLES = [
     LIMIT 100;
     """,
 
-    # NOVO:
-    # Exemplo de enum de classificação de produto.
     """
     Pergunta:
     Quais produtos são problemáticos?
@@ -421,13 +399,11 @@ SQL_EXAMPLES = [
     SQL:
     SELECT id_produto, nome_produto, categoria, taxa_problema, qtd_tickets_associados, classificacao
     FROM gold_produto_performance
-    WHERE classificacao = 'Problemático'
+    WHERE classificacao = 'Problematico'
     ORDER BY taxa_problema DESC
     LIMIT 100;
     """,
 
-    # NOVO:
-    # Exemplo de ranking por taxa de conversão.
     """
     Pergunta:
     Quais produtos tiveram maior conversão?
@@ -440,8 +416,6 @@ SQL_EXAMPLES = [
     LIMIT 100;
     """,
 
-    # NOVO:
-    # Exemplo de média usando AVG.
     """
     Pergunta:
     Qual a nota média dos produtos por categoria?
@@ -453,8 +427,6 @@ SQL_EXAMPLES = [
     ORDER BY nota_media_categoria DESC;
     """,
 
-    # NOVO:
-    # Exemplo com intervalo fechado-aberto em data.
     """
     Pergunta:
     Qual o NPS médio dos produtos avaliados em 2026?
@@ -466,8 +438,6 @@ SQL_EXAMPLES = [
       AND data_avaliacao < DATE '2027-01-01';
     """,
 
-    # NOVO:
-    # Exemplo de enum de sentimento.
     """
     Pergunta:
     Quais avaliações negativas foram feitas sobre produtos?
@@ -480,8 +450,6 @@ SQL_EXAMPLES = [
     LIMIT 100;
     """,
 
-    # NOVO:
-    # Exemplo de SLA estourado usando booleano e status de ticket.
     """
     Pergunta:
     Quais tickets estão com SLA estourado?
@@ -495,8 +463,6 @@ SQL_EXAMPLES = [
     LIMIT 100;
     """,
 
-    # NOVO:
-    # Exemplo de tempo médio de resolução por tipo de problema.
     """
     Pergunta:
     Qual o tempo médio de resolução dos tickets resolvidos por tipo de problema?
@@ -509,8 +475,6 @@ SQL_EXAMPLES = [
     ORDER BY tempo_medio_resolucao_horas DESC;
     """,
 
-    # NOVO:
-    # Exemplo de comportamento digital por canal.
     """
     Pergunta:
     Quantos abandonos de carrinho tivemos por canal em abril de 2026?
@@ -524,8 +488,6 @@ SQL_EXAMPLES = [
     ORDER BY total_abandonos DESC;
     """,
 
-    # NOVO:
-    # Exemplo com período relativo.
     """
     Pergunta:
     Qual cliente teve mais eventos digitais nos últimos 30 dias?
@@ -533,14 +495,12 @@ SQL_EXAMPLES = [
     SQL:
     SELECT id_cliente, SUM(qtd_eventos) AS total_eventos
     FROM gold_clickstream_resumo
-    WHERE data >= CURRENT_DATE - INTERVAL '30 days'
+    WHERE data >= DATE '2026-05-22' - INTERVAL '30 days'
     GROUP BY id_cliente
     ORDER BY total_eventos DESC
     LIMIT 1;
     """,
 
-    # NOVO:
-    # Exemplo de filtro booleano + enum de canal.
     """
     Pergunta:
     Quais clientes ativos nos últimos 90 dias compraram pelo App?
@@ -549,12 +509,10 @@ SQL_EXAMPLES = [
     SELECT id_cliente, nome, email, canal_preferido, is_ativo_90d
     FROM gold_cliente_360
     WHERE is_ativo_90d = TRUE
-      AND canal_preferido = 'App'
+      AND canal_preferido = 'app'
     LIMIT 100;
     """,
 
-    # NOVO:
-    # Exemplo de agrupamento por método de pagamento.
     """
     Pergunta:
     Qual método de pagamento teve mais pedidos aprovados?
@@ -582,26 +540,25 @@ VALUE_EXAMPLES = [
     "Boleto",
     "Aberto",
     "Resolvido",
-    "Web",
-    "Mobile",
-    "App",
-
-    # NOVO:
-    # Valores adicionados para cobrir enums do Schema Gold e reduzir alucinação.
-    "Desktop",
-    "Tablet",
-    "Indicacao",
+    "web",
+    "mobile",
+    "app",
+    "celular",
+    "computador",
+    "tablet",
+    "indicacao",
     "Alto",
     "Medio",
     "Baixo",
     "Top Vendedor",
-    "Estável",
-    "Problemático",
+    "Estavel",
+    "Problematico",
     "Encalhado",
     "Entrega",
     "Reembolso",
     "Produto",
     "Pagamento",
+    "Outros",
     "alta",
     "media",
     "baixa",
@@ -609,8 +566,12 @@ VALUE_EXAMPLES = [
     "positivo",
     "neutro",
     "negativo",
-
     "Eletronicos",
-    "Alimentos",
     "Moveis",
+    "Esportes",
+    "Beleza",
+    "Brinquedos",
+    "Casa",
+    "Automotivo",
+    "Vestuario",
 ]

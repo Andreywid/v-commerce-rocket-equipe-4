@@ -30,10 +30,17 @@ def get_all(
         db.close()
 
 
-def get_by_id(id: int) -> ClickstreamResumo | None:
+def get_by_key(id_cliente: str, data: str) -> ClickstreamResumo | None:
     db = SessionLocal()
     try:
-        return db.query(ClickstreamResumo).filter(ClickstreamResumo.id == id).first()
+        return (
+            db.query(ClickstreamResumo)
+            .filter(
+                ClickstreamResumo.id_cliente == id_cliente,
+                ClickstreamResumo.data == data,
+            )
+            .first()
+        )
     finally:
         db.close()
 
@@ -74,33 +81,5 @@ def create(data: dict) -> ClickstreamResumo:
         db.commit()
         db.refresh(record)
         return record
-    finally:
-        db.close()
-
-
-def update(id: int, data: dict) -> ClickstreamResumo | None:
-    db = SessionLocal()
-    try:
-        record = db.query(ClickstreamResumo).filter(ClickstreamResumo.id == id).first()
-        if not record:
-            return None
-        for field, value in data.items():
-            setattr(record, field, value)
-        db.commit()
-        db.refresh(record)
-        return record
-    finally:
-        db.close()
-
-
-def delete(id: int) -> bool:
-    db = SessionLocal()
-    try:
-        record = db.query(ClickstreamResumo).filter(ClickstreamResumo.id == id).first()
-        if not record:
-            return False
-        db.delete(record)
-        db.commit()
-        return True
     finally:
         db.close()

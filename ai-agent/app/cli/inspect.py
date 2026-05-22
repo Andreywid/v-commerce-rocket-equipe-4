@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import date
 
+from app.config import DATA_REFERENCIA_CALCULO
 from app.database.schema_registry import GOLD_SCHEMA, get_schema_prompt
 from app.prompts import system_prompt as system_prompt_module
 from app.prompts.examples import SQL_EXAMPLES, VALUE_EXAMPLES
@@ -29,7 +30,7 @@ def run_dry_prompt(question: str) -> None:
         schema=get_schema_prompt(),
         examples=SQL_EXAMPLES,
         values=VALUE_EXAMPLES,
-        current_date=datetime.now(),
+        current_date=date.fromisoformat(DATA_REFERENCIA_CALCULO),
     )
     sys_prompt_len = len(system_prompt_module.SYSTEM_PROMPT.strip())
     print("=== Dry-run: prompt modular (usuário) ===\n")

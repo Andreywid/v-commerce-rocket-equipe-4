@@ -10,14 +10,15 @@ import type { CustomerOut, OrderOut, ProductOut, TicketOut } from "@/types/api"
  * @param rows Data rows to be exported
  * @returns A formatted CSV string
  */
-export function generateCSV(headers: string[], rows: (string | number)[][]): string {
+export function generateCSV(headers: string[],rows: (string | number | null | undefined)[][]
+): string {
   const csvRows = [
     headers.join(","),
-    ...rows.map(row => 
+    ...rows.map(row =>
       row.map(value => {
-        const strValue = String(value).replace(/"/g, '""'); // Escape double quotes
-        return strValue.includes(",") || strValue.includes("\n") || strValue.includes('"') 
-          ? `"${strValue}"` 
+        const strValue = value == null ? "" : String(value).replace(/"/g, '""'); // Escape double quotes
+        return strValue.includes(",") || strValue.includes("\n") || strValue.includes('"')
+          ? `"${strValue}"`
           : strValue;
       }).join(",")
     )
@@ -90,12 +91,12 @@ export function exportClientesToCSV(data: CustomerOut[]): void {
   const rows = data.map((c) => [
     c.id_cliente,
     c.nome,
-    c.email,
-    c.telefone,
-    c.cidade,
-    c.estado,
-    c.origem,
-    c.data_cadastro,
+    c.email ?? "",
+    c.telefone ?? "",
+    c.cidade ?? "",
+    c.estado ?? "",
+    c.origem ?? "",
+    c.data_cadastro ?? "",
     c.qtd_pedidos_total,
     c.valor_total_gasto?.toFixed(2) ?? "",
     c.ticket_medio?.toFixed(2) ?? "",
@@ -118,9 +119,9 @@ export function exportProductsToCSV(data: ProductOut[]): void {
     p.id_produto,
     p.nome_produto,
     p.categoria,
-    p.preco_atual.toFixed(2),
+    p.preco_atual != null ? p.preco_atual.toFixed(2) : "",
     p.ativo ? "Sim" : "Não",
-    p.estoque ?? "",
+    p.estoque_disponivel != null ? p.estoque_disponivel : "",
     p.qtd_vendida_total,
     p.receita_total.toFixed(2),
     p.nota_media?.toFixed(1) ?? "",

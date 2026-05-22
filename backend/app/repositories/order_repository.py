@@ -45,7 +45,7 @@ def get_all(
         if categoria:
             query = query.filter(Order.categoria_produto == categoria)
         if estado:
-            query = query.filter(Order.estado_cliente == estado.upper())
+            query = query.filter(Order.estado_cliente == estado)
         if id_cliente:
             query = query.filter(Order.id_cliente == id_cliente)
         if data_inicio:
@@ -96,6 +96,8 @@ def create(data: dict) -> Order | None:
         product = db.query(Product).filter(Product.id_produto == data["id_produto"]).first()
         if not product:
             return None
+        if product.preco_atual is None or product.preco_atual <= 0:
+            return None
 
         d = data["data_pedido"] if isinstance(data["data_pedido"], date) else date.fromisoformat(str(data["data_pedido"]))
         quantidade = int(data["quantidade"])
@@ -141,7 +143,8 @@ def update(id_pedido: str, data: dict) -> Order | None:
                 order.id_produto = product.id_produto
                 order.nome_produto = product.nome_produto
                 order.categoria_produto = product.categoria
-                order.valor_unitario = float(product.preco_atual)
+                if product.preco_atual is not None and product.preco_atual > 0:
+                    order.valor_unitario = float(product.preco_atual)
 
         if "data_pedido" in data and data["data_pedido"]:
             d = data["data_pedido"] if isinstance(data["data_pedido"], date) else date.fromisoformat(str(data["data_pedido"]))

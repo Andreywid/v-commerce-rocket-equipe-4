@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import date
 from typing import Literal
 
 SqlDialect = Literal["postgresql", "sqlite"]
@@ -10,15 +10,13 @@ SqlDialect = Literal["postgresql", "sqlite"]
 SQLITE_TARGET_ENGINE_SECTION = """
 # TARGET DATABASE ENGINE
 
-SQLite 3 — a consulta será executada neste processo (mock local).
+SQLite 3.
 
 Regras obrigatórias de sintaxe:
 - Não use INTERVAL, DATE_TRUNC nem funções exclusivas do PostgreSQL.
-- Datas relativas: date('now'), datetime('now') e modificadores como '-6 months', 'start of month'.
-- Colunas ano_mes nas tabelas gold são TEXT no formato 'YYYY-MM'. Para "últimos N meses", compare com
-  strftime('%Y-%m', date('now', '-6 months')) (ajuste o modificador conforme N e a pergunta).
-- "Último mês" = mês completo anterior ao mês atual. Use data >= date('now','start of month','-1 month')
-    AND data < date('now','start of month'), ou ano_mes = strftime('%Y-%m', date('now','start of month','-1 month')).
+- Para datas relativas, use a data informada em # CURRENT DATE como âncora temporal; não use date('now'), datetime('now') ou CURRENT_DATE.
+- Colunas ano_mes nas tabelas gold são TEXT no formato 'YYYY-MM'. Para filtros mensais, use strftime('%Y-%m', date(<data_ref>, <modificador>)).
+- "Último mês" = mês completo anterior ao mês de referência. Use date(<data_ref>, 'start of month', '-1 month') e date(<data_ref>, 'start of month').
 - Não use ILIKE; para ignorar maiúsculas use lower(coluna) LIKE lower('%padrão%') ou LIKE ... COLLATE NOCASE.
 """.strip()
 
@@ -102,7 +100,7 @@ def build_sql_text_to_sql_user_prompt(
     examples_text: str,
     values_text: str,
     question: str,
-    current_date: datetime,
+    current_date: date,
     dialect: SqlDialect = "postgresql",
 ) -> str:
     """Monta o prompt de usuário enviado ao agente Text-to-SQL."""

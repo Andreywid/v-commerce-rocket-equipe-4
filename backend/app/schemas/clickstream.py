@@ -4,7 +4,6 @@ from typing import Literal, Optional
 
 
 class ClickstreamOut(BaseModel):
-    id: int
     id_cliente: str
     data: date
     qtd_eventos: int = 0
@@ -41,8 +40,8 @@ class ClickstreamCreate(BaseModel):
     qtd_abandon_cart: int = 0
     qtd_purchase: int = 0
     qtd_search: int = 0
-    canal_principal: Optional[Literal["Web", "Mobile", "App"]] = None
-    dispositivo_principal: Optional[Literal["Desktop", "Mobile", "Tablet"]] = None
+    canal_principal: Optional[Literal["web", "mobile", "app"]] = None
+    dispositivo_principal: Optional[Literal["celular", "computador", "tablet"]] = None
     tempo_total_segundos: int = 0
 
 
@@ -55,6 +54,6 @@ class ClickstreamUpdate(BaseModel):
     qtd_abandon_cart: Optional[int] = None
     qtd_purchase: Optional[int] = None
     qtd_search: Optional[int] = None
-    canal_principal: Optional[Literal["Web", "Mobile", "App"]] = None
-    dispositivo_principal: Optional[Literal["Desktop", "Mobile", "Tablet"]] = None
+    canal_principal: Optional[Literal["web", "mobile", "app"]] = None
+    dispositivo_principal: Optional[Literal["celular", "computador", "tablet"]] = None
     tempo_total_segundos: Optional[int] = None

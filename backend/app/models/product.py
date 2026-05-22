@@ -11,11 +11,10 @@ class Product(Base):
     categoria = Column(String)
     preco_atual = Column(Float)
     ativo = Column(Boolean, default=True)
-    
-    # Novos campos para suporte ao CRUD e Frontend
-    estoque = Column(Integer, nullable=True)
-    descricao = Column(String, nullable=True)
-    imagem_url = Column(String, nullable=True)
+    fornecedor = Column(String, nullable=True)
+    peso_kg = Column(Float, nullable=True)
+    estoque_disponivel = Column(Integer, nullable=True)
+    data_cadastro_produto = Column(Date, nullable=True)
 
     qtd_vendida_total = Column(Integer, default=0)
     qtd_vendida_30d = Column(Integer, default=0)
@@ -25,7 +24,7 @@ class Product(Base):
 
     qtd_tickets_associados = Column(Integer, default=0)
     qtd_tickets_30d = Column(Integer, default=0)
-    taxa_problema = Column(Float, default=0.0)
+    taxa_problema = Column(Float, nullable=True)
 
     qtd_avaliacoes = Column(Integer, default=0)
     nota_media = Column(Float, nullable=True)
@@ -33,8 +32,8 @@ class Product(Base):
 
     qtd_visualizacoes = Column(Integer, default=0)
     qtd_carrinho = Column(Integer, default=0)
-    taxa_conversao = Column(Float, default=0.0)
+    taxa_conversao = Column(Float, nullable=True)
 
-    # Top Vendedor | Estável | Problemático | Encalhado
+    # Top Vendedor | Estavel | Problematico | Encalhado
     classificacao = Column(String, nullable=True)
     data_referencia_calculo = Column(Date, nullable=True)

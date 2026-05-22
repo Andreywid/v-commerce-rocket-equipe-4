@@ -11,12 +11,12 @@ def test_list_products(client, auth_headers):
 
 
 def test_list_products_filter_categoria(client, auth_headers):
-    resp = client.get("/api/v1/products", params={"categoria": "Eletrônicos"}, headers=auth_headers)
+    resp = client.get("/api/v1/products", params={"categoria": "Eletronicos"}, headers=auth_headers)
     assert resp.status_code == 200
     data = resp.json()
     assert data["total"] >= 1
     for item in data["items"]:
-        assert item["categoria"] == "Eletrônicos"
+        assert item["categoria"] == "Eletronicos"
 
 
 def test_get_product(client, auth_headers):

@@ -1,14 +1,12 @@
-from sqlalchemy import Column, Integer, String, UniqueConstraint
+from sqlalchemy import Column, Integer, String
 from app.database import Base
 
 
 class ClickstreamResumo(Base):
     __tablename__ = "gold_clickstream_resumo"
-    __table_args__ = (UniqueConstraint("id_cliente", "data", name="uq_cliente_data"),)
 
-    id = Column(Integer, primary_key=True, index=True)
-    id_cliente = Column(String, index=True)
-    data = Column(String)
+    id_cliente = Column(String, primary_key=True, index=True)
+    data = Column(String, primary_key=True)
 
     qtd_eventos = Column(Integer, default=0)
     qtd_sessoes = Column(Integer, default=0)
@@ -20,7 +18,7 @@ class ClickstreamResumo(Base):
     qtd_purchase = Column(Integer, default=0)
     qtd_search = Column(Integer, default=0)
 
-    canal_principal = Column(String, nullable=True)        # Web | Mobile | App
-    dispositivo_principal = Column(String, nullable=True)  # Desktop | Mobile | Tablet
+    canal_principal = Column(String, nullable=True)        # web | mobile | app
+    dispositivo_principal = Column(String, nullable=True)  # celular | computador | tablet
     tempo_total_segundos = Column(Integer, default=0)
     data_referencia_calculo = Column(String, nullable=True)
